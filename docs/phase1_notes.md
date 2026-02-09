@@ -50,3 +50,19 @@ System is now:
 - Extensible
 
 This phase forms the infrastructure for future energy modeling, reinforcement learning, multi-agent coordination, and deployment layers.
+
+
+---
+
+## Phase 1 Closure Patch (v0.1.1)
+
+Additional structural refinements were introduced to ensure Phase-2 readiness:
+
+- Centralized dataset generation module added.
+- Minimal regression test layer established.
+- Requirements manifest introduced for reproducibility.
+- Node model extended with energy-ready attributes.
+- Environment model expanded with constraint placeholders.
+- Repository hygiene improved with cache exclusions.
+
+This closure patch finalizes the foundational infrastructure and freezes the baseline at tag `v0.1.1`.
