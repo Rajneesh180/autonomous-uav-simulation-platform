@@ -5,9 +5,17 @@ class Environment:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
-        self.nodes: List[Node] = []
+        self.nodes = []
 
-    def add_node(self, node: Node):
+        # -------- Reserved Containers (Phase-2 Ready) --------
+        self.cluster_centers = []
+        self.obstacles = []
+        self.no_fly_zones = []
+        self.risk_zones = []
+
+        self.dataset_mode = "random"
+
+    def add_node(self, node):
         self.nodes.append(node)
 
     def get_node_count(self):
@@ -17,5 +25,6 @@ class Environment:
         return {
             "width": self.width,
             "height": self.height,
-            "node_count": len(self.nodes)
+            "node_count": len(self.nodes),
+            "dataset_mode": self.dataset_mode
         }
