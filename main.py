@@ -34,14 +34,23 @@ def main():
     # -------- Energy Simulation --------
     print("\n--- Energy Simulation ---")
 
-    uav = env.nodes[0]
+    uav = env.nodes[0]  # first node acts as UAV base
     base_position = uav.position()
+
     visited = 0
+    attempted = 0
+    energy_consumed_total = 0
+    abort_reason = None
+    return_triggered = False
 
     for target in env.nodes[1:]:
 
-        # Check return threshold first
+        attempted += 1
+
+        # Threshold check
         if EnergyModel.should_return(uav):
+            abort_reason = "threshold"
+            return_triggered = True
             print("Battery threshold reached. Returning to base.")
             break
 
@@ -50,21 +59,24 @@ def main():
             target.position()
         )
 
-        # Can reach next node?
+        # Feasibility check
         if not EnergyModel.can_travel(uav, distance):
+            abort_reason = "insufficient_energy"
             print("Cannot reach next node safely.")
             break
 
-        # Simulate travel
+        # Consume energy
         energy_needed = EnergyModel.energy_for_distance(uav, distance)
         EnergyModel.consume(uav, energy_needed)
+        energy_consumed_total += energy_needed
 
-        # Check return feasibility
+        # Return-to-base safety check
         if not EnergyModel.can_return_to_base(
             uav,
             target.position(),
             base_position
         ):
+            abort_reason = "unsafe_return"
             print("Return-to-base unsafe. Mission halted.")
             break
 
@@ -74,8 +86,11 @@ def main():
             f"Battery Left: {round(uav.current_battery, 2)}"
         )
 
-    # <-- OUTSIDE LOOP
+    mission_completion = round((visited / max(1, attempted)) * 100, 2)
+
     print(f"Total Visited: {visited}")
+    print(f"Energy Consumed: {round(energy_consumed_total, 2)}")
+    print(f"Mission Completion %: {mission_completion}")
 
     # -------- Metrics Test --------
     timer_start = MetricEngine.start_timer()
@@ -94,18 +109,42 @@ def main():
             "timestamp": Logger.timestamp(),
             "node_count": env.get_node_count(),
             "sample_path_length": round(sample_path_length, 2),
-            "runtime": runtime
+            "runtime": runtime,
+            "energy_consumed": round(energy_consumed_total, 2),
+            "visited_nodes": visited,
+            "attempted_nodes": attempted,
+            "mission_completion_pct": mission_completion,
+            "abort_reason": abort_reason,
+            "return_triggered": return_triggered
         }
 
         Logger.log_json("run_log.json", payload)
+
         Logger.log_csv(
             "run_metrics.csv",
-            ["timestamp", "node_count", "sample_path_length", "runtime"],
+            [
+                "timestamp",
+                "node_count",
+                "sample_path_length",
+                "runtime",
+                "energy_consumed",
+                "visited_nodes",
+                "attempted_nodes",
+                "mission_completion_pct",
+                "abort_reason",
+                "return_triggered"
+            ],
             [
                 payload["timestamp"],
                 payload["node_count"],
                 payload["sample_path_length"],
-                payload["runtime"]
+                payload["runtime"],
+                payload["energy_consumed"],
+                payload["visited_nodes"],
+                payload["attempted_nodes"],
+                payload["mission_completion_pct"],
+                payload["abort_reason"],
+                payload["return_triggered"]
             ]
         )
 
