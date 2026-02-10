@@ -45,3 +45,14 @@ class MetricEngine:
     @staticmethod
     def return_flag(triggered):
         return 1 if triggered else 0
+
+    @staticmethod
+    def coverage_ratio(visited, total):
+        if total == 0:
+            return 0.0
+        return round((visited / total) * 100, 2)
+
+    @staticmethod
+    def constraint_violation_flag(collisions, unsafe_returns):
+        return 1 if (collisions > 0 or unsafe_returns > 0) else 0
+

@@ -55,12 +55,17 @@ def main():
     abort_reason = None
     return_triggered = False
 
+    # NEW COUNTERS
+    collision_count = 0
+    unsafe_return_count = 0
+
     for target in env.nodes[1:]:
 
         attempted += 1
 
         # -------- Collision Check --------
         if env.has_collision(uav.position(), target.position()):
+            collision_count += 1
             print(f"Path blocked by obstacle to Node {target.id}")
             continue
 
@@ -97,6 +102,7 @@ def main():
             target.position(),
             base_position
         ):
+            unsafe_return_count += 1
             abort_reason = "unsafe_return"
             print("Return-to-base unsafe. Mission halted.")
             break
@@ -121,10 +127,22 @@ def main():
     abort_flag = MetricEngine.abort_flag(abort_reason)
     return_flag = MetricEngine.return_flag(return_triggered)
 
+    coverage_ratio = MetricEngine.coverage_ratio(
+        visited,
+        len(env.nodes) - 1
+    )
+
+    constraint_flag = MetricEngine.constraint_violation_flag(
+        collision_count,
+        unsafe_return_count
+    )
+
     print(f"Total Visited: {visited}")
     print(f"Energy Consumed: {round(energy_consumed_total, 2)}")
     print(f"Mission Completion %: {mission_completion}")
     print(f"Energy Efficiency: {energy_efficiency}")
+    print(f"Coverage Ratio: {coverage_ratio}")
+    print(f"Constraint Violations: {constraint_flag}")
 
     # -------- Metrics Test --------
     timer_start = MetricEngine.start_timer()
@@ -149,12 +167,13 @@ def main():
             "attempted_nodes": attempted,
             "mission_completion_pct": mission_completion,
             "energy_efficiency": energy_efficiency,
+            "coverage_ratio": coverage_ratio,
+            "constraint_flag": constraint_flag,
             "abort_flag": abort_flag,
             "return_flag": return_flag
         }
 
         Logger.log_json("run_log.json", payload)
-
         Logger.log_csv(
             "run_metrics.csv",
             list(payload.keys()),
