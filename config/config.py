@@ -25,4 +25,4 @@ class Config:
 
     ENABLE_ENERGY = False
     ENABLE_OBSTACLES = True
-    ENABLE_RISK_ZONES = False
+    ENABLE_RISK_ZONES = True

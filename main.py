@@ -6,6 +6,7 @@ from core.obstacle_model import Obstacle
 from metrics.metric_engine import MetricEngine
 from metrics.logger import Logger
 from core.energy_model import EnergyModel
+from core.risk_zone_model import RiskZone
 
 
 def main():
@@ -34,6 +35,11 @@ def main():
     if Config.ENABLE_OBSTACLES:
         env.add_obstacle(Obstacle(200, 200, 350, 350))
         env.add_obstacle(Obstacle(500, 100, 650, 250))
+
+    # -------- Risk Zones --------
+    if Config.ENABLE_RISK_ZONES:
+        env.add_risk_zone(RiskZone(100, 400, 300, 550, multiplier=1.8))
+
 
     print("Environment Summary:", env.summary())
 
@@ -69,6 +75,10 @@ def main():
             uav.position(),
             target.position()
         )
+
+        # -------- Risk Multiplier (Soft Constraint) --------
+        risk_mult = env.risk_multiplier(target.position())
+        distance *= risk_mult
 
         # -------- Feasibility Check --------
         if not EnergyModel.can_travel(uav, distance):
