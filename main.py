@@ -7,6 +7,7 @@ from metrics.metric_engine import MetricEngine
 from metrics.logger import Logger
 from core.energy_model import EnergyModel
 from core.risk_zone_model import RiskZone
+from visualization.plot_renderer import PlotRenderer
 
 
 def main():
@@ -39,7 +40,6 @@ def main():
     # -------- Risk Zones --------
     if Config.ENABLE_RISK_ZONES:
         env.add_risk_zone(RiskZone(100, 400, 300, 550, multiplier=1.8))
-
 
     print("Environment Summary:", env.summary())
 
@@ -76,7 +76,7 @@ def main():
             target.position()
         )
 
-        # -------- Risk Multiplier (Soft Constraint) --------
+        # -------- Risk Multiplier --------
         risk_mult = env.risk_multiplier(target.position())
         distance *= risk_mult
 
@@ -107,11 +107,24 @@ def main():
             f"Battery Left: {round(uav.current_battery, 2)}"
         )
 
-    mission_completion = round((visited / max(1, attempted)) * 100, 2)
+    # -------- MetricEngine Derived Metrics --------
+    mission_completion = MetricEngine.mission_completion(
+        visited,
+        attempted
+    )
+
+    energy_efficiency = MetricEngine.energy_efficiency(
+        energy_consumed_total,
+        visited
+    )
+
+    abort_flag = MetricEngine.abort_flag(abort_reason)
+    return_flag = MetricEngine.return_flag(return_triggered)
 
     print(f"Total Visited: {visited}")
     print(f"Energy Consumed: {round(energy_consumed_total, 2)}")
     print(f"Mission Completion %: {mission_completion}")
+    print(f"Energy Efficiency: {energy_efficiency}")
 
     # -------- Metrics Test --------
     timer_start = MetricEngine.start_timer()
@@ -135,41 +148,24 @@ def main():
             "visited_nodes": visited,
             "attempted_nodes": attempted,
             "mission_completion_pct": mission_completion,
-            "abort_reason": abort_reason,
-            "return_triggered": return_triggered
+            "energy_efficiency": energy_efficiency,
+            "abort_flag": abort_flag,
+            "return_flag": return_flag
         }
 
         Logger.log_json("run_log.json", payload)
 
         Logger.log_csv(
             "run_metrics.csv",
-            [
-                "timestamp",
-                "node_count",
-                "sample_path_length",
-                "runtime",
-                "energy_consumed",
-                "visited_nodes",
-                "attempted_nodes",
-                "mission_completion_pct",
-                "abort_reason",
-                "return_triggered"
-            ],
-            [
-                payload["timestamp"],
-                payload["node_count"],
-                payload["sample_path_length"],
-                payload["runtime"],
-                payload["energy_consumed"],
-                payload["visited_nodes"],
-                payload["attempted_nodes"],
-                payload["mission_completion_pct"],
-                payload["abort_reason"],
-                payload["return_triggered"]
-            ]
+            list(payload.keys()),
+            list(payload.values())
         )
 
         print("Logs written to /logs directory")
+
+    # -------- Visualization --------
+    if Config.ENABLE_VISUALS:
+        PlotRenderer.render_environment(env)
 
 
 if __name__ == "__main__":
