@@ -2,6 +2,7 @@ from config.config import Config
 from core.seed_manager import set_global_seed
 from core.environment_model import Environment
 from core.dataset_generator import generate_nodes
+from core.obstacle_model import Obstacle
 from metrics.metric_engine import MetricEngine
 from metrics.logger import Logger
 from core.energy_model import EnergyModel
@@ -29,12 +30,17 @@ def main():
     for node in nodes:
         env.add_node(node)
 
+    # -------- Obstacles --------
+    if Config.ENABLE_OBSTACLES:
+        env.add_obstacle(Obstacle(200, 200, 350, 350))
+        env.add_obstacle(Obstacle(500, 100, 650, 250))
+
     print("Environment Summary:", env.summary())
 
     # -------- Energy Simulation --------
     print("\n--- Energy Simulation ---")
 
-    uav = env.nodes[0]  # first node acts as UAV base
+    uav = env.nodes[0]
     base_position = uav.position()
 
     visited = 0
@@ -47,7 +53,12 @@ def main():
 
         attempted += 1
 
-        # Threshold check
+        # -------- Collision Check --------
+        if env.has_collision(uav.position(), target.position()):
+            print(f"Path blocked by obstacle to Node {target.id}")
+            continue
+
+        # -------- Threshold Check --------
         if EnergyModel.should_return(uav):
             abort_reason = "threshold"
             return_triggered = True
@@ -59,18 +70,18 @@ def main():
             target.position()
         )
 
-        # Feasibility check
+        # -------- Feasibility Check --------
         if not EnergyModel.can_travel(uav, distance):
             abort_reason = "insufficient_energy"
             print("Cannot reach next node safely.")
             break
 
-        # Consume energy
+        # -------- Consume Energy --------
         energy_needed = EnergyModel.energy_for_distance(uav, distance)
         EnergyModel.consume(uav, energy_needed)
         energy_consumed_total += energy_needed
 
-        # Return-to-base safety check
+        # -------- Return Safety --------
         if not EnergyModel.can_return_to_base(
             uav,
             target.position(),

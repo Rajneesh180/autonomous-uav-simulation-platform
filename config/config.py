@@ -24,5 +24,5 @@ class Config:
     RETURN_THRESHOLD = 0.2
 
     ENABLE_ENERGY = False
-    ENABLE_OBSTACLES = False
+    ENABLE_OBSTACLES = True
     ENABLE_RISK_ZONES = False
