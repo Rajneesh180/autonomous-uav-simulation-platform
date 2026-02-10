@@ -4,6 +4,7 @@ from core.environment_model import Environment
 from core.dataset_generator import generate_nodes
 from metrics.metric_engine import MetricEngine
 from metrics.logger import Logger
+from core.energy_model import EnergyModel
 
 
 def main():
@@ -29,6 +30,33 @@ def main():
         env.add_node(node)
 
     print("Environment Summary:", env.summary())
+
+    # -------- Energy Simulation --------
+    print("\n--- Energy Simulation ---")
+
+    uav = env.nodes[0]  # treat first node as UAV base
+    visited = 0
+
+    for target in env.nodes[1:]:
+        distance = MetricEngine.euclidean_distance(
+            uav.position(),
+            target.position()
+        )
+
+        if not EnergyModel.can_travel(uav, distance):
+            print("Battery insufficient. Mission aborted.")
+            break
+
+        energy_needed = EnergyModel.energy_for_distance(uav, distance)
+        EnergyModel.consume(uav, energy_needed)
+
+        visited += 1
+        print(
+            f"Visited Node {target.id} | "
+            f"Battery Left: {round(uav.current_battery, 2)}"
+        )
+
+    print(f"Total Visited: {visited}")
 
     # -------- Metrics Test --------
     timer_start = MetricEngine.start_timer()
