@@ -34,21 +34,39 @@ def main():
     # -------- Energy Simulation --------
     print("\n--- Energy Simulation ---")
 
-    uav = env.nodes[0]  # treat first node as UAV base
+    uav = env.nodes[0]
+    base_position = uav.position()
     visited = 0
 
     for target in env.nodes[1:]:
+
+        # Check return threshold first
+        if EnergyModel.should_return(uav):
+            print("Battery threshold reached. Returning to base.")
+            break
+
         distance = MetricEngine.euclidean_distance(
             uav.position(),
             target.position()
         )
 
+        # Can reach next node?
         if not EnergyModel.can_travel(uav, distance):
-            print("Battery insufficient. Mission aborted.")
+            print("Cannot reach next node safely.")
             break
 
+        # Simulate travel
         energy_needed = EnergyModel.energy_for_distance(uav, distance)
         EnergyModel.consume(uav, energy_needed)
+
+        # Check return feasibility
+        if not EnergyModel.can_return_to_base(
+            uav,
+            target.position(),
+            base_position
+        ):
+            print("Return-to-base unsafe. Mission halted.")
+            break
 
         visited += 1
         print(
@@ -56,6 +74,7 @@ def main():
             f"Battery Left: {round(uav.current_battery, 2)}"
         )
 
+    # <-- OUTSIDE LOOP
     print(f"Total Visited: {visited}")
 
     # -------- Metrics Test --------

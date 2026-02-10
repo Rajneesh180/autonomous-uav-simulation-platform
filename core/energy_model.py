@@ -28,3 +28,16 @@ class EnergyModel:
         node.current_battery -= energy
         if node.current_battery < 0:
             node.current_battery = 0
+
+    # -------- NEW LOGIC --------
+    @staticmethod
+    def can_return_to_base(node, current_pos, base_pos) -> bool:
+        distance_back = MetricEngine.euclidean_distance(current_pos, base_pos)
+        required = EnergyModel.energy_for_distance(node, distance_back)
+        return node.current_battery >= required
+
+    @staticmethod
+    def should_return(node) -> bool:
+        return node.current_battery <= (
+            node.battery_capacity * node.return_threshold
+        )
