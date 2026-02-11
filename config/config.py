@@ -6,6 +6,7 @@ class Config:
     CLUSTER_COUNT = 5
     DATASET_MODE = "random"
     RANDOM_SEED = 42
+    RANDOMIZE_SEED = True
 
     # -------- Visualization --------
     SCREEN_WIDTH = 1000
@@ -18,12 +19,12 @@ class Config:
     LOG_FORMAT = "json"
 
     # -------- Energy & Constraint Placeholders --------
-    ENERGY_PER_METER = 0.1
-    BATTERY_CAPACITY = 100.0
+    ENERGY_PER_METER = 0.12
+    BATTERY_CAPACITY = 300.0
     HOVER_COST = 0.0
     RETURN_THRESHOLD = 0.2
 
-    ENABLE_ENERGY = False
+    ENABLE_ENERGY = True
     ENABLE_OBSTACLES = True
     ENABLE_RISK_ZONES = True
     ENABLE_VISUALS = True

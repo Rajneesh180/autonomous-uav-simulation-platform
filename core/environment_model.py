@@ -1,6 +1,8 @@
 from typing import List, Tuple
 from core.node_model import Node
 
+COLLISION_MARGIN = 5
+
 
 class Environment:
     def __init__(self, width: int, height: int):
@@ -37,19 +39,25 @@ class Environment:
         self.risk_zones.append(zone)
 
     # ---------------- Collision Checks ----------------
+
     def has_collision(
         self, start_pos: Tuple[float, float], end_pos: Tuple[float, float]
     ) -> bool:
         """
-        Hard collision check against obstacles and no-fly zones.
+        Soft collision check using sampled points along the path.
+        Prevents over-blocking from rectangle edge overlaps.
         """
-        for obs in self.obstacles:
-            if obs.intersects_line(start_pos[0], start_pos[1], end_pos[0], end_pos[1]):
-                return True
 
-        for zone in self.no_fly_zones:
-            if zone.intersects_line(start_pos[0], start_pos[1], end_pos[0], end_pos[1]):
-                return True
+        steps = 8  # sampling resolution
+
+        for obs in self.obstacles:
+            for i in range(1, steps + 1):
+                t = i / steps
+                x = start_pos[0] + t * (end_pos[0] - start_pos[0])
+                y = start_pos[1] + t * (end_pos[1] - start_pos[1])
+
+                if obs.contains_point(x, y):
+                    return True
 
         return False
 
@@ -79,6 +87,26 @@ class Environment:
     def update_risk_zones(self, step):
         for zone in self.risk_zones:
             zone.fluctuate(step)
+
+    def update_obstacles(self):
+        for obs in self.obstacles:
+            obs.move(self.width, self.height)
+
+    def get_safe_start(self, default=(0, 0)):
+        x, y = default
+
+        if not self.point_in_obstacle((x, y)):
+            return (x, y)
+
+        # search outward
+        for r in range(5, 100, 5):
+            for dx in (-r, 0, r):
+                for dy in (-r, 0, r):
+                    candidate = (x + dx, y + dy)
+                    if not self.point_in_obstacle(candidate):
+                        return candidate
+
+        return default
 
     # ---------------- Summary ----------------
     def summary(self):

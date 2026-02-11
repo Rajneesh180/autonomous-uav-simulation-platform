@@ -1,3 +1,5 @@
+import time
+
 from config.config import Config
 from core.seed_manager import set_global_seed
 from core.environment_model import Environment
@@ -16,7 +18,14 @@ def main():
     print("=== Autonomous UAV Simulation Platform ===")
 
     # -------- Seed --------
-    set_global_seed(Config.RANDOM_SEED)
+    if Config.RANDOMIZE_SEED:
+        active_seed = int(time.time())
+        set_global_seed(active_seed)
+        print(f"[SeedManager] Random seed set to {active_seed}")
+    else:
+        active_seed = Config.RANDOM_SEED
+        set_global_seed(active_seed)
+        print(f"[SeedManager] Global seed set to {active_seed}")
 
     # -------- Environment --------
     env = Environment(Config.MAP_WIDTH, Config.MAP_HEIGHT)
@@ -32,7 +41,7 @@ def main():
         Config.NODE_COUNT,
         Config.MAP_WIDTH,
         Config.MAP_HEIGHT,
-        Config.RANDOM_SEED,
+        active_seed,
     )
 
     for node in nodes:
@@ -56,6 +65,7 @@ def main():
     while temporal.tick():
         print(f"[Time Step] {temporal.current_step}")
         env.update_risk_zones(temporal.current_step)
+        env.update_obstacles()
 
     if (
         Config.ENABLE_DYNAMIC_NODES
@@ -80,7 +90,9 @@ def main():
     print("\n--- Energy Simulation ---")
 
     uav = env.nodes[0]
-    base_position = uav.position()
+    center = (env.width // 2, env.height // 2)
+    base_position = env.get_safe_start(center)
+    uav.x, uav.y = base_position
 
     visited = 0
     attempted = 0
@@ -134,6 +146,7 @@ def main():
             break
 
         visited += 1
+
         print(
             f"Visited Node {target.id} | "
             f"Battery Left: {round(uav.current_battery, 2)}"
