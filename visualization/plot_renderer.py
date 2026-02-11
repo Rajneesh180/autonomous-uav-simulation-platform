@@ -48,7 +48,9 @@ class PlotRenderer:
         plt.ylim(0, env.height)
         plt.grid(True)
 
-        plt.savefig("artifacts/figures/env_phase2.png", dpi=300, bbox_inches="tight")
+        plt.savefig(
+            "artifacts/figures/env_phase3_dynamic.png", dpi=300, bbox_inches="tight"
+        )
         plt.close()
 
     # ----------------------------------------------------
@@ -63,7 +65,7 @@ class PlotRenderer:
         plt.bar(["Visited Nodes"], [visited])
         plt.title("Visited Nodes")
         plt.savefig(
-            "artifacts/plots/visited_nodes_phase2.png", dpi=300, bbox_inches="tight"
+            "artifacts/plots/visited_nodes_phase3.png", dpi=300, bbox_inches="tight"
         )
         plt.close()
 
@@ -72,7 +74,7 @@ class PlotRenderer:
         plt.bar(["Energy Consumed"], [energy_consumed])
         plt.title("Energy Consumption")
         plt.savefig(
-            "artifacts/plots/energy_consumed_phase2.png", dpi=300, bbox_inches="tight"
+            "artifacts/plots/energy_consumed_phase3.png", dpi=300, bbox_inches="tight"
         )
         plt.close()
 
@@ -87,6 +89,6 @@ class PlotRenderer:
         plt.bar(["Completion %", "Efficiency"], [completion_pct, efficiency])
         plt.title("Mission Metrics Snapshot")
         plt.savefig(
-            "artifacts/plots/metrics_snapshot_phase2.png", dpi=300, bbox_inches="tight"
+            "artifacts/plots/metrics_snapshot_phase3.png", dpi=300, bbox_inches="tight"
         )
         plt.close()
