@@ -11,10 +11,10 @@ class Obstacle:
 
     def intersects_line(self, x3, y3, x4, y4):
         if (
-            max(x3, x4) < self.x1 or
-            min(x3, x4) > self.x2 or
-            max(y3, y4) < self.y1 or
-            min(y3, y4) > self.y2
+            max(x3, x4) < self.x1
+            or min(x3, x4) > self.x2
+            or max(y3, y4) < self.y1
+            or min(y3, y4) > self.y2
         ):
             return False
         return True

@@ -55,4 +55,3 @@ class MetricEngine:
     @staticmethod
     def constraint_violation_flag(collisions, unsafe_returns):
         return 1 if (collisions > 0 or unsafe_returns > 0) else 0
-

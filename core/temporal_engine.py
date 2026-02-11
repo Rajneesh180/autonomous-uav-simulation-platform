@@ -24,5 +24,5 @@ class TemporalEngine:
         return {
             "current_step": self.current_step,
             "max_steps": self.max_steps,
-            "active": self.active
+            "active": self.active,
         }

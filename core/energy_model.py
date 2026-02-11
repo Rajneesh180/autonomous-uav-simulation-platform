@@ -13,10 +13,9 @@ class EnergyModel:
 
     @staticmethod
     def total_energy(node, distance: float, hover_time: float = 0.0) -> float:
-        return (
-            EnergyModel.energy_for_distance(node, distance)
-            + EnergyModel.hover_energy(node, hover_time)
-        )
+        return EnergyModel.energy_for_distance(
+            node, distance
+        ) + EnergyModel.hover_energy(node, hover_time)
 
     @staticmethod
     def can_travel(node, distance: float) -> bool:
@@ -38,6 +37,4 @@ class EnergyModel:
 
     @staticmethod
     def should_return(node) -> bool:
-        return node.current_battery <= (
-            node.battery_capacity * node.return_threshold
-        )
+        return node.current_battery <= (node.battery_capacity * node.return_threshold)

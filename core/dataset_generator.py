@@ -2,7 +2,9 @@ import random
 from core.node_model import Node
 
 
-def generate_nodes(mode: str, count: int, width: int, height: int, seed: int | None = None):
+def generate_nodes(
+    mode: str, count: int, width: int, height: int, seed: int | None = None
+):
     if seed is not None:
         random.seed(seed)
 
@@ -16,6 +18,7 @@ def generate_nodes(mode: str, count: int, width: int, height: int, seed: int | N
 
     # Future modes can be added here (spiral, clustered, etc.)
     return nodes
+
 
 def spawn_single_node(width, height, node_id, env):
     import random
@@ -33,4 +36,3 @@ def spawn_single_node(width, height, node_id, env):
         attempts += 1
 
     return None
-

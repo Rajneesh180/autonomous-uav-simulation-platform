@@ -30,18 +30,14 @@ class PlotRenderer:
                 obs.x2 - obs.x1,
                 obs.y2 - obs.y1,
                 color="red",
-                alpha=0.4
+                alpha=0.4,
             )
             plt.gca().add_patch(rect)
 
         # -------- Risk Zones --------
         for rz in env.risk_zones:
             rect = plt.Rectangle(
-                (rz.x1, rz.y1),
-                rz.x2 - rz.x1,
-                rz.y2 - rz.y1,
-                color="orange",
-                alpha=0.3
+                (rz.x1, rz.y1), rz.x2 - rz.x1, rz.y2 - rz.y1, color="orange", alpha=0.3
             )
             plt.gca().add_patch(rect)
 
@@ -52,11 +48,7 @@ class PlotRenderer:
         plt.ylim(0, env.height)
         plt.grid(True)
 
-        plt.savefig(
-            "artifacts/figures/env_phase2.png",
-            dpi=300,
-            bbox_inches="tight"
-        )
+        plt.savefig("artifacts/figures/env_phase2.png", dpi=300, bbox_inches="tight")
         plt.close()
 
     # ----------------------------------------------------
@@ -71,9 +63,7 @@ class PlotRenderer:
         plt.bar(["Visited Nodes"], [visited])
         plt.title("Visited Nodes")
         plt.savefig(
-            "artifacts/plots/visited_nodes_phase2.png",
-            dpi=300,
-            bbox_inches="tight"
+            "artifacts/plots/visited_nodes_phase2.png", dpi=300, bbox_inches="tight"
         )
         plt.close()
 
@@ -82,9 +72,7 @@ class PlotRenderer:
         plt.bar(["Energy Consumed"], [energy_consumed])
         plt.title("Energy Consumption")
         plt.savefig(
-            "artifacts/plots/energy_consumed_phase2.png",
-            dpi=300,
-            bbox_inches="tight"
+            "artifacts/plots/energy_consumed_phase2.png", dpi=300, bbox_inches="tight"
         )
         plt.close()
 
@@ -96,14 +84,9 @@ class PlotRenderer:
         PlotRenderer._ensure_dirs()
 
         plt.figure()
-        plt.bar(
-            ["Completion %", "Efficiency"],
-            [completion_pct, efficiency]
-        )
+        plt.bar(["Completion %", "Efficiency"], [completion_pct, efficiency])
         plt.title("Mission Metrics Snapshot")
         plt.savefig(
-            "artifacts/plots/metrics_snapshot_phase2.png",
-            dpi=300,
-            bbox_inches="tight"
+            "artifacts/plots/metrics_snapshot_phase2.png", dpi=300, bbox_inches="tight"
         )
         plt.close()

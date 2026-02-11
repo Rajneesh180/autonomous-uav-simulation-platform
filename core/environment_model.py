@@ -17,6 +17,7 @@ class Environment:
         self.risk_zones = []
 
         self.dataset_mode = "random"
+        self.environment_changed = False
 
     # ---------------- Nodes ----------------
     def add_node(self, node: Node):
@@ -36,23 +37,18 @@ class Environment:
         self.risk_zones.append(zone)
 
     # ---------------- Collision Checks ----------------
-    def has_collision(self, start_pos: Tuple[float, float],
-                      end_pos: Tuple[float, float]) -> bool:
+    def has_collision(
+        self, start_pos: Tuple[float, float], end_pos: Tuple[float, float]
+    ) -> bool:
         """
         Hard collision check against obstacles and no-fly zones.
         """
         for obs in self.obstacles:
-            if obs.intersects_line(
-                start_pos[0], start_pos[1],
-                end_pos[0], end_pos[1]
-            ):
+            if obs.intersects_line(start_pos[0], start_pos[1], end_pos[0], end_pos[1]):
                 return True
 
         for zone in self.no_fly_zones:
-            if zone.intersects_line(
-                start_pos[0], start_pos[1],
-                end_pos[0], end_pos[1]
-            ):
+            if zone.intersects_line(start_pos[0], start_pos[1], end_pos[0], end_pos[1]):
                 return True
 
         return False
@@ -74,6 +70,12 @@ class Environment:
                 return True
         return False
 
+    def mark_changed(self):
+        self.environment_changed = True
+
+    def reset_change_flag(self):
+        self.environment_changed = False
+
     # ---------------- Summary ----------------
     def summary(self):
         return {
@@ -83,6 +85,5 @@ class Environment:
             "dataset_mode": self.dataset_mode,
             "obstacle_count": len(self.obstacles),
             "no_fly_zone_count": len(self.no_fly_zones),
-            "risk_zone_count": len(self.risk_zones)
+            "risk_zone_count": len(self.risk_zones),
         }
-
