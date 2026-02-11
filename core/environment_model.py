@@ -60,7 +60,7 @@ class Environment:
         multiplier = 1.0
         for zone in self.risk_zones:
             if zone.contains_point(pos[0], pos[1]):
-                multiplier *= 1.5
+                multiplier *= zone.current_multiplier
         return multiplier
 
     def point_in_obstacle(self, pos):
@@ -75,6 +75,10 @@ class Environment:
 
     def reset_change_flag(self):
         self.environment_changed = False
+
+    def update_risk_zones(self, step):
+        for zone in self.risk_zones:
+            zone.fluctuate(step)
 
     # ---------------- Summary ----------------
     def summary(self):

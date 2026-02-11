@@ -54,8 +54,8 @@ def main():
     print("\n--- Temporal Simulation ---")
 
     while temporal.tick():
-
         print(f"[Time Step] {temporal.current_step}")
+        env.update_risk_zones(temporal.current_step)
 
     if (
         Config.ENABLE_DYNAMIC_NODES
