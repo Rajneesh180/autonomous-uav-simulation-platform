@@ -8,6 +8,8 @@ from metrics.logger import Logger
 from core.energy_model import EnergyModel
 from core.risk_zone_model import RiskZone
 from visualization.plot_renderer import PlotRenderer
+from core.temporal_engine import TemporalEngine 
+from core.dataset_generator import spawn_single_node
 
 
 def main():
@@ -19,6 +21,14 @@ def main():
     # -------- Environment --------
     env = Environment(Config.MAP_WIDTH, Config.MAP_HEIGHT)
     env.dataset_mode = Config.DATASET_MODE
+
+    # -------- Temporal Engine --------
+    if Config.ENABLE_TEMPORAL:
+        temporal = TemporalEngine(
+            Config.TIME_STEP,
+            Config.MAX_TIME_STEPS
+        )
+
 
     # -------- Node Generation --------
     nodes = generate_nodes(
@@ -44,6 +54,33 @@ def main():
     print("Environment Summary:", env.summary())
 
     # -------- Energy Simulation --------
+
+    print("\n--- Temporal Simulation ---")
+
+    while temporal.tick():
+
+        print(f"[Time Step] {temporal.current_step}")
+
+    if (
+        Config.ENABLE_DYNAMIC_NODES and
+        temporal.current_step % Config.DYNAMIC_NODE_INTERVAL == 0 and
+        len(env.nodes) < Config.NODE_COUNT + Config.MAX_DYNAMIC_NODES
+    ):
+        new_id = len(env.nodes)
+
+        new_node = spawn_single_node(
+            Config.MAP_WIDTH,
+            Config.MAP_HEIGHT,
+            new_id
+        )
+
+        env.add_node(new_node)
+        print(f"[Dynamic] Node Spawned: {new_id}")
+
+
+
+
+    # Existing energy simulation logic goes here
     print("\n--- Energy Simulation ---")
 
     uav = env.nodes[0]
@@ -185,6 +222,12 @@ def main():
     # -------- Visualization --------
     if Config.ENABLE_VISUALS:
         PlotRenderer.render_environment(env)
+        PlotRenderer.render_energy_plots(visited, energy_consumed_total)
+        PlotRenderer.render_metrics_snapshot(
+            mission_completion,
+            energy_consumed_total
+        )
+
 
 
 if __name__ == "__main__":

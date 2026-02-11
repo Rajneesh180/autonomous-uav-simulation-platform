@@ -27,3 +27,14 @@ class Config:
     ENABLE_OBSTACLES = True
     ENABLE_RISK_ZONES = True
     ENABLE_VISUALS = True
+
+
+    # -------- Temporal Engine --------
+    TIME_STEP = 1
+    MAX_TIME_STEPS = 50
+    ENABLE_TEMPORAL = True
+
+    # -------- Phase 3 Dynamic Controls --------
+    ENABLE_DYNAMIC_NODES = True
+    DYNAMIC_NODE_INTERVAL = 10   # every 10 ticks
+    MAX_DYNAMIC_NODES = 30

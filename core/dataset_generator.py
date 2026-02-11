@@ -16,3 +16,12 @@ def generate_nodes(mode: str, count: int, width: int, height: int, seed: int | N
 
     # Future modes can be added here (spiral, clustered, etc.)
     return nodes
+
+def spawn_single_node(width, height, node_id):
+    import random
+    from core.node_model import Node
+
+    x = random.randint(0, width)
+    y = random.randint(0, height)
+
+    return Node(node_id, x, y)
