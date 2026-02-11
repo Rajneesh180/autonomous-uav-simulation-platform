@@ -32,8 +32,7 @@ def main():
     env.dataset_mode = Config.DATASET_MODE
 
     # -------- Temporal Engine --------
-    if Config.ENABLE_TEMPORAL:
-        temporal = TemporalEngine(Config.TIME_STEP, Config.MAX_TIME_STEPS)
+    temporal = TemporalEngine(Config.TIME_STEP, Config.MAX_TIME_STEPS)
 
     # -------- Node Generation --------
     nodes = generate_nodes(
@@ -85,6 +84,10 @@ def main():
 
     if env.environment_changed:
         print("[Temporal] Environment mutated during simulation")
+        temporal.trigger_replan("environment_changed")
+
+    if temporal.replan_required:
+        print(f"[Replan Triggered] Reason: {temporal.replan_reason}")
 
     # Existing energy simulation logic goes here
     print("\n--- Energy Simulation ---")
@@ -111,6 +114,8 @@ def main():
         # -------- Collision Check --------
         if env.has_collision(uav.position(), target.position()):
             collision_count += 1
+            temporal.trigger_replan("obstacle_blocked")
+            print(f"[Replan Triggered] Reason: {temporal.replan_reason}")
             print(f"Path blocked by obstacle to Node {target.id}")
             continue
 
@@ -142,6 +147,8 @@ def main():
         if not EnergyModel.can_return_to_base(uav, target.position(), base_position):
             unsafe_return_count += 1
             abort_reason = "unsafe_return"
+            temporal.trigger_replan("energy_risk")
+            print(f"[Replan Triggered] Reason: {temporal.replan_reason}")
             print("Return-to-base unsafe. Mission halted.")
             break
 

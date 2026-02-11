@@ -6,7 +6,7 @@ class Config:
     CLUSTER_COUNT = 5
     DATASET_MODE = "random"
     RANDOM_SEED = 42
-    RANDOMIZE_SEED = True
+    RANDOMIZE_SEED = False
 
     # -------- Visualization --------
     SCREEN_WIDTH = 1000

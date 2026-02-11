@@ -4,6 +4,8 @@ class TemporalEngine:
         self.max_steps = max_steps
         self.current_step = 0
         self.active = True
+        self.replan_required = False
+        self.replan_reason = None
 
     def reset(self):
         self.current_step = 0
@@ -26,3 +28,11 @@ class TemporalEngine:
             "max_steps": self.max_steps,
             "active": self.active,
         }
+
+    def trigger_replan(self, reason: str):
+        self.replan_required = True
+        self.replan_reason = reason
+
+    def reset_replan(self):
+        self.replan_required = False
+        self.replan_reason = None
