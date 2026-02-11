@@ -179,6 +179,7 @@ def main():
     print(f"Energy Efficiency: {energy_efficiency}")
     print(f"Coverage Ratio: {coverage_ratio}")
     print(f"Constraint Violations: {constraint_flag}")
+    print(f"Replan Count: {temporal.replan_count}")
 
     # -------- Metrics Test --------
     timer_start = MetricEngine.start_timer()
@@ -207,6 +208,7 @@ def main():
             "constraint_flag": constraint_flag,
             "abort_flag": abort_flag,
             "return_flag": return_flag,
+            "replan_count": temporal.replan_count,
         }
 
         Logger.log_json("run_log.json", payload)
