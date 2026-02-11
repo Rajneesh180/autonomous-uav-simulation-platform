@@ -67,6 +67,13 @@ class Environment:
                 multiplier *= 1.5
         return multiplier
 
+    def point_in_obstacle(self, pos):
+        x, y = pos
+        for obs in self.obstacles:
+            if obs.contains_point(x, y):
+                return True
+        return False
+
     # ---------------- Summary ----------------
     def summary(self):
         return {
@@ -78,3 +85,4 @@ class Environment:
             "no_fly_zone_count": len(self.no_fly_zones),
             "risk_zone_count": len(self.risk_zones)
         }
+

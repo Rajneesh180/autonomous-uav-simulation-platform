@@ -71,11 +71,16 @@ def main():
         new_node = spawn_single_node(
             Config.MAP_WIDTH,
             Config.MAP_HEIGHT,
-            new_id
+            new_id,
+            env
         )
 
-        env.add_node(new_node)
-        print(f"[Dynamic] Node Spawned: {new_id}")
+        if new_node:
+            env.add_node(new_node)
+            print(f"[Dynamic] Node Spawned: {new_id}")
+        else:
+            print("[Dynamic] Spawn Skipped (Obstacle Collision)")
+
 
 
 

@@ -17,11 +17,20 @@ def generate_nodes(mode: str, count: int, width: int, height: int, seed: int | N
     # Future modes can be added here (spiral, clustered, etc.)
     return nodes
 
-def spawn_single_node(width, height, node_id):
+def spawn_single_node(width, height, node_id, env):
     import random
     from core.node_model import Node
 
-    x = random.randint(0, width)
-    y = random.randint(0, height)
+    attempts = 0
 
-    return Node(node_id, x, y)
+    while attempts < 5:
+        x = random.randint(0, width)
+        y = random.randint(0, height)
+
+        if not env.point_in_obstacle((x, y)):
+            return Node(node_id, x, y)
+
+        attempts += 1
+
+    return None
+
