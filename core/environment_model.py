@@ -1,3 +1,5 @@
+import random
+
 from typing import List, Tuple
 from core.node_model import Node
 
@@ -27,6 +29,20 @@ class Environment:
 
     def get_node_count(self) -> int:
         return len(self.nodes)
+
+    def remove_random_node(self, min_floor=5):
+        if len(self.nodes) <= min_floor:
+            return False
+
+        # never remove UAV anchor node
+        removable = self.nodes[1:]
+        if not removable:
+            return False
+
+        node = random.choice(removable)
+        self.nodes.remove(node)
+        self.mark_changed()
+        return True
 
     # ---------------- Obstacles ----------------
     def add_obstacle(self, obstacle):

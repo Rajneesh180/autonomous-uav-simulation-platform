@@ -38,3 +38,9 @@ class Config:
     ENABLE_DYNAMIC_NODES = True
     DYNAMIC_NODE_INTERVAL = 10  # every 10 ticks
     MAX_DYNAMIC_NODES = 30
+
+    # -------- Dynamic Node Removal --------
+    ENABLE_NODE_REMOVAL = True
+    NODE_REMOVAL_INTERVAL = 10
+    NODE_REMOVAL_PROBABILITY = 0.25
+    MIN_NODE_FLOOR = 10

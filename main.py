@@ -1,5 +1,6 @@
 import time
 import os
+import random
 
 from config.config import Config
 from core.seed_manager import set_global_seed
@@ -68,9 +69,20 @@ def main():
     print("\n--- Temporal Simulation ---")
 
     while temporal.tick():
+        env.reset_change_flag()
         print(f"[Time Step] {temporal.current_step}")
         env.update_risk_zones(temporal.current_step)
         env.update_obstacles()
+        # -------- Dynamic Node Removal --------
+        if (
+            Config.ENABLE_NODE_REMOVAL
+            and temporal.current_step % Config.NODE_REMOVAL_INTERVAL == 0
+        ):
+
+            if random.random() < Config.NODE_REMOVAL_PROBABILITY:
+                removed = env.remove_random_node(Config.MIN_NODE_FLOOR)
+                if removed:
+                    print("[Dynamic] Node Removed")
         PlotRenderer.render_environment_frame(
             env, run_manager.get_frames_path(), temporal.current_step
         )
