@@ -1,4 +1,5 @@
 import time
+import os
 
 from config.config import Config
 from core.seed_manager import set_global_seed
@@ -12,6 +13,7 @@ from core.risk_zone_model import RiskZone
 from visualization.plot_renderer import PlotRenderer
 from core.temporal_engine import TemporalEngine
 from core.dataset_generator import spawn_single_node
+from core.run_manager import RunManager
 
 
 def main():
@@ -26,6 +28,10 @@ def main():
         active_seed = Config.RANDOM_SEED
         set_global_seed(active_seed)
         print(f"[SeedManager] Global seed set to {active_seed}")
+
+    # -------- Run Manager --------
+    run_manager = RunManager()
+    print(f"[RunManager] Run ID: {run_manager.get_run_id()}")
 
     # -------- Environment --------
     env = Environment(Config.MAP_WIDTH, Config.MAP_HEIGHT)
@@ -92,7 +98,11 @@ def main():
     # Existing energy simulation logic goes here
     print("\n--- Energy Simulation ---")
 
+    if not env.nodes:
+        print("No nodes generated. Exiting.")
+        return
     uav = env.nodes[0]
+
     center = (env.width // 2, env.height // 2)
     base_position = env.get_safe_start(center)
     uav.x, uav.y = base_position
@@ -106,6 +116,11 @@ def main():
     # NEW COUNTERS
     collision_count = 0
     unsafe_return_count = 0
+
+    # -------- Temporal History Trackers --------
+    visited_history = []
+    battery_history = []
+    replan_history = []
 
     for target in env.nodes[1:]:
 
@@ -159,6 +174,11 @@ def main():
             f"Battery Left: {round(uav.current_battery, 2)}"
         )
 
+        # -------- Temporal Tracking --------
+        visited_history.append(visited)
+        battery_history.append(uav.current_battery)
+        replan_history.append(temporal.replan_count)
+
     # -------- MetricEngine Derived Metrics --------
     mission_completion = MetricEngine.mission_completion(visited, attempted)
 
@@ -211,16 +231,33 @@ def main():
             "replan_count": temporal.replan_count,
         }
 
-        Logger.log_json("run_log.json", payload)
-        Logger.log_csv("run_metrics.csv", list(payload.keys()), list(payload.values()))
+        log_dir = run_manager.get_logs_path()
 
-        print("Logs written to /logs directory")
+        Logger.log_json(os.path.join(log_dir, "run_log.json"), payload)
+
+        Logger.log_csv(
+            os.path.join(log_dir, "run_metrics.csv"),
+            list(payload.keys()),
+            list(payload.values()),
+        )
+
+        print(f"Logs written to {run_manager.get_logs_path()}")
 
     # -------- Visualization --------
     if Config.ENABLE_VISUALS:
-        PlotRenderer.render_environment(env)
-        PlotRenderer.render_energy_plots(visited, energy_consumed_total)
-        PlotRenderer.render_metrics_snapshot(mission_completion, energy_consumed_total)
+        PlotRenderer.render_environment(env, run_manager.get_figures_path())
+        PlotRenderer.render_energy_plots(
+            visited, energy_consumed_total, run_manager.get_plots_path()
+        )
+        PlotRenderer.render_metrics_snapshot(
+            mission_completion, energy_consumed_total, run_manager.get_plots_path()
+        )
+        PlotRenderer.render_time_series(
+            visited_history,
+            battery_history,
+            replan_history,
+            run_manager.get_plots_path(),
+        )
 
 
 if __name__ == "__main__":

@@ -3,23 +3,24 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-LOG_DIR = Path("logs")
-LOG_DIR.mkdir(exist_ok=True)
-
 
 class Logger:
     @staticmethod
-    def log_json(filename, data):
-        filepath = LOG_DIR / filename
-        with open(filepath, "a") as f:
+    def log_json(filepath, data):
+        path = Path(filepath)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(path, "a") as f:
             f.write(json.dumps(data) + "\n")
 
     @staticmethod
-    def log_csv(filename, headers, row):
-        filepath = LOG_DIR / filename
-        file_exists = filepath.exists()
+    def log_csv(filepath, headers, row):
+        path = Path(filepath)
+        path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(filepath, "a", newline="") as f:
+        file_exists = path.exists()
+
+        with open(path, "a", newline="") as f:
             writer = csv.writer(f)
             if not file_exists:
                 writer.writerow(headers)
