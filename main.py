@@ -283,6 +283,20 @@ def main():
     print(f"Sample Path Length: {round(sample_path_length, 2)}")
     print(f"Runtime: {runtime}s")
 
+    # -------- Temporal Metrics --------
+    initial_nodes = Config.NODE_COUNT
+    final_nodes = env.get_node_count()
+
+    adaptation_latency = temporal.replan_count / max(1, temporal.current_step)
+    node_churn_rate = abs(final_nodes - initial_nodes) / max(1, initial_nodes)
+    path_stability_index = 1 / (1 + temporal.replan_count)
+    energy_prediction_error = energy_consumed_total / max(1, visited)
+
+    print(f"Adaptation Latency: {round(adaptation_latency, 3)}")
+    print(f"Node Churn Rate: {round(node_churn_rate, 3)}")
+    print(f"Path Stability Index: {round(path_stability_index, 3)}")
+    print(f"Energy Prediction Error: {round(energy_prediction_error, 3)}")
+
     # -------- Logging --------
     if Config.ENABLE_LOGGING:
         payload = {
@@ -301,6 +315,11 @@ def main():
             "return_flag": return_flag,
             "replan_count": temporal.replan_count,
             "recluster_count": cluster_manager.get_recluster_count(),
+            # -------- NEW TEMPORAL METRICS --------
+            "adaptation_latency": round(adaptation_latency, 3),
+            "node_churn_rate": round(node_churn_rate, 3),
+            "path_stability_index": round(path_stability_index, 3),
+            "energy_prediction_error": round(energy_prediction_error, 3),
         }
 
         log_dir = run_manager.get_logs_path()
