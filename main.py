@@ -71,6 +71,9 @@ def main():
         print(f"[Time Step] {temporal.current_step}")
         env.update_risk_zones(temporal.current_step)
         env.update_obstacles()
+        PlotRenderer.render_environment_frame(
+            env, run_manager.get_frames_path(), temporal.current_step
+        )
 
     if (
         Config.ENABLE_DYNAMIC_NODES

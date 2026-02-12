@@ -11,6 +11,7 @@ class RunManager:
         self.figures_path = os.path.join(self.run_path, "figures")
         self.plots_path = os.path.join(self.run_path, "plots")
         self.logs_path = os.path.join(self.run_path, "logs")
+        self.frames_path = os.path.join(self.run_path, "frames")
 
         self._create_dirs()
 
@@ -18,6 +19,7 @@ class RunManager:
         os.makedirs(self.figures_path, exist_ok=True)
         os.makedirs(self.plots_path, exist_ok=True)
         os.makedirs(self.logs_path, exist_ok=True)
+        os.makedirs(self.frames_path, exist_ok=True)
 
     def get_figures_path(self):
         return self.figures_path
@@ -27,6 +29,9 @@ class RunManager:
 
     def get_logs_path(self):
         return self.logs_path
+
+    def get_frames_path(self):
+        return self.frames_path
 
     def get_run_path(self):
         return self.run_path
