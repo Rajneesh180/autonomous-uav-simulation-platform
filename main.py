@@ -83,6 +83,7 @@ def main():
                 removed = env.remove_random_node(Config.MIN_NODE_FLOOR)
                 if removed:
                     print("[Dynamic] Node Removed")
+
         PlotRenderer.render_environment_frame(
             env, run_manager.get_frames_path(), temporal.current_step
         )
@@ -137,6 +138,7 @@ def main():
     battery_history = []
     replan_history = []
 
+    frame_counter = 10000
     for target in env.nodes[1:]:
 
         attempted += 1
@@ -181,6 +183,37 @@ def main():
             print(f"[Replan Triggered] Reason: {temporal.replan_reason}")
             print("Return-to-base unsafe. Mission halted.")
             break
+
+        # -------- Motion Interpolation --------
+        steps = 10
+        tx, ty = target.position()
+        dx = (tx - uav.x) / steps
+        dy = (ty - uav.y) / steps
+
+        motion_blocked = False
+
+        for s in range(steps):
+            next_x = uav.x + dx
+            next_y = uav.y + dy
+
+            # ----- Mid-Motion Collision Guard -----
+            if env.point_in_obstacle((next_x, next_y)):
+                collision_count += 1
+                temporal.trigger_replan("mid_motion_collision")
+                print("[Replan Triggered] Reason: mid_motion_collision")
+                break
+
+            uav.x = next_x
+            uav.y = next_y
+
+            # ----- Frame Capture -----
+            frame_counter += 1
+            PlotRenderer.render_environment_frame(
+                env, run_manager.get_frames_path(), frame_counter
+            )
+
+        # ----- Snap Exact Target (float drift fix) -----
+        uav.x, uav.y = tx, ty
 
         visited += 1
 
