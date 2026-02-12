@@ -105,20 +105,8 @@ class Environment:
             zone.fluctuate(step)
 
     def update_obstacles(self):
-        changed = False
-
         for obs in self.obstacles:
-            old_pos = (obs.x1, obs.y1, obs.x2, obs.y2)
-
             obs.move(self.width, self.height)
-
-            new_pos = (obs.x1, obs.y1, obs.x2, obs.y2)
-
-            if old_pos != new_pos:
-                changed = True
-
-        if changed:
-            self.mark_changed()
 
     def get_safe_start(self, default=(0, 0)):
         x, y = default

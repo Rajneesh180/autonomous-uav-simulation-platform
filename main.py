@@ -15,6 +15,7 @@ from visualization.plot_renderer import PlotRenderer
 from core.temporal_engine import TemporalEngine
 from core.dataset_generator import spawn_single_node
 from core.run_manager import RunManager
+from clustering.cluster_manager import ClusterManager
 
 
 def main():
@@ -33,6 +34,8 @@ def main():
     # -------- Run Manager --------
     run_manager = RunManager()
     print(f"[RunManager] Run ID: {run_manager.get_run_id()}")
+
+    cluster_manager = ClusterManager()
 
     # -------- Environment --------
     env = Environment(Config.MAP_WIDTH, Config.MAP_HEIGHT)
@@ -65,51 +68,70 @@ def main():
     print("Environment Summary:", env.summary())
 
     # -------- Energy Simulation --------
-
     print("\n--- Temporal Simulation ---")
 
     while temporal.tick():
         env.reset_change_flag()
         print(f"[Time Step] {temporal.current_step}")
+
+        # -------- Environment Updates --------
         env.update_risk_zones(temporal.current_step)
         env.update_obstacles()
+
         # -------- Dynamic Node Removal --------
         if (
             Config.ENABLE_NODE_REMOVAL
             and temporal.current_step % Config.NODE_REMOVAL_INTERVAL == 0
         ):
-
             if random.random() < Config.NODE_REMOVAL_PROBABILITY:
                 removed = env.remove_random_node(Config.MIN_NODE_FLOOR)
                 if removed:
+                    env.mark_changed()
                     print("[Dynamic] Node Removed")
 
+        # -------- Dynamic Node Spawn --------
+        if (
+            Config.ENABLE_DYNAMIC_NODES
+            and temporal.current_step % Config.DYNAMIC_NODE_INTERVAL == 0
+            and len(env.nodes) < Config.NODE_COUNT + Config.MAX_DYNAMIC_NODES
+        ):
+            new_id = len(env.nodes)
+            new_node = spawn_single_node(
+                Config.MAP_WIDTH,
+                Config.MAP_HEIGHT,
+                new_id,
+                env,
+            )
+
+            if new_node:
+                env.add_node(new_node)
+                env.mark_changed()
+                print(f"[Dynamic] Node Spawned: {new_id}")
+            else:
+                print("[Dynamic] Spawn Skipped (Obstacle Collision)")
+
+        # -------- Reclustering Trigger --------
+        current_nodes = env.get_node_count()
+        if cluster_manager.should_recluster(current_nodes):
+            print("[Cluster] Recomputing clusters...")
+            cluster_manager.mark_clustered(current_nodes)
+
+        # -------- Replan Trigger --------
+        if env.environment_changed:
+            print("[Temporal] Environment mutated during simulation")
+            temporal.trigger_replan("environment_changed")
+            env.reset_change_flag()
+
+        if temporal.replan_required:
+            print(f"[Replan Triggered] Reason: {temporal.replan_reason}")
+            temporal.reset_replan()
+
+        # -------- Frame Capture --------
         PlotRenderer.render_environment_frame(
-            env, run_manager.get_frames_path(), temporal.current_step
+            env,
+            run_manager.get_frames_path(),
+            temporal.current_step,
         )
-
-    if (
-        Config.ENABLE_DYNAMIC_NODES
-        and temporal.current_step % Config.DYNAMIC_NODE_INTERVAL == 0
-        and len(env.nodes) < Config.NODE_COUNT + Config.MAX_DYNAMIC_NODES
-    ):
-        new_id = len(env.nodes)
-
-        new_node = spawn_single_node(Config.MAP_WIDTH, Config.MAP_HEIGHT, new_id, env)
-
-        if new_node:
-            env.add_node(new_node)
-            env.mark_changed()
-            print(f"[Dynamic] Node Spawned: {new_id}")
-        else:
-            print("[Dynamic] Spawn Skipped (Obstacle Collision)")
-
-    if env.environment_changed:
-        print("[Temporal] Environment mutated during simulation")
-        temporal.trigger_replan("environment_changed")
-
-    if temporal.replan_required:
-        print(f"[Replan Triggered] Reason: {temporal.replan_reason}")
 
     # Existing energy simulation logic goes here
     print("\n--- Energy Simulation ---")
@@ -248,6 +270,7 @@ def main():
     print(f"Coverage Ratio: {coverage_ratio}")
     print(f"Constraint Violations: {constraint_flag}")
     print(f"Replan Count: {temporal.replan_count}")
+    print(f"Recluster Count: {cluster_manager.get_recluster_count()}")
 
     # -------- Metrics Test --------
     timer_start = MetricEngine.start_timer()
@@ -277,6 +300,7 @@ def main():
             "abort_flag": abort_flag,
             "return_flag": return_flag,
             "replan_count": temporal.replan_count,
+            "recluster_count": cluster_manager.get_recluster_count(),
         }
 
         log_dir = run_manager.get_logs_path()
