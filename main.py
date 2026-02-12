@@ -16,6 +16,7 @@ from core.temporal_engine import TemporalEngine
 from core.dataset_generator import spawn_single_node
 from core.run_manager import RunManager
 from clustering.cluster_manager import ClusterManager
+from core.stability_monitor import StabilityMonitor
 
 
 def main():
@@ -36,6 +37,8 @@ def main():
     print(f"[RunManager] Run ID: {run_manager.get_run_id()}")
 
     cluster_manager = ClusterManager()
+
+    stability_monitor = StabilityMonitor()
 
     # -------- Environment --------
     env = Environment(Config.MAP_WIDTH, Config.MAP_HEIGHT)
@@ -297,6 +300,13 @@ def main():
     print(f"Path Stability Index: {round(path_stability_index, 3)}")
     print(f"Energy Prediction Error: {round(energy_prediction_error, 3)}")
 
+    stability_monitor.record(
+        temporal.replan_count, node_churn_rate, energy_prediction_error
+    )
+
+    stability = stability_monitor.stability_score()
+    print(f"Stability Score: {stability}")
+
     # -------- Logging --------
     if Config.ENABLE_LOGGING:
         payload = {
@@ -320,6 +330,7 @@ def main():
             "node_churn_rate": round(node_churn_rate, 3),
             "path_stability_index": round(path_stability_index, 3),
             "energy_prediction_error": round(energy_prediction_error, 3),
+            "stability_score": stability,
         }
 
         log_dir = run_manager.get_logs_path()
