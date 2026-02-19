@@ -181,6 +181,23 @@ class PlotRenderer:
         plt.xlim(0, env.width)
         plt.ylim(0, env.height)
         plt.title(f"Step {step}")
+        # --- Replan Flash Overlay ---
+        if hasattr(env, "temporal_engine"):
+            flash = env.temporal_engine.consume_replan_flash()
+            if flash:
+                ax = plt.gca()
+                ax.set_facecolor((1.0, 0.85, 0.85))  # light red
+                ax.text(
+                    0.5,
+                    0.95,
+                    "REPLAN TRIGGERED",
+                    transform=ax.transAxes,
+                    ha="center",
+                    va="top",
+                    fontsize=12,
+                    color="red",
+                    fontweight="bold",
+                )
 
         filename = f"{step:04d}.png"
         plt.savefig(f"{save_dir}/{filename}", dpi=200)

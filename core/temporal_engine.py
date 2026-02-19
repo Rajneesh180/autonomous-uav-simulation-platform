@@ -4,9 +4,14 @@ class TemporalEngine:
         self.max_steps = max_steps
         self.current_step = 0
         self.active = True
+
+        # --- Replan State ---
         self.replan_count = 0
         self.replan_required = False
         self.replan_reason = None
+
+        # --- Visual Flash Buffer ---
+        self.replan_flash_frames = 0
 
     def reset(self):
         self.current_step = 0
@@ -34,7 +39,21 @@ class TemporalEngine:
         if not self.replan_required:
             self.replan_required = True
             self.replan_reason = reason
+
         self.replan_count += 1
+
+        # Activate visual flash for 5 frames
+        self.replan_flash_frames = 5
+
+    def consume_replan_flash(self):
+        """
+        Called by renderer.
+        Returns True if flash should be shown.
+        """
+        if self.replan_flash_frames > 0:
+            self.replan_flash_frames -= 1
+            return True
+        return False
 
     def reset_replan(self):
         self.replan_required = False

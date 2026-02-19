@@ -46,6 +46,7 @@ def main():
 
     # -------- Temporal Engine --------
     temporal = TemporalEngine(Config.TIME_STEP, Config.MAX_TIME_STEPS)
+    env.temporal_engine = temporal
 
     # -------- Node Generation --------
     nodes = generate_nodes(
