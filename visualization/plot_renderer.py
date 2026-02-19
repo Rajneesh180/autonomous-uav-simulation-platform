@@ -154,10 +154,12 @@ class PlotRenderer:
 
         plt.figure(figsize=(8, 6))
 
+        # -------- Nodes --------
         xs = [node.x for node in env.nodes]
         ys = [node.y for node in env.nodes]
         plt.scatter(xs, ys, c="blue")
 
+        # -------- Obstacles --------
         for obs in env.obstacles:
             rect = plt.Rectangle(
                 (obs.x1, obs.y1),
@@ -168,6 +170,7 @@ class PlotRenderer:
             )
             plt.gca().add_patch(rect)
 
+        # -------- Risk Zones --------
         for rz in env.risk_zones:
             rect = plt.Rectangle(
                 (rz.x1, rz.y1),
@@ -178,15 +181,20 @@ class PlotRenderer:
             )
             plt.gca().add_patch(rect)
 
+        # -------- UAV Marker (ADD HERE) --------
+        if hasattr(env, "uav"):
+            plt.scatter(env.uav.x, env.uav.y, c="black", s=80, marker="^", zorder=10)
+
         plt.xlim(0, env.width)
         plt.ylim(0, env.height)
         plt.title(f"Step {step}")
-        # --- Replan Flash Overlay ---
+
+        # -------- Replan Flash --------
         if hasattr(env, "temporal_engine"):
             flash = env.temporal_engine.consume_replan_flash()
             if flash:
                 ax = plt.gca()
-                ax.set_facecolor((1.0, 0.85, 0.85))  # light red
+                ax.set_facecolor((1.0, 0.85, 0.85))
                 ax.text(
                     0.5,
                     0.95,

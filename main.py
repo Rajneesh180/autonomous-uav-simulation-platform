@@ -144,6 +144,7 @@ def main():
         print("No nodes generated. Exiting.")
         return
     uav = env.nodes[0]
+    env.uav = uav
 
     center = (env.width // 2, env.height // 2)
     base_position = env.get_safe_start(center)
