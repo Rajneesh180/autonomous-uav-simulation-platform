@@ -181,9 +181,33 @@ class PlotRenderer:
             )
             plt.gca().add_patch(rect)
 
-        # -------- UAV Marker (ADD HERE) --------
+        # -------- UAV Rendering --------
         if hasattr(env, "uav"):
-            plt.scatter(env.uav.x, env.uav.y, c="black", s=80, marker="^", zorder=10)
+
+            # --- UAV Trail ---
+            if hasattr(env, "uav_trail") and len(env.uav_trail) > 1:
+                trail_x = [p[0] for p in env.uav_trail]
+                trail_y = [p[1] for p in env.uav_trail]
+
+                plt.plot(
+                    trail_x,
+                    trail_y,
+                    linewidth=1.2,
+                    alpha=0.8,
+                    zorder=5,
+                )
+
+            # --- UAV Marker ---
+            plt.scatter(
+                env.uav.x,
+                env.uav.y,
+                s=120,
+                marker="^",
+                c="black",
+                edgecolors="white",
+                linewidths=0.8,
+                zorder=10,
+            )
 
         plt.xlim(0, env.width)
         plt.ylim(0, env.height)

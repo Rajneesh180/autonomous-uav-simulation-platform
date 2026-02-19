@@ -106,7 +106,8 @@ class Environment:
 
     def update_obstacles(self):
         for obs in self.obstacles:
-            obs.move(self.width, self.height)
+            if hasattr(obs, "move"):
+                obs.move(self.width, self.height)
 
     def get_safe_start(self, default=(0, 0)):
         x, y = default
