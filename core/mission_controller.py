@@ -36,6 +36,10 @@ class MissionController:
         self.collision_count = 0
         self.unsafe_return_count = 0
 
+        # Phase-3 Energy Prediction Error
+        self.energy_prediction_error_sum = 0.0
+        self.energy_prediction_samples = 0
+
         # Histories
         self.visited_history = []
         self.battery_history = []
@@ -137,7 +141,7 @@ class MissionController:
         ):
             PlotRenderer.render_environment_frame(
                 self.env,
-                self.run_manager.get_frames_path(),
+                self.run_manager.get_path("frames"),
                 self.temporal.current_step,
             )
 
@@ -159,9 +163,14 @@ class MissionController:
             self.event_timestamps.append(self.temporal.current_step)
 
             self.temporal.trigger_replan(reason)
+
+            # Log actual adaptation execution time (same step)
+            self.replan_timestamps.append(self.temporal.current_step)
+
             self.last_replan_step = self.temporal.current_step
 
     def _recompute_plan(self):
+
         # Remaining unvisited nodes (exclude UAV anchor at index 0)
         remaining = [n for n in self.env.nodes[1:] if n.id not in self.visited]
 
@@ -304,10 +313,18 @@ class MissionController:
 
         new_x, new_y, adjusted_distance = best_move
 
-        # Energy consumption
-        energy = EnergyModel.energy_for_distance(self.uav, adjusted_distance)
-        EnergyModel.consume(self.uav, energy)
-        self.energy_consumed_total += energy
+        # --- Energy Prediction ---
+        predicted_energy = EnergyModel.energy_for_distance(self.uav, adjusted_distance)
+
+        EnergyModel.consume(self.uav, predicted_energy)
+        self.energy_consumed_total += predicted_energy
+
+        # --- Phase-3 Energy Prediction Error Instrumentation ---
+        actual_energy_drop = predicted_energy  # deterministic model (for now)
+        prediction_error = abs(predicted_energy - actual_energy_drop)
+
+        self.energy_prediction_error_sum += prediction_error
+        self.energy_prediction_samples += 1
 
         # Return safety check
         if not EnergyModel.can_return_to_base(

@@ -3,38 +3,45 @@ from datetime import datetime
 
 
 class RunManager:
-    def __init__(self, base_dir="artifacts/runs"):
-        self.base_dir = base_dir
-        self.run_id = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.run_path = os.path.join(self.base_dir, self.run_id)
+    """
+    Central filesystem authority for a simulation run.
+    All runtime artifacts must be stored under:
+        results/runs/<RUN_ID>/
+    """
 
-        self.figures_path = os.path.join(self.run_path, "figures")
-        self.plots_path = os.path.join(self.run_path, "plots")
-        self.logs_path = os.path.join(self.run_path, "logs")
-        self.frames_path = os.path.join(self.run_path, "frames")
+    def __init__(self):
+        self.run_id = self._generate_run_id()
+        self.base_path = os.path.join("results", "runs", self.run_id)
 
-        self._create_dirs()
+        self.paths = {
+            "logs": os.path.join(self.base_path, "logs"),
+            "frames": os.path.join(self.base_path, "frames"),
+            "plots": os.path.join(self.base_path, "plots"),
+            "figures": os.path.join(self.base_path, "figures"),
+        }
 
-    def _create_dirs(self):
-        os.makedirs(self.figures_path, exist_ok=True)
-        os.makedirs(self.plots_path, exist_ok=True)
-        os.makedirs(self.logs_path, exist_ok=True)
-        os.makedirs(self.frames_path, exist_ok=True)
+        self._create_directories()
 
-    def get_figures_path(self):
-        return self.figures_path
+    # ----------------------------
+    # Internal
+    # ----------------------------
 
-    def get_plots_path(self):
-        return self.plots_path
+    def _generate_run_id(self):
+        return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    def get_logs_path(self):
-        return self.logs_path
+    def _create_directories(self):
+        os.makedirs(self.base_path, exist_ok=True)
+        for path in self.paths.values():
+            os.makedirs(path, exist_ok=True)
 
-    def get_frames_path(self):
-        return self.frames_path
+    # ----------------------------
+    # Public API
+    # ----------------------------
 
-    def get_run_path(self):
-        return self.run_path
+    def get_path(self, category: str):
+        if category not in self.paths:
+            raise ValueError(f"Invalid run category: {category}")
+        return self.paths[category]
 
     def get_run_id(self):
         return self.run_id

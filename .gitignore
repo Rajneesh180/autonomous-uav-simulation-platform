@@ -1,6 +1,20 @@
+# Python
 __pycache__/
 *.pyc
-.DS_Store
+
+# IDE
 .vscode/
 .idea/
+
+# OS
+.DS_Store
+
+# Runtime experiment outputs
+results/
+artifacts/
 logs/
+
+# Temporary
+*.log
+*.json
+*.csv
