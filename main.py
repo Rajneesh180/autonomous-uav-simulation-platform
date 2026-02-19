@@ -122,6 +122,36 @@ def main():
     print(f"Collision count: {mission.collision_count}")
     print(f"Unsafe return count: {mission.unsafe_return_count}")
 
+    # ---------------------------------------------------------
+    # Phase-3 Stability Metrics
+    # ---------------------------------------------------------
+
+    total_steps = step_counter if step_counter > 0 else 1
+
+    replan_frequency = temporal.replan_count / total_steps
+    collision_rate = mission.collision_count / total_steps
+
+    if mission.event_timestamps and mission.replan_timestamps:
+        latency_samples = [
+            r - e for e, r in zip(mission.event_timestamps, mission.replan_timestamps)
+        ]
+        adaptation_latency = (
+            sum(latency_samples) / len(latency_samples) if latency_samples else 0.0
+        )
+    else:
+        adaptation_latency = 0.0
+
+    path_stability_index = 1 - (temporal.replan_count / (len(mission.visited) + 1))
+
+    node_churn_impact = mission.event_count / (len(mission.visited) + 1)
+
+    print("\n--- Stability Metrics ---")
+    print(f"Replan Frequency: {round(replan_frequency, 4)}")
+    print(f"Collision Rate: {round(collision_rate, 4)}")
+    print(f"Adaptation Latency: {round(adaptation_latency, 4)}")
+    print(f"Path Stability Index: {round(path_stability_index, 4)}")
+    print(f"Node Churn Impact: {round(node_churn_impact, 4)}")
+
 
 if __name__ == "__main__":
     main()

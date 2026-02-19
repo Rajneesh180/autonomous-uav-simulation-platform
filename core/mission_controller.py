@@ -44,6 +44,13 @@ class MissionController:
         # Replan cooldown
         self.last_replan_step = -100
 
+        # ---------------------------------------------------------
+        # Phase-3 Stability Instrumentation
+        # ---------------------------------------------------------
+        self.event_count = 0
+        self.event_timestamps = []
+        self.replan_timestamps = []
+
         # UAV trail
         self.env.uav = self.uav
         self.env.uav_trail = []
@@ -55,7 +62,7 @@ class MissionController:
     # ---------------------------------------------------------
 
     def _initialize_queue(self):
-        self.target_queue = self.env.nodes[1:].copy()
+        self._recompute_plan()
 
     def is_active(self):
         return self.temporal.active and self.uav.current_battery > 0
@@ -146,11 +153,28 @@ class MissionController:
             >= Config.REPLAN_COOLDOWN_STEPS
         ):
             print(f"[Replan Triggered] Reason: {reason}")
+
+            # --- instrumentation ---
+            self.event_count += 1
+            self.event_timestamps.append(self.temporal.current_step)
+
             self.temporal.trigger_replan(reason)
             self.last_replan_step = self.temporal.current_step
 
     def _recompute_plan(self):
+        # Remaining unvisited nodes (exclude UAV anchor at index 0)
         remaining = [n for n in self.env.nodes[1:] if n.id not in self.visited]
+
+        if not remaining:
+            self.target_queue = []
+            self.current_target = None
+            return
+
+        # Sort by Euclidean distance from current UAV position
+        ux, uy = self.uav.position()
+
+        remaining.sort(key=lambda n: math.hypot(n.x - ux, n.y - uy))
+
         self.target_queue = remaining
         self.current_target = None
 
