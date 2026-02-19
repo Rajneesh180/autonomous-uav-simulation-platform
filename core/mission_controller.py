@@ -12,10 +12,13 @@ from visualization.plot_renderer import PlotRenderer
 
 
 class MissionController:
-    def __init__(self, env: Environment, temporal: TemporalEngine, run_manager=None):
+    def __init__(
+        self, env: Environment, temporal: TemporalEngine, run_manager=None, render=True
+    ):
         self.env = env
         self.temporal = temporal
         self.run_manager = run_manager
+        self.render_enabled = render
 
         # UAV anchor
         self.uav: Node = env.nodes[0]
@@ -79,7 +82,8 @@ class MissionController:
         if not self.temporal.tick():
             return
 
-        print(f"[Time Step] {self.temporal.current_step}")
+        if self.render_enabled:
+            print(f"[Time Step] {self.temporal.current_step}")
 
         # Obstacle motion toggle
         if Config.ENABLE_MOVING_OBSTACLES:
@@ -135,7 +139,8 @@ class MissionController:
 
         # Frame saving
         if (
-            Config.ENABLE_VISUALS
+            self.render_enabled
+            and Config.ENABLE_VISUALS
             and self.run_manager
             and self.temporal.current_step % Config.FRAME_SAVE_INTERVAL == 0
         ):

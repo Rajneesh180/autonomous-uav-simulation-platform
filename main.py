@@ -3,11 +3,10 @@ import json
 
 from core.simulation_runner import run_simulation
 from metrics.metric_engine import MetricEngine
+from core.batch_runner import BatchRunner
 
 
-def main():
-    print("=== Autonomous UAV Simulation Platform ===")
-
+def run_single():
     results = run_simulation(verbose=True)
     metrics = MetricEngine.compute_stability_metrics(results)
 
@@ -24,9 +23,7 @@ def main():
     for k, v in metrics.items():
         print(f"{k}: {round(v, 4)}")
 
-    # ---------------------------------------------------------
-    # Persist Stability Metrics (per run)
-    # ---------------------------------------------------------
+    # Persist per-run stability metrics
     metrics_path = os.path.join(
         "results",
         "runs",
@@ -37,6 +34,30 @@ def main():
 
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=4)
+
+
+def run_batch():
+    runner = BatchRunner(runs=10)
+    aggregated = runner.execute()
+
+    runner.save(aggregated)
+
+    print("\n--- Batch Aggregated Metrics ---")
+    for metric, stats in aggregated.items():
+        print(metric, stats)
+
+
+def main():
+    print("=== Autonomous UAV Simulation Platform ===")
+
+    MODE = "batch"  # change to "batch" when needed
+
+    if MODE == "single":
+        run_single()
+    elif MODE == "batch":
+        run_batch()
+    else:
+        raise ValueError("Invalid MODE. Use 'single' or 'batch'.")
 
 
 if __name__ == "__main__":

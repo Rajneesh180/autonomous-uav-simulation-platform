@@ -15,12 +15,16 @@ from core.stability_monitor import StabilityMonitor
 from core.clustering.cluster_manager import ClusterManager
 
 
-def run_simulation(verbose=True):
+def run_simulation(verbose=True, render=True, seed_override=None):
 
     # ---------------------------------------------------------
     # Seed Control
     # ---------------------------------------------------------
-    active_seed = int(time.time()) if Config.RANDOMIZE_SEED else Config.RANDOM_SEED
+    if seed_override is not None:
+        active_seed = seed_override
+    else:
+        active_seed = int(time.time()) if Config.RANDOMIZE_SEED else Config.RANDOM_SEED
+
     set_global_seed(active_seed)
 
     Config.apply_hostility_profile()
@@ -70,7 +74,12 @@ def run_simulation(verbose=True):
     # ---------------------------------------------------------
     # Mission Controller
     # ---------------------------------------------------------
-    mission = MissionController(env, temporal, run_manager)
+    mission = MissionController(
+        env,
+        temporal,
+        run_manager=run_manager,
+        render=render,
+    )
 
     step_counter = 0
 
