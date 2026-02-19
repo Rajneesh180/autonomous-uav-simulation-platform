@@ -178,8 +178,28 @@ class MissionController:
         self.target_queue = remaining
         self.current_target = None
 
+    def _rectangle_clearance(self, x, y, obs):
+        dx = max(obs.x1 - x, 0, x - obs.x2)
+        dy = max(obs.y1 - y, 0, y - obs.y2)
+        return math.hypot(dx, dy)
+
+    def _predicted_clearance(self, x, y, obs):
+        if not Config.ENABLE_MOVING_OBSTACLES:
+            return self._rectangle_clearance(x, y, obs)
+
+        # Predict next position (linear motion model)
+        pred_x1 = obs.x1 + obs.vx
+        pred_x2 = obs.x2 + obs.vx
+        pred_y1 = obs.y1 + obs.vy
+        pred_y2 = obs.y2 + obs.vy
+
+        dx = max(pred_x1 - x, 0, x - pred_x2)
+        dy = max(pred_y1 - y, 0, y - pred_y2)
+
+        return math.hypot(dx, dy)
+
     # ---------------------------------------------------------
-    # Predictive Movement
+    # Motion Primitive Selection (Research-Clean Version)
     # ---------------------------------------------------------
 
     def _move_one_step(self):
@@ -196,6 +216,7 @@ class MissionController:
         dy = target_pos[1] - current_pos[1]
         distance = math.hypot(dx, dy)
 
+        # Target reached
         if distance < 1e-3:
             self.visited.add(self.current_target.id)
             print(f"[Visited] Node {self.current_target.id}")
@@ -205,18 +226,108 @@ class MissionController:
         step_size = min(Config.UAV_STEP_SIZE, distance)
         base_angle = math.atan2(dy, dx)
 
-        candidate_angles = [0] + Config.STEERING_ANGLES
+        best_score = float("inf")
+        best_move = None
 
-        for angle_offset in candidate_angles:
+        # Generate motion primitives
+        for angle_offset in [0] + Config.STEERING_ANGLES:
+
             angle = base_angle + math.radians(angle_offset)
 
-            if self._is_direction_safe(current_pos, angle, step_size):
-                return
+            new_x = current_pos[0] + step_size * math.cos(angle)
+            new_y = current_pos[1] + step_size * math.sin(angle)
 
-        # All directions failed
-        self.collision_count += 1
-        self._trigger_replan("collision")
-        self.current_target = None
+            # Hard collision check
+            if self.env.point_in_obstacle((new_x, new_y)):
+                continue
+
+            travel_distance = math.hypot(new_x - current_pos[0], new_y - current_pos[1])
+
+            risk_mult = self.env.risk_multiplier((new_x, new_y))
+            adjusted_distance = travel_distance * risk_mult
+
+            # Energy feasibility
+            if not EnergyModel.can_travel(self.uav, adjusted_distance):
+                continue
+
+            # ---------- SCORING COMPONENTS ----------
+
+            # 1. Alignment score (cosine similarity)
+            to_target_vec = (dx, dy)
+            move_vec = (new_x - current_pos[0], new_y - current_pos[1])
+
+            dot = to_target_vec[0] * move_vec[0] + to_target_vec[1] * move_vec[1]
+            norm_prod = (
+                math.hypot(*to_target_vec) * math.hypot(*move_vec) + Config.SCORE_EPS
+            )
+
+            alignment_score = 1 - (dot / norm_prod)  # smaller is better
+
+            # 2. Obstacle proximity penalty
+            obstacle_penalty = 0.0
+
+            for obs in self.env.obstacles:
+                clearance = self._predicted_clearance(new_x, new_y, obs)
+
+                # Hard rejection if inside safety margin
+                if clearance < Config.COLLISION_MARGIN:
+                    obstacle_penalty += 1000.0
+                else:
+                    # Smooth inverse-distance penalty
+                    obstacle_penalty += 1.0 / (clearance + 1e-5)
+
+            # 3. Risk penalty
+            risk_penalty = risk_mult - 1.0
+
+            # 4. Energy penalty
+            energy_penalty = adjusted_distance
+
+            # ---------- TOTAL SCORE ----------
+
+            total_score = (
+                Config.ALIGNMENT_WEIGHT * alignment_score
+                + Config.OBSTACLE_PENALTY_WEIGHT * obstacle_penalty
+                + Config.RISK_PENALTY_WEIGHT * risk_penalty
+                + Config.ENERGY_PENALTY_WEIGHT * energy_penalty
+            )
+
+            if total_score < best_score:
+                best_score = total_score
+                best_move = (new_x, new_y, adjusted_distance)
+
+        # If no valid motion primitive found
+        if best_move is None:
+            self.collision_count += 1
+            self._trigger_replan("collision")
+            self.current_target = None
+            return
+
+        new_x, new_y, adjusted_distance = best_move
+
+        # Energy consumption
+        energy = EnergyModel.energy_for_distance(self.uav, adjusted_distance)
+        EnergyModel.consume(self.uav, energy)
+        self.energy_consumed_total += energy
+
+        # Return safety check
+        if not EnergyModel.can_return_to_base(
+            self.uav,
+            (new_x, new_y),
+            self.base_position,
+            self.env.risk_multiplier((new_x, new_y)),
+        ):
+            self.unsafe_return_count += 1
+            self._trigger_replan("energy_risk")
+            self.temporal.active = False
+            return
+
+        # Apply movement
+        self.uav.x = new_x
+        self.uav.y = new_y
+
+        self.env.uav_trail.append((new_x, new_y))
+        if len(self.env.uav_trail) > 30:
+            self.env.uav_trail.pop(0)
 
     # ---------------------------------------------------------
     # Predictive Safety Check

@@ -100,6 +100,22 @@ class Config:
     STEERING_ANGLES = [15, -15, 30, -30]
 
     # =========================================================
+    # Motion Primitive Scoring (Research-Clean Layer)
+    # =========================================================
+
+    # Weight balance for motion primitive evaluation
+    ALIGNMENT_WEIGHT = 1.0  # Attraction to target
+    OBSTACLE_PENALTY_WEIGHT = 3.0  # Proximity to obstacles
+    RISK_PENALTY_WEIGHT = 2.0  # Risk zone multiplier penalty
+    ENERGY_PENALTY_WEIGHT = 0.5  # Energy efficiency consideration
+
+    # Obstacle proximity radius (soft penalty zone)
+    OBSTACLE_INFLUENCE_RADIUS = 40.0
+
+    # Normalization epsilon
+    SCORE_EPS = 1e-6
+
+    # =========================================================
     # Hostility Policy Application
     # =========================================================
     @staticmethod
