@@ -1,4 +1,6 @@
+import math
 from metrics.metric_engine import MetricEngine
+from config.config import Config
 
 
 class EnergyModel:
@@ -6,7 +8,7 @@ class EnergyModel:
     Phase-3 Energy & Safety Model
 
     Responsibilities:
-    - Deterministic energy computation
+    - Deterministic Rotary-Wing energy computation
     - Travel feasibility checks
     - Return-to-base safety validation
     - Preventive threshold detection
@@ -17,18 +19,58 @@ class EnergyModel:
     # ---------------------------------------------------------
 
     @staticmethod
+    def propulsion_power(v: float) -> float:
+        """
+        Computes mechanical power P_p(v) in Watts required for a speed v.
+        Incorporates blade profile, induced, and parasite power.
+        """
+        P_0 = Config.PROFILE_POWER_HOVER
+        P_i = Config.INDUCED_POWER_HOVER
+        U_tip = Config.ROTOR_TIP_SPEED
+        v_0 = Config.MEAN_ROTOR_VELOCITY
+        d_0 = Config.FUSELAGE_DRAG_RATIO
+        rho = Config.AIR_DENSITY
+        s = Config.ROTOR_SOLIDITY
+        A = Config.ROTOR_DISC_AREA
+
+        # 1. Profile power (friction on rotor blades)
+        profile = P_0 * (1.0 + (3.0 * v**2) / (U_tip**2))
+
+        # 2. Induced power (downward thrust)
+        if v < 0.01:
+            induced = P_i
+        else:
+            term1 = math.sqrt(1.0 + (v**4) / (4.0 * v_0**4))
+            term2 = (v**2) / (2.0 * v_0**2)
+            inner_val = max(0.0, term1 - term2)
+            induced = P_i * math.sqrt(inner_val)
+
+        # 3. Parasite power (fuselage drag)
+        parasite = 0.5 * d_0 * rho * s * A * (v**3)
+
+        return profile + induced + parasite
+
+    @staticmethod
     def energy_for_distance(node, distance: float) -> float:
         """
-        Linear propulsion model.
+        Energy = Power(v) * dt
+        Assumes constant speed v over the temporal step dt.
         """
-        return max(0.0, distance) * node.energy_per_meter
+        dt = float(Config.TIME_STEP)
+        # Handle zero division safeguard
+        v = distance / dt if dt > 0 else 0.0
+        
+        # Energy = Power * Time
+        power = EnergyModel.propulsion_power(v)
+        return power * dt
 
     @staticmethod
     def hover_energy(node, hover_time: float) -> float:
         """
-        Hover cost (currently optional).
+        Hover cost: zero velocity power evaluation over hover_time.
         """
-        return max(0.0, hover_time) * node.hover_cost
+        power_hover = EnergyModel.propulsion_power(0.0)
+        return max(0.0, hover_time) * power_hover
 
     @staticmethod
     def total_energy(node, distance: float, hover_time: float = 0.0) -> float:

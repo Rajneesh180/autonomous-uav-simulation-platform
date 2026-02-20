@@ -32,11 +32,27 @@ class Config:
     LOG_FORMAT = "json"
 
     # =========================================================
-    # Energy Model
+    # Energy Model & Aerodynamics
     # =========================================================
-    BATTERY_CAPACITY = 600.0
+    BATTERY_CAPACITY = 600000.0  # Joules (scaled up for realistic Watt-seconds)
+    
+    # Rotary-Wing Aerodynamic Constants for Propulsion Power P_p(v(t))
+    UAV_MASS = 2.0                 # m (kg)
+    GRAVITY = 9.8                  # g (m/s^2)
+    AIR_DENSITY = 1.225            # rho (kg/m^3)
+    ROTOR_DISC_AREA = 0.503        # A (m^2)
+    ROTOR_SOLIDITY = 0.05          # s
+    ROTOR_TIP_SPEED = 120.0        # U_tip (m/s)
+    FUSELAGE_DRAG_RATIO = 0.6      # d_0
+    
+    # Derived Hovering Power Constants
+    PROFILE_POWER_HOVER = 79.856   # P_0 (W)
+    INDUCED_POWER_HOVER = 88.627   # P_i (W)
+    MEAN_ROTOR_VELOCITY = 4.03     # v_0 (m/s)
+
+    # Legacy basic constants (phased out for continuous modeling where applicable)
     ENERGY_PER_METER = 0.12
-    HOVER_COST = 0.02
+    HOVER_COST = PROFILE_POWER_HOVER + INDUCED_POWER_HOVER
     RETURN_THRESHOLD = 0.15
 
     ENABLE_ENERGY = True
