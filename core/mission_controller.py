@@ -9,6 +9,8 @@ from core.environment_model import Environment
 from core.node_model import Node
 from core.dataset_generator import spawn_single_node
 from visualization.plot_renderer import PlotRenderer
+from core.communication import CommunicationEngine
+from core.buffer_aware_manager import BufferAwareManager
 
 
 class MissionController:
@@ -130,6 +132,12 @@ class MissionController:
             self.temporal.active = False
             return
 
+        # Fill buffers for all unvisited nodes based on Generation Rate
+        dt = float(Config.TIME_STEP)
+        for node in self.env.nodes[1:]:
+            if node.id not in self.visited:
+                CommunicationEngine.fill_buffer(node, dt)
+
         self._move_one_step()
 
         # Histories
@@ -232,9 +240,25 @@ class MissionController:
 
         # Target reached
         if distance < 1e-3:
-            self.visited.add(self.current_target.id)
-            print(f"[Visited] Node {self.current_target.id}")
-            self.current_target = None
+            # We are hovering over the node to drain the buffer.
+            dt = float(Config.TIME_STEP)
+            data_collected = BufferAwareManager.process_data_collection(
+                self.uav.position(), self.current_target, dt
+            )
+            
+            # Hover energy computation
+            hover_e = EnergyModel.hover_energy(self.uav, dt)
+            EnergyModel.consume(self.uav, hover_e)
+            self.energy_consumed_total += hover_e
+            
+            # If buffer is empty, mark as visited
+            if self.current_target.current_buffer <= 1e-3:
+                self.visited.add(self.current_target.id)
+                print(f"[Visited] Node {self.current_target.id} (Buffer Drained)")
+                self.current_target = None
+            else:
+                hover_strategy = BufferAwareManager.get_optimal_hover_strategy(self.uav.position(), self.current_target)
+                print(f"[Hovering] Node {self.current_target.id} ({hover_strategy['strategy']}) | Reqd Time: {hover_strategy['required_service_time']:.2f}s | Vol: {self.current_target.current_buffer:.2f}Mb")
             return
 
         step_size = min(Config.UAV_STEP_SIZE, distance)
