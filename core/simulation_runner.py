@@ -13,6 +13,7 @@ from core.run_manager import RunManager
 from core.mission_controller import MissionController
 from core.stability_monitor import StabilityMonitor
 from core.clustering.cluster_manager import ClusterManager
+from visualization.plot_renderer import PlotRenderer
 
 
 def run_simulation(verbose=True, render=True, seed_override=None):
@@ -128,5 +129,25 @@ def run_simulation(verbose=True, render=True, seed_override=None):
     config_file = os.path.join(logs_path, "config_snapshot.json")
     with open(config_file, "w") as f:
         json.dump(config_snapshot, f, indent=4)
+
+    # ---------------------------------------------------------
+    # Final Visual Metric Artifact Generation
+    # ---------------------------------------------------------
+    visuals_path = run_manager.get_path("plots")
+    
+    PlotRenderer.render_environment(env, visuals_path)
+    
+    PlotRenderer.render_energy_plots(
+        visited=len(mission.visited),
+        energy_consumed=mission.energy_consumed_total,
+        save_dir=visuals_path
+    )
+    
+    PlotRenderer.render_time_series(
+        visited_hist=mission.visited_history,
+        battery_hist=mission.battery_history,
+        replan_hist=mission.replan_history,
+        save_dir=visuals_path
+    )
 
     return results

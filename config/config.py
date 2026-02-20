@@ -7,6 +7,7 @@ class Config:
 
     NODE_COUNT = 50
     CLUSTER_COUNT = 5
+    # Supported modes: random, priority_heavy, deadline_critical, risk_dense, mixed_feature
     DATASET_MODE = "random"
 
     # =========================================================

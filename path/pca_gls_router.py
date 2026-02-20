@@ -38,15 +38,24 @@ class PCAGLSRouter:
                 dist = PCAGLSRouter._compute_distance(current_pos, node.position())
                 
                 # Heuristic: distance + (time window urgency) - (buffer pressure)
-                urgency = max(0.0, node.time_window_end - (current_time + dist))
+                if math.isinf(node.time_window_end):
+                    urgency = 0.0
+                else:
+                    margin = node.time_window_end - (current_time + dist)
+                    urgency = 100.0 / (margin + 1.0) if margin >= 0 else 1000.0
+                
                 buffer_weight = node.current_buffer / (node.buffer_capacity + 1e-6)
                 
                 # PCA cost function (alpha, beta, gamma weightings)
-                cost = dist + (0.5 * urgency) - (500.0 * buffer_weight)
+                cost = dist + (10.0 * urgency) - (500.0 * buffer_weight)
 
                 if cost < best_cost:
                     best_cost = cost
                     best_node = node
+                    
+            if best_node is None:
+                # Fallback fallback
+                best_node = unvisited[0]
 
             # Proceed
             route.append(best_node)

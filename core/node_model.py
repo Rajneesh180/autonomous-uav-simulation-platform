@@ -18,6 +18,7 @@ class Node:
     risk: float = 0.0
     signal_strength: float = 1.0
     deadline: Optional[float] = None
+    reliability: float = 1.0
 
     # ---------------------------------------------------------
     # Buffer & Data Profile (DST-BA Implementation)
@@ -55,3 +56,21 @@ class Node:
 
     def reset_battery(self):
         self.current_battery = self.battery_capacity
+
+    def get_feature_vector(self) -> list:
+        """
+        Extracts the node properties as a numeric vector for scaling and semantic clustering.
+        Vector: [x, y, z, priority, risk, signal_strength, deadline/time_window, buffer, reliability]
+        """
+        safe_deadline = self.time_window_end if self.time_window_end != float('inf') else 9999.0
+        return [
+            self.x, 
+            self.y, 
+            self.z, 
+            float(self.priority), 
+            self.risk, 
+            self.signal_strength, 
+            safe_deadline, 
+            self.current_buffer,
+            self.reliability
+        ]
