@@ -3,9 +3,12 @@ import os
 import statistics
 from math import sqrt
 
+import pandas as pd
+
 from config.config import Config
 from core.simulation_runner import run_simulation
 from metrics.metric_engine import MetricEngine
+from visualization.batch_plotter import BatchPlotter
 
 
 class BatchRunner:
@@ -24,6 +27,7 @@ class BatchRunner:
     # ---------------------------------------------------------
 
     def execute(self):
+        # Execute runs
         for i in range(self.runs):
             print(f"\n=== Batch Run {i+1}/{self.runs} ===")
 
@@ -33,8 +37,14 @@ class BatchRunner:
                 seed_override=Config.RANDOM_SEED + i,
             )
             stability = MetricEngine.compute_stability_metrics(run_result)
+            
+            # Combine run variables for flat DataFrame representation
+            combined = run_result.copy()
+            combined.update(stability)
+            combined['mode'] = Config.DATASET_MODE
+            combined['hostility_level'] = Config.HOSTILITY_LEVEL
 
-            self.results.append(run_result)
+            self.results.append(combined)
             self.metrics.append(stability)
 
         return self._aggregate()
@@ -78,3 +88,13 @@ class BatchRunner:
             json.dump(aggregated_metrics, f, indent=4)
 
         print(f"\nBatch summary saved → {filepath}")
+        
+        # Phase 4: DataFrame Plotting (IEEE Stats)
+        df = pd.DataFrame(self.results)
+        plot_dir = os.path.join(output_path, "plots")
+        
+        print("\n[BatchRunner] Generating standard statistical figures...")
+        BatchPlotter.render_stability_boxplots(df, plot_dir)
+        BatchPlotter.render_semantic_correlation_heatmap(df, plot_dir)
+        BatchPlotter.render_efficiency_pareto(df, plot_dir)
+        print(f"[BatchRunner] Batch graphics finalized in: {plot_dir}")
