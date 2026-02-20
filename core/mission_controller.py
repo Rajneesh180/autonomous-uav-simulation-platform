@@ -11,6 +11,7 @@ from core.dataset_generator import spawn_single_node
 from visualization.plot_renderer import PlotRenderer
 from core.communication import CommunicationEngine
 from core.buffer_aware_manager import BufferAwareManager
+from path.pca_gls_router import PCAGLSRouter
 
 
 class MissionController:
@@ -192,12 +193,11 @@ class MissionController:
             self.current_target = None
             return
 
-        # Sort by Euclidean distance from current UAV position
         ux, uy, uz = self.uav.position()
 
-        remaining.sort(key=lambda n: math.hypot(n.x - ux, n.y - uy))
+        # Execute PCA-GLS Meta-Heuristic
+        self.target_queue = PCAGLSRouter.optimize((ux, uy, uz), remaining)
 
-        self.target_queue = remaining
         self.current_target = None
 
     def _rectangle_clearance(self, x, y, obs):
