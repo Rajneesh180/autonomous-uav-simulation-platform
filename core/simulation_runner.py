@@ -14,6 +14,7 @@ from core.mission_controller import MissionController
 from core.stability_monitor import StabilityMonitor
 from core.clustering.cluster_manager import ClusterManager
 from visualization.plot_renderer import PlotRenderer
+from metrics.metric_engine import MetricEngine
 
 
 def run_simulation(verbose=True, render=True, seed_override=None):
@@ -109,6 +110,16 @@ def run_simulation(verbose=True, render=True, seed_override=None):
             else 0.0
         ),
     }
+
+    # Semantic Evaluations
+    if Config.ENABLE_SEMANTIC_CLUSTERING:
+        visited_nodes_objs = [n for n in env.nodes if n.id in mission.visited]
+        semantic_scores = MetricEngine.compute_semantic_metrics(
+            visited_nodes=visited_nodes_objs,
+            all_nodes=env.nodes[1:], 
+            active_labels=mission.active_labels
+        )
+        results.update(semantic_scores)
 
     # ---------------------------------------------------------
     # Persist Run Summary

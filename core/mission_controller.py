@@ -11,6 +11,8 @@ from core.dataset_generator import spawn_single_node
 from visualization.plot_renderer import PlotRenderer
 from core.communication import CommunicationEngine
 from core.buffer_aware_manager import BufferAwareManager
+
+from core.clustering.cluster_manager import ClusterManager
 from path.pca_gls_router import PCAGLSRouter
 
 
@@ -36,6 +38,11 @@ class MissionController:
         safe_start = self.env.get_safe_start(center)
         self.uav.x, self.uav.y = safe_start
         self.base_position = safe_start
+
+        # Semantic Intelligence Engine
+        self.cluster_manager = ClusterManager()
+        self.active_centroids = []
+        self.active_labels = []
 
         # Metrics
         self.energy_consumed_total = 0.0
@@ -126,6 +133,13 @@ class MissionController:
                 self.target_queue.append(new_node)
                 self._trigger_replan("node_spawned")
 
+        # Periodically re-evaluate Semantic Clusters
+        unvisited_nodes = [n for n in self.env.nodes[1:] if n.id not in self.visited]
+        if self.temporal.current_step % 50 == 0 or self.cluster_manager.should_recluster(len(unvisited_nodes)):
+            self.active_centroids, self.active_labels = self.cluster_manager.perform_clustering(
+                unvisited_nodes, self.temporal.current_step
+            )
+
         # Replan handling
         if self.temporal.replan_required:
             self._recompute_plan()
@@ -199,7 +213,29 @@ class MissionController:
 
         ux, uy, uz = self.uav.position()
 
-        # Execute PCA-GLS Meta-Heuristic
+        # Phase-4 Hierarchical Semantic Routing: 
+        # If Semantic Clustering is actively tracking centroids, 
+        # find the closest latent density centroid and route to its member nodes first.
+        if len(self.active_centroids) > 0 and len(self.active_labels) == len(remaining):
+            import numpy as np
+            distances_to_centroids = [
+                (idx, np.linalg.norm(np.array([ux, uy, uz]) - centroid)) 
+                for idx, centroid in enumerate(self.active_centroids) 
+                if not np.all(centroid == 0) # Ignore empty noise clusters
+            ]
+            
+            if distances_to_centroids:
+                closest_cluster_idx = min(distances_to_centroids, key=lambda x: x[1])[0]
+                # Filter remaining to only the semantic locality
+                priority_subgroup = [
+                    remaining[i] for i, label in enumerate(self.active_labels) 
+                    if label == closest_cluster_idx
+                ]
+                # Fallback if DBSCAN noise filtered out all valid subgroup routers
+                if priority_subgroup:
+                    remaining = priority_subgroup
+
+        # Execute PCA-GLS Meta-Heuristic on the priority subgroup
         self.target_queue = PCAGLSRouter.optimize((ux, uy, uz), remaining)
 
         self.current_target = None

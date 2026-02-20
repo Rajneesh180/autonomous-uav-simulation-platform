@@ -11,6 +11,14 @@ class Config:
     DATASET_MODE = "random"
 
     # =========================================================
+    # Phase 4: Semantic Intelligence & Latent Clustering
+    # =========================================================
+    ENABLE_SEMANTIC_CLUSTERING = True
+    SCALING_METHOD = "minmax"          # minmax | zscore
+    REDUCTION_DIMS = 3                 # Target components for PCA
+    CLUSTER_ALGO_MODE = "dbscan"       # kmeans | dbscan
+
+    # =========================================================
     # Randomness / Reproducibility
     # =========================================================
     RANDOM_SEED = 42

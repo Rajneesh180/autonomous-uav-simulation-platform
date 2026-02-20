@@ -108,3 +108,47 @@ class MetricEngine:
             return 0.0
 
         return round(sum(latencies) / len(latencies), 4)
+
+    # -------- Phase-4 Semantic Metrics --------
+    @staticmethod
+    def compute_semantic_metrics(visited_nodes, all_nodes, active_labels):
+        """
+        Calculates Phase-4 Semantic Execution performance.
+        Priority Satisfaction: Percentage of high-priority nodes successfully serviced.
+        Semantic Purity: Intra-cluster feature variance proxy (lower is better).
+        """
+        import numpy as np
+        
+        # Priority Satisfaction
+        high_priority_total = sum(1 for n in all_nodes if n.priority >= 5)
+        high_priority_visited = sum(1 for n in visited_nodes if n.priority >= 5)
+        
+        priority_satisfaction = 100.0
+        if high_priority_total > 0:
+            priority_satisfaction = round((high_priority_visited / high_priority_total) * 100, 2)
+            
+        # Semantic Purity (Intra-cluster variance of priorities and risks)
+        purity_score = 1.0 # default
+        if len(active_labels) > 0 and len(active_labels) <= len(all_nodes):
+            variances = []
+            unique_labels = set(active_labels)
+            for k in unique_labels:
+                if k == -1: continue # Skip noise
+                # Extract features for this cluster
+                cluster_nodes = [all_nodes[i] for i, label in enumerate(active_labels) if label == k]
+                if not cluster_nodes: continue
+                
+                priorities = [n.priority for n in cluster_nodes]
+                risks = [n.risk for n in cluster_nodes]
+                # Purity proxy: variance of core features
+                var_p = np.var(priorities) if len(priorities) > 1 else 0
+                var_r = np.var(risks) if len(risks) > 1 else 0
+                variances.append(var_p + var_r)
+                
+            if variances:
+                purity_score = round(float(np.mean(variances)), 4)
+                
+        return {
+            "priority_satisfaction_percent": priority_satisfaction,
+            "semantic_purity_index": purity_score
+        }
