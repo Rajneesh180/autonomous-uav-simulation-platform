@@ -60,6 +60,34 @@ class Config:
     TERMINATE_ON_ENERGY_RISK = False
 
     # =========================================================
+    # 3D Environment & Communication Modeling (Rician Fading)
+    # =========================================================
+    UAV_FLIGHT_ALTITUDE = 100.0  # meters (h)
+    
+    # Rician K-factor (dB)
+    RICIAN_K_FACTOR_DB = 15.0
+    
+    # Environmental constants for LoS probability (Urban profile)
+    LOS_PARAM_A = 9.61
+    LOS_PARAM_B = 0.16
+    
+    # Path loss exponents
+    PATH_LOSS_LOS = 2.0
+    PATH_LOSS_NLOS = 2.8
+    
+    # Transmission properties
+    CARRIER_FREQUENCY = 2e9        # Carrier freq in Hz (2 GHz)
+    NOISE_POWER_DENSITY = -174.0   # dBm/Hz
+    BANDWIDTH = 1e6                # 1 MHz
+    NODE_TX_POWER = 0.1            # 100 mW
+
+    # =========================================================
+    # Buffer & Data Collection Settings (DST-BA)
+    # =========================================================
+    DEFAULT_BUFFER_CAP_MBITS = 50.0 
+    DEFAULT_DATA_RATE_MBPS = 0.5    
+
+    # =========================================================
     # Temporal Engine
     # =========================================================
     TIME_STEP = 1

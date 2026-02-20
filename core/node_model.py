@@ -9,14 +9,25 @@ class Node:
     id: int
     x: float
     y: float
+    z: float = 0.0
 
     # ---------------------------------------------------------
-    # Semantic Fields (Phase-4 ready but passive in Phase-3)
+    # Semantic Fields
     # ---------------------------------------------------------
     priority: int = 1
     risk: float = 0.0
     signal_strength: float = 1.0
     deadline: Optional[float] = None
+
+    # ---------------------------------------------------------
+    # Buffer & Data Profile (DST-BA Implementation)
+    # ---------------------------------------------------------
+    buffer_capacity: float = field(default_factory=lambda: Config.DEFAULT_BUFFER_CAP_MBITS)
+    current_buffer: float = 0.0
+    data_generation_rate: float = field(default_factory=lambda: Config.DEFAULT_DATA_RATE_MBPS)
+    
+    time_window_start: float = 0.0
+    time_window_end: float = float("inf")
 
     # ---------------------------------------------------------
     # Energy Model (Initialized from Config)
@@ -39,8 +50,8 @@ class Node:
     # Utilities
     # ---------------------------------------------------------
 
-    def position(self) -> Tuple[float, float]:
-        return (self.x, self.y)
+    def position(self) -> Tuple[float, float, float]:
+        return (self.x, self.y, self.z)
 
     def reset_battery(self):
         self.current_battery = self.battery_capacity

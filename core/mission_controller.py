@@ -185,7 +185,7 @@ class MissionController:
             return
 
         # Sort by Euclidean distance from current UAV position
-        ux, uy = self.uav.position()
+        ux, uy, uz = self.uav.position()
 
         remaining.sort(key=lambda n: math.hypot(n.x - ux, n.y - uy))
 
