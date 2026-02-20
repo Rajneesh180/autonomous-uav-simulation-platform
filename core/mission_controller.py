@@ -86,7 +86,11 @@ class MissionController:
             return
 
         if self.render_enabled:
-            print(f"[Time Step] {self.temporal.current_step}")
+            if not hasattr(self, 'pygame_renderer'):
+                from visualization.pygame_renderer import PygameRenderer
+                self.pygame_renderer = PygameRenderer(self.env.width, self.env.height)
+            self.pygame_renderer.render(self.env, self.uav, self.current_target, self.temporal.current_step)
+            # print(f"[Time Step] {self.temporal.current_step}")
 
         # Obstacle motion toggle
         if Config.ENABLE_MOVING_OBSTACLES:

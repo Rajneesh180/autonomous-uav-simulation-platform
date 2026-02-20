@@ -1,13 +1,14 @@
 import os
 import json
+import argparse
 
 from core.simulation_runner import run_simulation
 from metrics.metric_engine import MetricEngine
 from core.batch_runner import BatchRunner
 
 
-def run_single():
-    results = run_simulation(verbose=True)
+def run_single(render: bool = False):
+    results = run_simulation(verbose=True, render=render)
     metrics = MetricEngine.compute_stability_metrics(results)
 
     print("\nMission execution completed.")
@@ -48,17 +49,29 @@ def run_batch():
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Autonomous UAV Simulation Platform")
+    parser.add_argument(
+        "--mode", 
+        type=str, 
+        choices=["single", "batch"], 
+        default="single",
+        help="Execution mode: 'single' for a detailed run, 'batch' for statistical aggregation."
+    )
+    parser.add_argument(
+        "--render", 
+        action="store_true", 
+        help="Enable Matplotlib/Pygame telemetry visualizer."
+    )
+    
+    args = parser.parse_args()
+
     print("=== Autonomous UAV Simulation Platform ===")
 
-    MODE = "batch"  # change to "batch" when needed
-
-    if MODE == "single":
-        run_single()
-    elif MODE == "batch":
+    if args.mode == "single":
+        run_single(render=args.render)
+    elif args.mode == "batch":
+        print(f"[Warning] GUI rendering is implicitly disabled during high-speed batch executions.")
         run_batch()
-    else:
-        raise ValueError("Invalid MODE. Use 'single' or 'batch'.")
-
 
 if __name__ == "__main__":
     main()
