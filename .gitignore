@@ -18,3 +18,19 @@ logs/
 *.log
 *.json
 *.csv
+
+# Visualization & Runs
+visualization/runs/
+visualization/plots/
+visualization/figures/
+visualization/frames/
+
+# Research Artifacts
+docs/references/*.pdf
+*.pdf
+
+# Environment
+.env
+.venv
+env/
+venv/
