@@ -1,0 +1,28 @@
+class FeatureToggles:
+    """
+    Centralized controller for enabling or disabling major simulation features.
+    These can be overridden via CLI arguments in main.py.
+    """
+
+    # --- Core Mechanics ---
+    DIMENSIONS = "2D"           # "2D" or "3D"
+    ENABLE_OBSTACLES = True     # Apply obstacle constraints
+    MOVING_OBSTACLES = True     # Evolve obstacles temporally
+
+    # --- Metrics & Output ---
+    ENABLE_VISUALS = True       # Save rendering artifacts
+    ENABLE_SEMANTIC_CLUSTERING = True 
+
+    @classmethod
+    def apply_overrides(cls, args):
+        """Inject CLI arguments into the toggle state unconditionally."""
+        if hasattr(args, "dimensions") and args.dimensions:
+            cls.DIMENSIONS = str(args.dimensions).upper()
+            
+        if hasattr(args, "obstacles"):
+            cls.ENABLE_OBSTACLES = str(args.obstacles).lower() == 'true'
+            
+        if hasattr(args, "moving_obstacles"):
+            cls.MOVING_OBSTACLES = str(args.moving_obstacles).lower() == 'true'
+            if not cls.ENABLE_OBSTACLES and cls.MOVING_OBSTACLES:
+               cls.MOVING_OBSTACLES = False # Cannot have moving obstacles if obstacles are off

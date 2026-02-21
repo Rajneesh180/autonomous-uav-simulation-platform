@@ -276,7 +276,16 @@ class MissionController:
 
         dx = target_pos[0] - current_pos[0]
         dy = target_pos[1] - current_pos[1]
-        distance = math.hypot(dx, dy)
+        
+        from config.feature_toggles import FeatureToggles
+        if FeatureToggles.DIMENSIONS == "3D":
+            dz = target_pos[2] - current_pos[2]
+            distance = math.sqrt(dx**2 + dy**2 + dz**2)
+            base_pitch = math.atan2(dz, math.hypot(dx, dy))
+        else:
+            dz = 0.0
+            distance = math.hypot(dx, dy)
+            base_pitch = 0.0
 
         # Target reached
         if distance < 1e-3:
@@ -308,70 +317,76 @@ class MissionController:
         best_move = None
 
         # Generate motion primitives
-        for angle_offset in [0] + Config.STEERING_ANGLES:
+        yaw_offsets = [0] + Config.STEERING_ANGLES
+        pitch_offsets = [0, -15, 15] if FeatureToggles.DIMENSIONS == "3D" else [0]
+        
+        for yaw_offset in yaw_offsets:
+            for pitch_offset in pitch_offsets:
+                yaw = base_angle + math.radians(yaw_offset)
+                pitch = base_pitch + math.radians(pitch_offset)
 
-            angle = base_angle + math.radians(angle_offset)
+                # Spherical to Cartesian representation
+                new_x = current_pos[0] + step_size * math.cos(pitch) * math.cos(yaw)
+                new_y = current_pos[1] + step_size * math.cos(pitch) * math.sin(yaw)
+                new_z = current_pos[2] + step_size * math.sin(pitch) if FeatureToggles.DIMENSIONS == "3D" else current_pos[2]
 
-            new_x = current_pos[0] + step_size * math.cos(angle)
-            new_y = current_pos[1] + step_size * math.sin(angle)
+                # Hard collision check
+                if self.env.point_in_obstacle((new_x, new_y)):
+                    continue
 
-            # Hard collision check
-            if self.env.point_in_obstacle((new_x, new_y)):
-                continue
+                travel_distance = math.sqrt((new_x - current_pos[0])**2 + (new_y - current_pos[1])**2 + (new_z - current_pos[2])**2)
 
-            travel_distance = math.hypot(new_x - current_pos[0], new_y - current_pos[1])
+                risk_mult = self.env.risk_multiplier((new_x, new_y))
+                adjusted_distance = travel_distance * risk_mult
 
-            risk_mult = self.env.risk_multiplier((new_x, new_y))
-            adjusted_distance = travel_distance * risk_mult
+                # Energy feasibility
+                if not EnergyModel.can_travel(self.uav, adjusted_distance):
+                    continue
 
-            # Energy feasibility
-            if not EnergyModel.can_travel(self.uav, adjusted_distance):
-                continue
+                # ---------- SCORING COMPONENTS ----------
 
-            # ---------- SCORING COMPONENTS ----------
+                # 1. Alignment score (cosine similarity in 3D)
+                to_target_vec = (dx, dy, dz)
+                move_vec = (new_x - current_pos[0], new_y - current_pos[1], new_z - current_pos[2])
 
-            # 1. Alignment score (cosine similarity)
-            to_target_vec = (dx, dy)
-            move_vec = (new_x - current_pos[0], new_y - current_pos[1])
+                dot = to_target_vec[0] * move_vec[0] + to_target_vec[1] * move_vec[1] + to_target_vec[2] * move_vec[2]
+                norm_prod = (
+                    math.sqrt(sum(v**2 for v in to_target_vec)) * math.sqrt(sum(v**2 for v in move_vec)) + Config.SCORE_EPS
+                )
 
-            dot = to_target_vec[0] * move_vec[0] + to_target_vec[1] * move_vec[1]
-            norm_prod = (
-                math.hypot(*to_target_vec) * math.hypot(*move_vec) + Config.SCORE_EPS
-            )
+                alignment_score = 1 - (dot / norm_prod)  # smaller is better
 
-            alignment_score = 1 - (dot / norm_prod)  # smaller is better
+                # 2. Obstacle proximity penalty
+                obstacle_penalty = 0.0
 
-            # 2. Obstacle proximity penalty
-            obstacle_penalty = 0.0
+                for obs in self.env.obstacles:
+                    clearance = self._predicted_clearance(new_x, new_y, obs)
 
-            for obs in self.env.obstacles:
-                clearance = self._predicted_clearance(new_x, new_y, obs)
+                    # Hard rejection if inside safety margin
+                    if clearance < Config.COLLISION_MARGIN:
+                        obstacle_penalty += 1000.0
+                    else:
+                        # Smooth inverse-distance penalty
+                        obstacle_penalty += 1.0 / (clearance + 1e-5)
 
-                # Hard rejection if inside safety margin
-                if clearance < Config.COLLISION_MARGIN:
-                    obstacle_penalty += 1000.0
-                else:
-                    # Smooth inverse-distance penalty
-                    obstacle_penalty += 1.0 / (clearance + 1e-5)
+                # 3. Risk penalty
+                risk_penalty = risk_mult - 1.0
 
-            # 3. Risk penalty
-            risk_penalty = risk_mult - 1.0
+                # 4. Energy penalty
+                energy_penalty = adjusted_distance
 
-            # 4. Energy penalty
-            energy_penalty = adjusted_distance
+                # ---------- TOTAL SCORE ----------
 
-            # ---------- TOTAL SCORE ----------
+                total_score = (
+                    Config.ALIGNMENT_WEIGHT * alignment_score
+                    + Config.OBSTACLE_PENALTY_WEIGHT * obstacle_penalty
+                    + Config.RISK_PENALTY_WEIGHT * risk_penalty
+                    + Config.ENERGY_PENALTY_WEIGHT * energy_penalty
+                )
 
-            total_score = (
-                Config.ALIGNMENT_WEIGHT * alignment_score
-                + Config.OBSTACLE_PENALTY_WEIGHT * obstacle_penalty
-                + Config.RISK_PENALTY_WEIGHT * risk_penalty
-                + Config.ENERGY_PENALTY_WEIGHT * energy_penalty
-            )
-
-            if total_score < best_score:
-                best_score = total_score
-                best_move = (new_x, new_y, adjusted_distance)
+                if total_score < best_score:
+                    best_score = total_score
+                    best_move = (new_x, new_y, new_z, adjusted_distance)
 
         # If no valid motion primitive found
         if best_move is None:
@@ -380,7 +395,7 @@ class MissionController:
             self.current_target = None
             return
 
-        new_x, new_y, adjusted_distance = best_move
+        new_x, new_y, new_z, adjusted_distance = best_move
 
         # --- Energy Prediction ---
         predicted_energy = EnergyModel.energy_for_distance(self.uav, adjusted_distance)
@@ -410,8 +425,9 @@ class MissionController:
         # Apply movement
         self.uav.x = new_x
         self.uav.y = new_y
+        self.uav.z = new_z
 
-        self.env.uav_trail.append((new_x, new_y))
+        self.env.uav_trail.append((new_x, new_y, new_z))
         if len(self.env.uav_trail) > 30:
             self.env.uav_trail.pop(0)
 

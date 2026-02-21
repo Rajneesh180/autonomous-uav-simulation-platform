@@ -5,9 +5,11 @@ import argparse
 from core.simulation_runner import run_simulation
 from metrics.metric_engine import MetricEngine
 from core.batch_runner import BatchRunner
+from config.feature_toggles import FeatureToggles
+from config.config import Config
 
 
-def run_single(render: bool = False):
+def run_single(render: bool = True):
     results = run_simulation(verbose=True, render=render)
     metrics = MetricEngine.compute_stability_metrics(results)
 
@@ -34,7 +36,7 @@ def run_single(render: bool = False):
 
     # Persist per-run stability metrics
     metrics_path = os.path.join(
-        "results",
+        "visualization",
         "runs",
         results["run_id"],
         "logs",
@@ -70,13 +72,39 @@ def main():
         action="store_true", 
         help="Enable Matplotlib/Pygame telemetry visualizer."
     )
+    parser.add_argument(
+        "--dimensions", 
+        type=str, 
+        choices=["2D", "3D"], 
+        default="2D",
+        help="Run environment mathematically in 2D or 3D."
+    )
+    parser.add_argument(
+        "--obstacles", 
+        type=str, 
+        choices=["true", "false", "True", "False"], 
+        default="true",
+        help="Toggle obstacle presence."
+    )
+    parser.add_argument(
+        "--moving_obstacles", 
+        type=str, 
+        choices=["true", "false", "True", "False"], 
+        default="true",
+        help="Toggle obstacle animation."
+    )
     
     args = parser.parse_args()
+
+    # Apply Toggles
+    FeatureToggles.apply_overrides(args)
+    Config.ENABLE_OBSTACLES = FeatureToggles.ENABLE_OBSTACLES
+    Config.ENABLE_MOVING_OBSTACLES = FeatureToggles.MOVING_OBSTACLES
 
     print("=== Autonomous UAV Simulation Platform ===")
 
     if args.mode == "single":
-        run_single(render=args.render)
+        run_single(render=True)
     elif args.mode == "batch":
         print(f"[Warning] GUI rendering is implicitly disabled during high-speed batch executions.")
         run_batch()

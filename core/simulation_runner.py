@@ -84,9 +84,12 @@ def run_simulation(verbose=True, render=True, seed_override=None):
     )
 
     step_counter = 0
+    frames_path = run_manager.get_path("frames")
 
     while mission.is_active():
         mission.step()
+        if render:
+            PlotRenderer.render_environment_frame(env, frames_path, step_counter)
         step_counter += 1
 
     # ---------------------------------------------------------

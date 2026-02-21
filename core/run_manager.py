@@ -11,7 +11,7 @@ class RunManager:
 
     def __init__(self):
         self.run_id = self._generate_run_id()
-        self.base_path = os.path.join("results", "runs", self.run_id)
+        self.base_path = os.path.join("visualization", "runs", self.run_id)
 
         self.paths = {
             "logs": os.path.join(self.base_path, "logs"),

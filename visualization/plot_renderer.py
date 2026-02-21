@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.art3d as art3d
 import os
+from config.feature_toggles import FeatureToggles
 
 
 class PlotRenderer:
@@ -18,12 +20,23 @@ class PlotRenderer:
     def render_environment(env, save_dir):
         PlotRenderer._ensure_dir(save_dir)
 
-        plt.figure(figsize=(8, 6))
+        fig = plt.figure(figsize=(8, 6))
+        is_3d = FeatureToggles.DIMENSIONS == "3D"
+        
+        if is_3d:
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = fig.add_subplot(111)
 
         # -------- Nodes --------
         xs = [node.x for node in env.nodes]
         ys = [node.y for node in env.nodes]
-        plt.scatter(xs, ys, c="blue", label="Nodes")
+        
+        if is_3d:
+            zs = [node.z for node in env.nodes]
+            ax.scatter(xs, ys, zs, c="blue", label="Nodes")
+        else:
+            ax.scatter(xs, ys, c="blue", label="Nodes")
 
         # -------- Obstacles --------
         for obs in env.obstacles:
@@ -34,7 +47,9 @@ class PlotRenderer:
                 color="red",
                 alpha=0.4,
             )
-            plt.gca().add_patch(rect)
+            ax.add_patch(rect)
+            if is_3d:
+                art3d.pathpatch_2d_to_3d(rect, z=0, zdir="z")
 
         # -------- Risk Zones --------
         for rz in env.risk_zones:
@@ -45,15 +60,21 @@ class PlotRenderer:
                 color="orange",
                 alpha=0.3,
             )
-            plt.gca().add_patch(rect)
+            ax.add_patch(rect)
+            if is_3d:
+                art3d.pathpatch_2d_to_3d(rect, z=0, zdir="z")
 
-        plt.title("UAV Environment Visualization")
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.xlim(0, env.width)
-        plt.ylim(0, env.height)
-        plt.grid(True)
-        plt.legend()
+        ax.set_title("UAV Environment Visualization")
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_xlim(0, env.width)
+        ax.set_ylim(0, env.height)
+        if is_3d:
+            ax.set_zlabel("Z (Altitude)")
+            ax.set_zlim(0, 50)
+            
+        ax.grid(True)
+        ax.legend()
 
         plt.savefig(
             os.path.join(save_dir, "environment.png"),
@@ -152,12 +173,23 @@ class PlotRenderer:
     def render_environment_frame(env, save_dir, step):
         PlotRenderer._ensure_dir(save_dir)
 
-        plt.figure(figsize=(8, 6))
+        fig = plt.figure(figsize=(8, 6))
+        is_3d = FeatureToggles.DIMENSIONS == "3D"
+        
+        if is_3d:
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = fig.add_subplot(111)
 
         # -------- Nodes --------
         xs = [node.x for node in env.nodes]
         ys = [node.y for node in env.nodes]
-        plt.scatter(xs, ys, c="blue")
+        
+        if is_3d:
+            zs = [node.z for node in env.nodes]
+            ax.scatter(xs, ys, zs, c="blue")
+        else:
+            ax.scatter(xs, ys, c="blue")
 
         # -------- Obstacles --------
         for obs in env.obstacles:
@@ -168,7 +200,9 @@ class PlotRenderer:
                 color="red",
                 alpha=0.4,
             )
-            plt.gca().add_patch(rect)
+            ax.add_patch(rect)
+            if is_3d:
+                art3d.pathpatch_2d_to_3d(rect, z=0, zdir="z")
 
         # -------- Risk Zones --------
         for rz in env.risk_zones:
@@ -179,7 +213,9 @@ class PlotRenderer:
                 color="orange",
                 alpha=0.3,
             )
-            plt.gca().add_patch(rect)
+            ax.add_patch(rect)
+            if is_3d:
+                art3d.pathpatch_2d_to_3d(rect, z=0, zdir="z")
 
         # -------- UAV Rendering --------
         if hasattr(env, "uav"):
@@ -189,37 +225,33 @@ class PlotRenderer:
                 trail_x = [p[0] for p in env.uav_trail]
                 trail_y = [p[1] for p in env.uav_trail]
 
-                plt.plot(
-                    trail_x,
-                    trail_y,
-                    linewidth=1.2,
-                    alpha=0.8,
-                    zorder=5,
-                )
+                if is_3d:
+                    trail_z = [p[2] for p in env.uav_trail if len(p) > 2]
+                    # Ensure z array matches length just in case old 2D data is inside
+                    if len(trail_z) == len(trail_x):
+                        ax.plot(trail_x, trail_y, zs=trail_z, linewidth=1.2, alpha=0.8, color="black", zorder=5)
+                else:
+                    ax.plot(trail_x, trail_y, linewidth=1.2, alpha=0.8, color="black", zorder=5)
 
             # --- UAV Marker ---
-            plt.scatter(
-                env.uav.x,
-                env.uav.y,
-                s=120,
-                marker="^",
-                c="black",
-                edgecolors="white",
-                linewidths=0.8,
-                zorder=10,
-            )
+            if is_3d:
+                ax.scatter(env.uav.x, env.uav.y, env.uav.z, s=120, marker="^", c="black", edgecolors="white", linewidths=0.8, zorder=10)
+            else:
+                ax.scatter(env.uav.x, env.uav.y, s=120, marker="^", c="black", edgecolors="white", linewidths=0.8, zorder=10)
 
-        plt.xlim(0, env.width)
-        plt.ylim(0, env.height)
-        plt.title(f"Step {step}")
+        ax.set_xlim(0, env.width)
+        ax.set_ylim(0, env.height)
+        if is_3d:
+            ax.set_zlim(0, 50)
+            
+        ax.set_title(f"Step {step}")
 
         # -------- Replan Flash --------
         if hasattr(env, "temporal_engine"):
             flash = env.temporal_engine.consume_replan_flash()
             if flash:
-                ax = plt.gca()
                 ax.set_facecolor((1.0, 0.85, 0.85))
-                ax.text(
+                ax.text2D(
                     0.5,
                     0.95,
                     "REPLAN TRIGGERED",
@@ -232,5 +264,5 @@ class PlotRenderer:
                 )
 
         filename = f"{step:04d}.png"
-        plt.savefig(f"{save_dir}/{filename}", dpi=200)
-        plt.close()
+        fig.savefig(f"{save_dir}/{filename}", dpi=200)
+        plt.close(fig)
