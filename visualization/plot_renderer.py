@@ -40,29 +40,53 @@ class PlotRenderer:
 
         # -------- Obstacles --------
         for obs in env.obstacles:
-            rect = plt.Rectangle(
-                (obs.x1, obs.y1),
-                obs.x2 - obs.x1,
-                obs.y2 - obs.y1,
-                color="red",
-                alpha=0.4,
-            )
-            ax.add_patch(rect)
             if is_3d:
-                art3d.pathpatch_2d_to_3d(rect, z=0, zdir="z")
+                # 3D Extrusion (Height = 20)
+                z_floor, z_ceil = 0, 20
+                dx = obs.x2 - obs.x1
+                dy = obs.y2 - obs.y1
+                
+                # Define 8 vertices of the prism
+                vertices = [
+                    [obs.x1, obs.y1, z_floor], [obs.x2, obs.y1, z_floor], [obs.x2, obs.y2, z_floor], [obs.x1, obs.y2, z_floor],
+                    [obs.x1, obs.y1, z_ceil], [obs.x2, obs.y1, z_ceil], [obs.x2, obs.y2, z_ceil], [obs.x1, obs.y2, z_ceil]
+                ]
+                # Define the 6 faces connecting vertices
+                faces = [
+                    [vertices[0], vertices[1], vertices[2], vertices[3]], # Bottom
+                    [vertices[4], vertices[5], vertices[6], vertices[7]], # Top
+                    [vertices[0], vertices[1], vertices[5], vertices[4]], # Front
+                    [vertices[2], vertices[3], vertices[7], vertices[6]], # Back
+                    [vertices[1], vertices[2], vertices[6], vertices[5]], # Right
+                    [vertices[0], vertices[3], vertices[7], vertices[4]]  # Left
+                ]
+                collection = art3d.Poly3DCollection(faces, alpha=0.3, facecolors="red", edgecolors="darkred")
+                ax.add_collection3d(collection)
+            else:
+                rect = plt.Rectangle((obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1, color="red", alpha=0.4)
+                ax.add_patch(rect)
 
         # -------- Risk Zones --------
         for rz in env.risk_zones:
-            rect = plt.Rectangle(
-                (rz.x1, rz.y1),
-                rz.x2 - rz.x1,
-                rz.y2 - rz.y1,
-                color="orange",
-                alpha=0.3,
-            )
-            ax.add_patch(rect)
             if is_3d:
-                art3d.pathpatch_2d_to_3d(rect, z=0, zdir="z")
+                z_floor, z_ceil = 0, 15
+                vertices = [
+                    [rz.x1, rz.y1, z_floor], [rz.x2, rz.y1, z_floor], [rz.x2, rz.y2, z_floor], [rz.x1, rz.y2, z_floor],
+                    [rz.x1, rz.y1, z_ceil], [rz.x2, rz.y1, z_ceil], [rz.x2, rz.y2, z_ceil], [rz.x1, rz.y2, z_ceil]
+                ]
+                faces = [
+                    [vertices[0], vertices[1], vertices[2], vertices[3]], 
+                    [vertices[4], vertices[5], vertices[6], vertices[7]], 
+                    [vertices[0], vertices[1], vertices[5], vertices[4]], 
+                    [vertices[2], vertices[3], vertices[7], vertices[6]], 
+                    [vertices[1], vertices[2], vertices[6], vertices[5]], 
+                    [vertices[0], vertices[3], vertices[7], vertices[4]]  
+                ]
+                collection = art3d.Poly3DCollection(faces, alpha=0.2, facecolors="orange", edgecolors="darkorange")
+                ax.add_collection3d(collection)
+            else:
+                rect = plt.Rectangle((rz.x1, rz.y1), rz.x2 - rz.x1, rz.y2 - rz.y1, color="orange", alpha=0.3)
+                ax.add_patch(rect)
 
         ax.set_title("UAV Environment Visualization")
         ax.set_xlabel("X")
@@ -193,29 +217,47 @@ class PlotRenderer:
 
         # -------- Obstacles --------
         for obs in env.obstacles:
-            rect = plt.Rectangle(
-                (obs.x1, obs.y1),
-                obs.x2 - obs.x1,
-                obs.y2 - obs.y1,
-                color="red",
-                alpha=0.4,
-            )
-            ax.add_patch(rect)
             if is_3d:
-                art3d.pathpatch_2d_to_3d(rect, z=0, zdir="z")
+                z_floor, z_ceil = 0, 20
+                vertices = [
+                    [obs.x1, obs.y1, z_floor], [obs.x2, obs.y1, z_floor], [obs.x2, obs.y2, z_floor], [obs.x1, obs.y2, z_floor],
+                    [obs.x1, obs.y1, z_ceil], [obs.x2, obs.y1, z_ceil], [obs.x2, obs.y2, z_ceil], [obs.x1, obs.y2, z_ceil]
+                ]
+                faces = [
+                    [vertices[0], vertices[1], vertices[2], vertices[3]], 
+                    [vertices[4], vertices[5], vertices[6], vertices[7]], 
+                    [vertices[0], vertices[1], vertices[5], vertices[4]], 
+                    [vertices[2], vertices[3], vertices[7], vertices[6]], 
+                    [vertices[1], vertices[2], vertices[6], vertices[5]], 
+                    [vertices[0], vertices[3], vertices[7], vertices[4]]  
+                ]
+                collection = art3d.Poly3DCollection(faces, alpha=0.3, facecolors="red", edgecolors="darkred")
+                ax.add_collection3d(collection)
+            else:
+                rect = plt.Rectangle((obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1, color="red", alpha=0.4)
+                ax.add_patch(rect)
 
         # -------- Risk Zones --------
         for rz in env.risk_zones:
-            rect = plt.Rectangle(
-                (rz.x1, rz.y1),
-                rz.x2 - rz.x1,
-                rz.y2 - rz.y1,
-                color="orange",
-                alpha=0.3,
-            )
-            ax.add_patch(rect)
             if is_3d:
-                art3d.pathpatch_2d_to_3d(rect, z=0, zdir="z")
+                z_floor, z_ceil = 0, 15
+                vertices = [
+                    [rz.x1, rz.y1, z_floor], [rz.x2, rz.y1, z_floor], [rz.x2, rz.y2, z_floor], [rz.x1, rz.y2, z_floor],
+                    [rz.x1, rz.y1, z_ceil], [rz.x2, rz.y1, z_ceil], [rz.x2, rz.y2, z_ceil], [rz.x1, rz.y2, z_ceil]
+                ]
+                faces = [
+                    [vertices[0], vertices[1], vertices[2], vertices[3]], 
+                    [vertices[4], vertices[5], vertices[6], vertices[7]], 
+                    [vertices[0], vertices[1], vertices[5], vertices[4]], 
+                    [vertices[2], vertices[3], vertices[7], vertices[6]], 
+                    [vertices[1], vertices[2], vertices[6], vertices[5]], 
+                    [vertices[0], vertices[3], vertices[7], vertices[4]]  
+                ]
+                collection = art3d.Poly3DCollection(faces, alpha=0.2, facecolors="orange", edgecolors="darkorange")
+                ax.add_collection3d(collection)
+            else:
+                rect = plt.Rectangle((rz.x1, rz.y1), rz.x2 - rz.x1, rz.y2 - rz.y1, color="orange", alpha=0.3)
+                ax.add_patch(rect)
 
         # -------- UAV Rendering --------
         if hasattr(env, "uav"):
