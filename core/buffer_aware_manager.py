@@ -11,14 +11,14 @@ class BufferAwareManager:
     """
 
     @staticmethod
-    def calculate_service_time(uav_pos, node, is_buffer_full: bool) -> float:
+    def calculate_service_time(uav_pos, node, is_buffer_full: bool, env=None) -> float:
         """
         Calculates the required service time (ST_i) to offload the buffer 
         based on the Shannon capacity limits and Rician fading.
         """
         # Data rate in Mbps (from Shannon Capacity with Rician Fading)
         rate_mbps = CommunicationEngine.achievable_data_rate(
-            node.position(), uav_pos
+            node.position(), uav_pos, env
         )
         
         if rate_mbps <= 0.0:
@@ -29,7 +29,7 @@ class BufferAwareManager:
         return required_time
 
     @staticmethod
-    def get_optimal_hover_strategy(uav_pos, node) -> dict:
+    def get_optimal_hover_strategy(uav_pos, node, env=None) -> dict:
         """
         Returns the optimal strategy (Center-Hover vs Chord-Fly).
         If buffer is full (current >= capacity * 0.95), UAV must center-hover.
@@ -38,7 +38,7 @@ class BufferAwareManager:
         # Using 95% threshold to define 'Full' to prevent floating point edge cases
         is_full = node.current_buffer >= (node.buffer_capacity * 0.95)
         
-        required_time = BufferAwareManager.calculate_service_time(uav_pos, node, is_full)
+        required_time = BufferAwareManager.calculate_service_time(uav_pos, node, is_full, env)
         
         strategy = "Center-Hover" if is_full else "Chord-Fly"
         
@@ -49,7 +49,7 @@ class BufferAwareManager:
         }
 
     @staticmethod
-    def process_data_collection(uav_pos, node, dt: float) -> float:
+    def process_data_collection(uav_pos, node, dt: float, env=None) -> float:
         """
         Processes data collection over a time step dt.
         Returns the amount of data collected in Mbits.
@@ -62,7 +62,7 @@ class BufferAwareManager:
             return 0.0
             
         rate_mbps = CommunicationEngine.achievable_data_rate(
-            node.position(), uav_pos
+            node.position(), uav_pos, env
         )
         
         collectable_data = rate_mbps * dt

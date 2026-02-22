@@ -88,30 +88,45 @@ class InteractiveDashboard:
                 ax.add_patch(circle)
                 ax.text(cx, cy + comm_radius + 5, f"{label} Zone", color='purple', fontsize=10, ha='center')
                 
-        # 3. Render Nodes
+        # 3. Render Nodes (Age of Information Visualization)
         xs, ys, zs, colors, sizes = [], [], [], [], []
+        
+        from config.config import Config
+        max_aoi = getattr(Config, 'MAX_AOI_LIMIT', 200.0)
+        
         for node in self.env.nodes[1:]:
             xs.append(node.x)
             ys.append(node.y)
             zs.append(getattr(node, 'z', 0.0))
             
-            # Buffer draining visualization
+            # Size mapped to Buffer density
             cap_ratio = node.current_buffer / (node.buffer_capacity + 1e-6)
             sizes.append(20 + 100 * cap_ratio) # Size shrinks as buffer drains
             
-            if cap_ratio > 0.95: colors.append('red')
-            elif cap_ratio > 0.5: colors.append('orange')
-            elif cap_ratio < 0.01: colors.append('gray')
-            else: colors.append('green')
+            # Color mapped to Age of Information (AoI) Data Freshness
+            aoi = getattr(node, 'aoi_timer', 0.0)
+            
+            if node.current_buffer < 0.01:
+                colors.append('darkgray') # Idle / Complete
+            else:
+                aoi_ratio = min(1.0, aoi / max_aoi)
+                if aoi_ratio > 0.8:
+                    colors.append('darkred')      # Critical Staleness
+                elif aoi_ratio > 0.5:
+                    colors.append('orangered')
+                elif aoi_ratio > 0.2:
+                    colors.append('orange')
+                else:
+                    colors.append('mediumseagreen') # Fresh Data
             
         if is_3d:
             ax.scatter(xs, ys, zs, c=colors, s=sizes, edgecolors='black')
         else:
             ax.scatter(xs, ys, c=colors, s=sizes, edgecolors='black')
-            # Data draining text
+            # Text Tag rendering (Buffer / AoI)
             for node in self.env.nodes[1:]:
                 if node.current_buffer > 0.01:
-                    ax.text(node.x + 5, node.y + 5, f"{node.current_buffer:.1f}", fontsize=8)
+                    ax.text(node.x + 5, node.y + 5, f"AoI: {getattr(node, 'aoi_timer', 0.0):.1f}s", fontsize=7)
 
         # 4. Environment Obstacles (Collision Avoidance Prisms)
         import matplotlib.patches as patches

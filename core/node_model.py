@@ -71,7 +71,7 @@ class Node:
     def get_feature_vector(self) -> list:
         """
         Extracts the node properties as a numeric vector for scaling and semantic clustering.
-        Vector: [x, y, z, priority, risk, signal_strength, deadline/time_window, buffer, reliability]
+        Vector: [x, y, z, priority, risk, signal_strength, deadline/time_window, buffer, reliability, aoi]
         """
         safe_deadline = self.time_window_end if self.time_window_end != float('inf') else 9999.0
         return [
@@ -83,5 +83,6 @@ class Node:
             self.signal_strength, 
             safe_deadline, 
             self.current_buffer,
-            self.reliability
+            self.reliability,
+            self.aoi_timer
         ]

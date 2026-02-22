@@ -307,7 +307,7 @@ class MissionController:
         # The UAV is capable of collecting data while in transit 
         # (probabilistic sensing over distance).
         data_collected = BufferAwareManager.process_data_collection(
-            self.uav.position(), self.current_target, dt
+            self.uav.position(), self.current_target, dt, self.env
         )
         
         if data_collected > 0 and distance > 5.0:
@@ -329,7 +329,15 @@ class MissionController:
             EnergyModel.consume(self.uav, hover_e)
             self.energy_consumed_total += hover_e
             
-            hover_strategy = BufferAwareManager.get_optimal_hover_strategy(self.uav.position(), self.current_target)
+            hover_strategy = BufferAwareManager.get_optimal_hover_strategy(self.uav.position(), self.current_target, self.env)
+            
+            # Phase 3.8: LoS Occlusion Failsafe
+            if hover_strategy['required_service_time'] == float('inf'):
+                print(f"[Warning] Node {self.current_target.id} Data Rate is 0 Mbps (NLoS Blocked). Abandoning target.")
+                self.visited.add(self.current_target.id) # Mark visited to avoid infinite loops
+                self.current_target = None
+                return
+                
             print(f"[Center-Hover] Node {self.current_target.id} | Reqd Time: {hover_strategy['required_service_time']:.2f}s | Vol: {self.current_target.current_buffer:.2f}Mb")
             return
 
@@ -450,14 +458,21 @@ class MissionController:
         # If no valid motion primitive found
         if best_move is None:
             self.collision_count += 1
-            print(f"[Warning] UAV trapped near ({current_pos[0]:.1f}, {current_pos[1]:.1f}). Forcing escape bounce.")
-            # Bouncing logic: reverse direction slightly to break out of local minima
-            self.uav.x = max(0.0, min(float(self.env.width), self.uav.x - 2.0 * math.cos(self.uav.yaw)))
-            self.uav.y = max(0.0, min(float(self.env.height), self.uav.y - 2.0 * math.sin(self.uav.yaw)))
-            self.uav.yaw += math.pi  # Turn around 180 deg
+            print(f"[Warning] UAV trapped near ({current_pos[0]:.1f}, {current_pos[1]:.1f}). Forcing aggressive escape bounce.")
+            
+            # Escape Traps: Aggressive reverse + scatter bounce
+            import random
+            bounce_dist = 15.0
+            escape_yaw = self.uav.yaw + math.pi + random.uniform(-0.5, 0.5)
+            
+            self.uav.x = max(0.0, min(float(self.env.width), self.uav.x + bounce_dist * math.cos(escape_yaw)))
+            self.uav.y = max(0.0, min(float(self.env.height), self.uav.y + bounce_dist * math.sin(escape_yaw)))
+            self.uav.yaw = escape_yaw
             
             self._trigger_replan("collision_escape")
-            self.current_target = None
+            
+            # DO NOT set current_target to None here! That breaks the routing queue.
+            # Instead, the replan will generate a new valid routing graph around the obstacle.
             return
 
         new_x, new_y, new_z, adjusted_distance, chosen_yaw, chosen_pitch, v_mag, step_size = best_move

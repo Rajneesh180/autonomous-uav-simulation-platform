@@ -35,7 +35,7 @@ class SemanticClusterer:
 
         raw_features = np.array([n.get_feature_vector() for n in nodes])
         
-        # Structure: [x, y, z, priority, risk, signal, deadline, buffer, reliability]
+        # Structure: [x, y, z, priority, risk, signal, deadline, buffer, reliability, aoi]
         # We handle Time Decay for the deadline (index 6) separately
         deadlines = raw_features[:, 6]
         urgency_weights = self.feature_scaler.apply_time_decay(deadlines, current_time)
@@ -46,6 +46,13 @@ class SemanticClusterer:
         # Override the deadline column with calculated, scaled urgency
         scaled[:, 6] = urgency_weights
         
+        # Phase 3.9: Age of Information (AoI) Calculus
+        # Dynamically boost the Priority (Index 3) based on AoI Staleness (Index 9)
+        # Assuming AoI is scaled 0-1, we add a heavy 1.5x multiplier to the priority 
+        # to force the PCA/DBSCAN algorithms to break geo-clusters and rescue stale data.
+        if scaled.shape[1] > 9:
+            scaled[:, 3] += (scaled[:, 9] * 1.5)
+            
         return scaled
 
     def reduce_dimensions(self, scaled_features: np.ndarray) -> np.ndarray:

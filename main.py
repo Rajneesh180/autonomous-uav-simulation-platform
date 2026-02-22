@@ -109,6 +109,9 @@ def main():
 
     if args.mode == "single":
         run_single(render=True)
+        if args.render or True: # Render is currently hardcoded to True in run_single above
+            print("\n[Dashboard] Simulation complete! The dynamic dashboard is still active.")
+            input("Press [ENTER] to exit the simulation framework...")
     elif args.mode == "batch":
         print(f"[Warning] GUI rendering is implicitly disabled during high-speed batch executions.")
         run_batch()

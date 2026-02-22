@@ -29,11 +29,48 @@ class CommunicationEngine:
         return math.atan2(dz, horizontal_dist)
 
     @staticmethod
-    def prob_los(elevation_angle_rad: float) -> float:
+    def is_line_of_sight_clear(node_pos: tuple, uav_pos: tuple, env) -> bool:
+        """
+        Phase 3.8: Implements precise Ray-Casting Object Intersection.
+        Checks if the 3D ray between the UAV and the IoT node is obstructed by any physical Environment Obstacle.
+        Returns True if LoS is clear, False if NLoS (obstructed).
+        """
+        # Segment from node to UAV
+        x1, y1 = node_pos[0], node_pos[1]
+        x2, y2 = uav_pos[0], uav_pos[1]
+        
+        # We assume obstacles are infinitely tall pillars for now or check against their height.
+        # Check intersection with every obstacle's 2D bounding box
+        for obs in env.obstacles:
+            # Check if either point is inside the obstacle
+            if obs.contains_point(x1, y1) or obs.contains_point(x2, y2):
+                return False
+                
+            # Check if line segment intersects the obstacle's bounding lines
+            # A simple bounding box ray intersection
+            min_x, max_x = min(x1, x2), max(x1, x2)
+            min_y, max_y = min(y1, y2), max(y1, y2)
+            
+            # If the bounding boxes of the segment and the obstacle don't overlap, no intersection
+            if max_x < obs.x1 or min_x > obs.x2 or max_y < obs.y1 or min_y > obs.y2:
+                continue
+                
+            # Use cross product line intersection or simple line-rectangle intersection
+            if obs.intersects_line(x1, y1, x2, y2):
+                return False
+
+        return True
+
+    @staticmethod
+    def prob_los(elevation_angle_rad: float, is_los_clear: bool = True) -> float:
         """
         Calculates the probability of Line-of-Sight (LoS) based on the environmental
-        parameters and the elevation angle (theta).
+        parameters and the elevation angle (theta). Overridden perfectly to 0 if a static 
+        obstacle interrupts the raycast.
         """
+        if not is_los_clear:
+            return 0.0
+            
         theta_degrees = math.degrees(elevation_angle_rad)
         a = Config.LOS_PARAM_A
         b = Config.LOS_PARAM_B
@@ -69,7 +106,7 @@ class CommunicationEngine:
         return expected_loss
 
     @staticmethod
-    def achievable_data_rate(node_pos: tuple, uav_pos: tuple) -> float:
+    def achievable_data_rate(node_pos: tuple, uav_pos: tuple, env=None) -> float:
         """
         Calculates theoretical capacity based on SNR from the expected path loss
         Returns data rate in Mbps.
@@ -84,7 +121,12 @@ class CommunicationEngine:
         full_dist = math.sqrt(distance_3d**2 + (uav_z - node_z)**2)
         
         angle = CommunicationEngine.elevation_angle(node_pos, uav_pos)
-        p_los = CommunicationEngine.prob_los(angle)
+        
+        is_clear = True
+        if env is not None:
+            is_clear = CommunicationEngine.is_line_of_sight_clear(node_pos, uav_pos, env)
+            
+        p_los = CommunicationEngine.prob_los(angle, is_clear)
         
         loss_linear = CommunicationEngine.path_loss(full_dist, p_los)
         tx_power = Config.NODE_TX_POWER

@@ -82,7 +82,7 @@ class EnergyModel:
     def mechanical_energy(node, acceleration_vec: tuple) -> float:
         """
         Acceleration-based mechanical energy model.
-        E_ME = \Delta \sum wc || a[i] - ag ||^2
+        E_ME = \\Delta \\sum wc || a[i] - ag ||^2
         """
         ax, ay, az = acceleration_vec
         ag_x, ag_y, ag_z = 0.0, 0.0, -Config.GRAVITY
