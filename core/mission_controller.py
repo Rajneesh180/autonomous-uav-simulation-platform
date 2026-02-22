@@ -97,10 +97,18 @@ class MissionController:
             return
 
         if self.render_enabled:
-            if not hasattr(self, 'pygame_renderer'):
-                from visualization.pygame_renderer import PygameRenderer
-                self.pygame_renderer = PygameRenderer(self.env.width, self.env.height)
-            self.pygame_renderer.render(self.env, self.uav, self.current_target, self.temporal.current_step, self.base_position)
+            # We enforce Matplotlib interactive dash for Phase 3.6 fidelity
+            if not hasattr(self, 'interactive_dash'):
+                from visualization.interactive_dashboard import InteractiveDashboard
+                self.interactive_dash = InteractiveDashboard(self.env)
+                
+            self.interactive_dash.render(
+                self.uav, 
+                self.current_target, 
+                self.temporal.current_step, 
+                self.base_position, 
+                self.active_centroids
+            )
             # print(f"[Time Step] {self.temporal.current_step}")
 
         # Obstacle motion toggle
