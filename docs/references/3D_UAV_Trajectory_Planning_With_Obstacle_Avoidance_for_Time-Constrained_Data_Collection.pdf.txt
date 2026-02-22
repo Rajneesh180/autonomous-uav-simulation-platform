@@ -1,0 +1,2614 @@
+1460 IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY , VOL. 74, NO. 1, JANUARY 2025
+3D UA V Trajectory Planning With Obstacle
+Avoidance for UA V -Enabled Time-Constrained
+Data Collection Systems
+Jun Zheng , Senior Member , IEEE,a n dK a iL i u
+Abstract—This paper investigates the three-dimensional (3D)
+unmanned aerial vehicle (UA V) trajectory-planning problem in a
+UA V-enabled data collection (DC) system, in which a UA V exe-
+cutes a mission to collect time-constrained data in a geographical
+area with spatial obstacles. For such a UA V trajectory-planning
+problem, how to timely collect data, avoid collisions with spatial
+obstacles, and complete DC with limited UA V onboard energy is a
+big challenge. To address this challenge, the investigated problem
+is formulated as an optimization problem aiming to minimize the
+UA V’s total mission completion time subject to the time constraint
+of collected data, the avoidance of spatial obstacles, and the energy
+constraint of the UA V . To solve the formulated problem, the problem
+is decomposed into a visiting sequence optimization sub-problem,
+and a hovering position and ﬂying path optimization sub-problem.
+Correspondingly, a genetic algorithm (GA) based algorithm, and
+a successive convex approximation (SCA) based algorithm are
+proposed to solve the sub-problems, respectively. Based on the
+two algorithms, a 3D trajectory optimization algorithm is further
+proposed to solve the main problem. Simulation results show that
+the UA V’s trajectory planned with the proposed algorithm can
+effectively reduce the UA V’s total mission completion time.
+Index Terms —UA V, data collection, obstacle avoidance,
+3D trajectory planning.
+I. I NTRODUCTION
+U
+NMANNED aerial vehicles (UA Vs) have been widely
+used in more and more applications [1], [2].I nm a n y
+applications, UA V can be deployed to execute a data collection
+(DC) mission in a geographical area to collect data sensed
+by devices distributed in the area or to sense and collect data
+directly in different data collection areas (DCAs) using onboard
+sensors to provide a variety of DC applications [3]. In executing
+a DC mission, a UA V needs to ﬂy between different DCAs.
+The planning of the UA V’s trajectory is critical for successfully
+Manuscript received 30 December 2023; revised 13 May 2024; accepted
+24 June 2024. Date of publication 27 June 2024; date of current version 16
+January 2025. This work was supported in part by the National Natural Science
+Foundation of China under Grant 62471130, in part by the National Key R&D
+Program of China under Grant 2023YFB4503302, and in part by the Fundamen-
+tal Research Funds for the Central Universities under Grant 2242022k60001.
+The review of this article was coordinated by Dr. Qiang John Y e.(Corresponding
+author: Jun Zheng.)
+Jun Zheng and Kai Liu are with the National Mobile Communications
+Research Laboratory, School of Information Science and Engineering, Frontiers
+Science Center for Mobile Information Communication and Security, Southeast
+University, Nanjing 210096, China, and also with Purple Mountain Laboratories,
+Nanjing 211111, China (e-mail: junzheng@seu.edu.cn; kailiu@seu.edu.cn).
+Digital Object Identiﬁer 10.1109/TVT.2024.3419842
+completing the DC mission. In many DC application scenarios,
+collected data are often time-constrained and thus need to be
+timely transmitted to a ground center through a base station
+(BS) within a limited time [4]. However, if a UA V is far away
+from a BS, the signal-to-noise ratio (SNR) at the BS may
+not be able to reach a minimum level, resulting in the UA V
+unable to transmit collected data directly to the BS. In this
+case, the UA V has to ﬂy to a position closer to the BS for
+transmission. This would cause a certain delay and thus affect
+the timely transmission of collected data. Thus, the planning
+of the UA V’s trajectory should consider the time constraint of
+collected data. On the other hand, when a UA V ﬂies between
+different DCAs, it may encounter various spatial obstacles such
+as mountain peaks, signal towers, or high-rising buildings [5].
+To avoid collisions with such obstacles, a common way is to
+make a UA V ﬂy at a constant and safe altitude, which would
+result in a two-dimensional (2D) UA V trajectory, and thus limit
+the sufﬁcient utilization of a UA V’s high maneuverability in
+space and degrade the overall system performance. Thus, it is
+necessary to consider obstacle avoidance in a three-dimensional
+(3D) UA V trajectory planning. In addition, since the onboard
+energy of a UA V is limited, the energy constraint of the UA V is
+also a concern in the planning of the UA V’s trajectory. Therefore,
+it is necessary to consider all the above issues in the planning
+of a UA V’s trajectory. However, to the best of our knowledge,
+no previous work has studied the 3D UA V trajectory-planning
+problem in a UA V -enabled DC system, while considering the
+time constraint of collected data, the avoidance of obstacles,
+and a UA V’s energy constraint, which is the motivation of this
+paper.
+In this paper, we investigate the 3D UA V trajectory-planning
+problem in a UA V -enabled DC system, in which a UA V is
+deployed to execute a mission to collect time-constrained data in
+a number of DCAs in a geographical area with spatial obstacles.
+The problem is formulated as an optimization problem with an
+objective to minimize the UA V’s total mission completion time,
+taking into account the time constraint of collected data, the
+avoidance of the obstacles, and the UA V’s energy constraint.
+To solve the formulated problem, the problem is decomposed
+into a visiting sequence optimization sub-problem, and a hov-
+ering position and ﬂying path optimization sub-problem. Cor-
+respondingly, a genetic algorithm (GA) based algorithm, and
+a successive convex approximation (SCA) based algorithm are
+proposed to solve the two sub-problems, respectively. Based on
+the two algorithms, a 3D trajectory optimization algorithm is
+0018-9545 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+ZHENG AND LIU: 3D UA V TRAJECTORY PLANNING WITH OBSTACLE A VOIDANCE FOR UA V -ENABLED TIME-CONSTRAINED DC SYSTEMS 1461
+further proposed to solve the main problem. Simulation results
+are shown to evaluate the performance of the proposed algorithm
+in reducing the UA V’s total mission completion time.
+The remainder of the paper is organized as follows. Section II
+reviews related work. Section III describes the system model
+and problem formulation. Section IV presents the proposed al-
+gorithm. SectionV conducts performance evaluation. SectionVI
+concludes this paper.
+II. R ELA TEDWORK
+The planning of a UA V’s trajectory is an important problem
+in UA V -enabled DC systems and has been extensively studied in
+literature [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16],
+[17].I n [6], Y ou et al. studied a 3D UA V trajectory-planning
+problem for maximizing the minimum DC rate from all senor
+nodes (SNs), and proposed a hybrid ofﬂine-online optimization
+method leveraging both statistical and real-time channel state
+information (CSI). In [7], Wang et al. considered a UA V -assisted
+internet of thing system in a sophisticated 3D environment
+with imperfect CSI, and studied a 3D UA V trajectory-planning
+problem for minimizing the total mission completion time, while
+taking into account throughput and ﬂight movement constraints.
+In [8], Li et al. studied a UA V trajectory-planning problem aim-
+ing to minimize the total mission completion time by jointly opti-
+mizing the UA V’s ﬂying and collection trajectory and proposed a
+V -shaped collection trajectory to reduce a UA V’s collection time.
+In [9], Chen et al. considered a multi-UA V assisted DC system,
+and studied a multi-UA V trajectory-planning problem for maxi-
+mizing the total throughput and energy efﬁciency of the system,
+while taking into account the signal-to-interference-and-noise
+ratio and fairness among heterogeneous ground users. In [10],
+Y uan et al. studied the UA V trajectory-planning problem in a
+UA V -assisted DC system, aiming to minimize the total mission
+completion time by jointly optimizing the UA V trajectory and
+the SN assignment. In [11], Nguyen et al. studied a 3D UA V
+trajectory-planning problem aiming to maximize collected data
+by using a deep reinforcement learning based technique. In[12],
+Sun et al. considered a system where UA V is dispatched to
+harvest solar energy and collect data from multiple smart de-
+vices (SDs), and studied a 3D UA V trajectory-planning problem
+aiming to achieve max-min fairness among SDs’ uploading data.
+However, the aforementioned studies considered 2D or 3D sce-
+narios with only delay-tolerant data. The solutions obtained in
+these studies are inapplicable in scenarios with time-constrained
+data.
+For the UA V trajectory-planning problem in time-constrained
+DC, many studies have also been conducted. For example, Zhang
+et al. considered a cellular-enabled UA V DC and data transmis-
+sion (DT) system, and studied a UA V trajectory-planning prob-
+lem for minimizing the AoI of collected data with a proposed
+sensing and transmission trade-off design [4].I n [13], Samir
+et al. considered a time-constrained DC scenario in an Internet
+of Things (IoT) network, and studied a UA V trajectory-planning
+problem for maximizing the number of served devices, taking
+into account collected data’s minimum amount and deadline
+constraints. In [14], we considered a UA V -enabled DC scenario,
+and studied a UA V trajectory-planning problem for minimiz-
+ing the UA V’s total mission completion time with the time
+Fig. 1. System scenario.
+constraint of collected data and the energy constraint of the
+UAV. In [15], Li et al. considered a DC scenario in an IoT
+network, and studied a UA V trajectory-planning problem for
+minimizing the age of information (AoI) of collected data with
+no knowledge of the sampling mode used by each SN. In [16],
+Al-Hilo et al. considered a time-constrained DC scenario in an
+IoT network, which uses a reconﬁgurable intelligent surface
+to improve the UA V’s connectivity and energy efﬁciency, and
+studied a UA V trajectory-planning problem for maximizing
+the number of served devices. In [17], Gao et al. studied a
+multi-UA V trajectory-planning problem for minimizing SNs’
+peak and average AoI in wireless sensor networks. Nevertheless,
+most of the above studies considered a constant and safe altitude
+for a UA V’s ﬂying, which limits the sufﬁcient utilization of a
+UA V’s high maneuverability in space, and degrades the overall
+system performance. Relevant studies considering a variable
+ﬂying altitude are limited.
+III. S YSTEM MODEL AND PROBLEM FORMULA TION
+This section describes the system model and formulates the
+3D trajectory-planning problem under consideration.
+A. System Scenario
+Consider a UA V -enabled DC system in which a rotary-wing
+UA V is deployed to execute a DC mission in a geographical area
+with one BS, K DCAs and various spatial obstacles, as shown
+in Fig. 1. The DCAs are uniformly distributed in the area and
+are denoted by A = {ak,k = 1,...,K }. During the process of
+executing the DC mission, the UA V takes off from a starting
+position and ﬂies to sense and collect data over theK DCAs using
+onboard sensors and transmit collected data to the BS. After the
+DC mission is completed, the UA V will ﬂy back to the starting
+position. Assume that the UA V’s starting position is located
+at (sT
+0 ,H 0)in a 3D Cartesian coordinate system, where s0 =
+[x0,y 0]T ∈R2×1 denotes the starting position’s projection on
+the ground,H0 denotes the UA V’s starting altitude and T denotes
+a transposition operator. The BS is located at (0, 0,Hb), where
+Hb denotes the BS’ altitude. Each DCA ak is a small circular
+area with center (aT
+k , 0) and radius ra, where ak =[ xk
+a,yk
+a]
+T
+∈
+R2×1 denotes the center’s projection on the ground. The UA V’s
+trajectory is denoted by (q(t)T,H(t)),0 ≤t ≤Ttotal, where
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+1462 IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+q(t)=[ x(t),y(t)]T ∈R2×1 denotes the trajectory’s projection
+on the ground,H(t) denotes the UA V’s ﬂying altitude andTtotal
+denotes the UA V’s total mission completion time. The UA V’s
+ﬂying speed is limited tovmax.
+Consider that the UA V executes the DC mission in a
+successive-hover-ﬂy (SHF) manner, whose effectiveness in the
+UA V trajectory-planning problem has been justiﬁed in[10], [18].
+Thus, the process of executing the DC mission can be divided
+into two phases: hovering and ﬂying.
+B. Hovering Phase
+The hovering phase can be further divided into two sub-
+phases: DC and DT.
+1) DC Sub-Phase: In the DC sub-phase, the UA V needs
+to hover over a DCA in order to sense and collect data. We
+call the data collected in DCA ak “DATA_k” and let (˜qT
+k ,Hk
+q )
+denote the UA V’s hovering position for DC in DCA ak, where
+˜qk =[ xk
+q,yk
+q]
+T
+∈R2×1 denotes the position’s projection on the
+ground and Hk
+q denotes the UA V’s hovering altitude for DC in
+DCA ak. As illustrated in Fig. 1, the UA V’s sensing range on
+the ground is a small circular area with center position (˜qT
+k , 0)
+and radius rk = Hk
+q ·tanθs, where θs denotes the maximum
+sensing angle of the sensor. To make sensing successful, the
+UA V’s sensing range should cover a DCA, i.e.,
+∥˜qk −ak∥≤ rk −ra,k = 1,...,K. (1)
+To measure if a data sensing is successful, we consider a
+typical probabilistic sensing model in [4], [19], in which the
+probability that the UA V successfully senses data in DCAak in
+one time is deﬁned as
+P 1
+suc = e−τdk
+q , (2)
+where τ denotes a sensing factor, and dk
+q denotes the distance
+between the UA V hovering at(˜qT
+k ,Hk
+q ) and the center of DCA
+ak. Obviously, we have
+dk
+q =
+√
+∥˜qk −ak∥2 +Hkq
+2. (3)
+Thus, the probability that the UA V successfully senses data in
+DCAakin ns times is given by
+Pns
+suc = 1−(1−e−τdk
+q )
+ns
+. (4)
+For a successful data sensing, it is usually considered that
+Pns
+sucshould exceed a threshold ω, i.e.,
+Pns
+suc ≥ω. (5)
+According to (4) and (5), the minimum time the UA V takes to
+successfully sense data in DCA ak, i.e., the UA V’s DC time, is
+given by
+tk
+c =
+⌣
+ns ×Ts = ln(1−ω)
+ln[1−e−τ(∥˜qk−ak∥2 +(Hkq )2 )
+1/2
+]
+×Ts, (6)
+where
+⌣
+ns denotes the minimum number of sensing times, and
+Ts denotes the time the UA V takes to perform sensing per time.
+2) DT Sub-Phase: In the DT sub-phase, the UA V needs to
+hover at a position where the SNR at the BS reaches a mini-
+mum level in order for the BS to successfully receive DATA_k
+from the UA V . For ease of exposition, let (˜pT
+k ,Hk
+p) denote
+the UA V’s hovering position for transmitting DATA_k, where
+˜pk =[ xk
+p,yk
+p]
+T
+∈R2×1 denotes the position’s projection on the
+ground and Hk
+p denotes the UA V’s hovering altitude.
+Assume that the UA V hovers at (˜pT
+k ,Hk
+p). We consider a
+probabilistic LoS model for the channel between the UA V and
+the BS [20], [21].L e thk denote the channel coefﬁcient. Thus,
+we have
+hk =
+√
+βk˜hk, (7)
+where βk and ˜hk denote the large-scale fading and small-scale
+fading of the channel, respectively, and ˜hk is a complex-valued
+random variable with E[|˜hk|
+2
+]= 1. According to [20],w eh a v e
+βk =
+{
+β0dk
+p
+−α
+, LoSlink
+κβ0dk
+p
+−α
+, NLoSlink , (8)
+where β0 denotes the path loss at 1 meter, αdenotes the path
+loss exponent, κ(< 1) denotes an additional attenuation factor,
+anddk
+p denotes the distance between the UA V and the BS. Thus,
+we have
+dk
+p =
+√
+∥˜pk∥2 +(Hkp −Hb)2. (9)
+Let PLoS denote the LoS probability between the UA V and
+the BS. According to [20],PLoS can be modeled as
+PLoS(θk)= 1
+1+g1 exp[−g2(θk −g1)], (10)
+where g1 and g2 denote two environmental coefﬁcients, and
+θk denotes the elevation angle between the UA V and the BS,
+andθk = 180/πarctan((Hk
+p −Hb)/∥˜pk∥). Thus, the expected
+channel power gain between the UA V and the BS is given by
+E[|hk|2]= PLoS(θk)β0dk
+p
+−α
++[ 1−PLoS(θk)]κβ0dk
+p
+−α
+= ˆPLoS(θk)β0dk
+p
+−α
+, (11)
+where
+ˆPLoS(θk)= PLoS(θk)+[ 1−PLoS(θk)]κ.
+According to [20], ˆPLoS(θk) can be approximated to
+ˆPLoS(θk) ≈PLoS,
+where PLoS denotes the average LoS probability for a given
+UA V trajectory. Thus,(11) can approximately be expressed as
+E[|hk|2] ≈PLoSβ0dk
+p
+−α
+. (12)
+The expected SNR at the BS is given by
+E[γk]= puE[|hk|2]
+σ2Γ ≈ puPLoSβ0/σ2Γ
+[∥˜pk∥2 +(Hkp −Hb)2]
+α/2
+= γ0
+[∥˜pk∥2 +(Hkp −Hb)2]
+α/2, (13)
+where γ0 = puPLoSβ0/σ2Γdenotes the expected SNR at 1
+meter, pu denotes the UA V’s transmitting power, σ2 denotes
+the noise power, and Γ(> 1) denotes an SNR gap [20]. Thus,
+the expected achievable rate between the UA V and the BS is
+approximated as
+E[Rk] ≈Blog2
+(
+1+ puE|hk|2
+σ2Γ
+)
+≈Blog2
+⎧
+⎨
+⎩1+ γ0
+[∥˜pk∥2 +(Hkp −Hb)2]
+α/2
+⎫
+⎬
+⎭, (14)
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+ZHENG AND LIU: 3D UA V TRAJECTORY PLANNING WITH OBSTACLE A VOIDANCE FOR UA V -ENABLED TIME-CONSTRAINED DC SYSTEMS 1463
+Fig. 2. The UA V’s ﬂying path with path discretization.
+whereB denotes the channel bandwidth allocated to the UA V .
+Based on the above analyses, to achieve a successful DT, the
+expected SNR at the BS should meet the following condition:
+E[γk] ≥γmin, (15)
+whereγmin denotes an SNR threshold. The time the UA V takes
+to successfully transmit DATA_k to the BS is given by
+tk
+s = Sk/E[Rk], (16)
+whereSk denotes the size of DATA_k.
+C. Flying Phase
+In the ﬂying phase, the UA V successively ﬂies to visit its
+hovering positions for DC {(˜qT
+k ,Hk
+q ),k = 1,...,K } and hov-
+ering positions for DT {(˜pT
+k ,Hk
+p),k = 1,...,K } in a certain
+sequence. Let π(k) ∈{1,...,K } denote the index of the kth
+visited DCA. Thus, the UA V’s visiting sequence is given by
+[π(1),π(2),...,π (K)] ∈Ψ, where Ψdenotes a set of all pos-
+sible permutations. Since there are K DCAs,Ψis actually a set
+of K! random permutations of integers from 1 to K, where K!
+denotes the factorial of K.
+Unlike [14], in which a 2D scenario is considered, we consider
+a 3D scenario where the UA V does not ﬂy along a straight line
+between two adjacent hovering positions at a constant and safe
+altitude. Since there may exist obstacles between two adjacent
+hovering positions, the UA V needs to ﬂy around or over these
+obstacles to avoid collisions, resulting in the trajectory planning
+between two adjacent hovering positions more complicated.
+To make the trajectory planning tractable, a path discretization
+method [5], [20] is introduced to discretize the UA V’s ﬂying path
+between two adjacent hovering positions into L+ 1 path seg-
+ments withL waypoints, as illustrated in Fig.2.T h eLwaypoints
+are determined such that by ﬂying along the waypoints of
+the path, the UA V can circumvent or ﬂy over these obstacles.
+Obviously, if L is large enough, the path length between two
+adjacent hovering positions would be much larger than the length
+of a path segment. Thus, the UA V can be considered ﬂying
+straightly at a constant speed on each path segment. Since the
+durations the UA V ﬂies on different path segments are different,
+the UA V’s ﬂying path between two adjacent hovering positions
+can be represented by the UA V’s waypoints and ﬂying durations
+on all segments of the ﬂying path.
+There are three situations for the UA V’s trajectory between
+two adjacent hovering positions:
+S-1: from position (˜pπ(π′(k)−1),Hπ(π′ (k)−1)
+p ) to position
+(˜qT
+k ,Hk
+q ). In this situation, the UA V ﬂies from its hovering
+position for transmitting data collected in DCA aπ(π′(k)−1) to
+its hovering position for DC in DCA ak, where π′(k) is the
+inverse function ofπ(k) and denotes the UA V’s visiting order
+for DCA ak, and aπ(π′(k)−1) is the last visited DCA before
+DCAak is visited by the UA V;
+S-2: from position (˜qT
+k ,Hk
+q ) to position (˜pT
+k ,Hk
+p).I nt h i s
+situation, the UA V ﬂies from its hovering position for
+DC in DCA ak to its hovering position for transmitting
+DATA_k;
+S-3: from position (˜pT
+π(K),Hπ(K)
+p ) to position (s0T,H 0).I n
+this situation, the UA V ﬂies from its hovering position for
+transmitting data collected in the last DCAaπ(K) to its starting
+position.
+Note that in S-1, when π′(k)= 1, the UA V ﬂies from its
+starting position to visit DCA ak ﬁrst. For ease of exposition,
+we deﬁne (˜pT
+π(0),Hπ(0)
+p )=( s0T,H 0), i.e., (˜pT
+π(0),Hπ(0)
+p ) also
+denotes the UA V’s starting position.
+Corresponding to the three situations, we introduce three
+types of waypoints to discretize the UA V’s path between
+two adjacent hovering positions, respectively, i.e., the way-
+points for collecting DATA_k, waypoints for transmitting
+DATA_k, and waypoints for ﬂying back to the starting po-
+sition. Let(wk,n
+Fc
+T
+,zk,n
+Fc ), (wk,n
+Fs
+T
+,zk,n
+Fs ) and (wn
+F0
+T,zn
+F0),k =
+1,...,K ,n = 1,...,L , denote the 3D coordinates of the three
+types of waypoints, respectively, wherewk,n
+Fc =[ xk,n
+Fc ,yk,n
+Fc ]
+T
+∈
+R2×1, wk,n
+Fs =[ xk,n
+Fs ,yk,n
+Fs ]
+T
+∈R2×1 and wn
+F0 =[ xn
+F0,yn
+F0]T ∈
+R2×1 denote their horizontal coordinates, respectively;zk,n
+Fc ,zk,n
+Fs
+andzn
+F0 denote their altitudes, respectively. The UA V’s durations
+on the nth path segments in the three situations are tk,n
+Fc , tk,n
+Fs
+and tn
+F0 , respectively. Since there are L+ 1 path segments, we
+haven = 1,...,L + 1. Letvk,n
+Fc ,vk,n
+Fs andvn
+F0 denote the UA V’s
+instantaneous ﬂying speeds on thenth path segments in the three
+situations, respectively. Obviously, we have
+vk,n
+Fc =
+√wk,n−1
+Fc −wk,n
+Fc
+
+2
++(zk,n−1
+Fc −zk,n
+Fc )
+2
+tk,n
+Fc
+= Δk,n
+Fc
+tk,n
+Fc
+,
+(17)
+vk,n
+Fs =
+√wk,n−1
+Fs −wk,n
+Fs
+
+2
++(zk,n−1
+Fs −zk,n
+Fs )
+2
+tk,n
+Fs
+= Δk,n
+Fs
+tk,n
+Fs
+,
+(18)
+vn
+F0 =
+√wn−1
+F0 −wn
+F0
+2
++(zn−1
+F0 −zn
+F0)
+2
+tn
+F0
+= Δn
+F0
+tn
+F0
+, (19)
+where (wk,0
+Fc ,zk,0
+Fc )=( ˜pπ(π′(k)−1),H π(π′(k)−1)
+p ), (wk,L+1
+Fc ,
+zk,L+1
+Fc )=( ˜qk,Hk
+q ), (wk,0
+Fs ,zk,0
+Fs )=( ˜qk,Hk
+q ), (wk,L+1
+Fs ,
+zk,L+1
+Fs )=( ˜pk,Hk
+p),(w0
+F0,z 0
+F0)=( ˜pπ(K),Hπ(K)
+p )( wL+1
+F0 ,
+zL+1
+F0 )=( s0,H 0), k = 1,...,K and n = 1,...,L + 1, and
+Δk,n
+Fc , Δk,n
+Fs as well as Δn
+F0 denote the length of each path
+segment in S-1, S-2, and S-3, respectively. Since the UA V’s
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+1464 IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+Fig. 3. The UA V’s mission execution time sequence.
+maximum ﬂying speed is vmax,w eh a v e
+Δk,n
+Fc ≤vmaxtk,n
+Fc , (20)
+Δk,n
+Fs ≤vmaxtk,n
+Fs , (21)
+Δn
+F0 ≤vmaxtn
+F0, (22)
+wheren = 1,...,L + 1 and k = 1,...,K .
+D. Time Sequence and Time Constraint
+Based on the analyses in Section III-B and III-C,t h eU A V ’ s
+total mission completion time can be expressed as
+Ttotal =
+K∑
+k=1
+(tk
+Fc +tk
+c +tk
+Fs +tk
+s)+ tF0, (23)
+and tk
+Fc =∑L+1
+n=1 tk,n
+Fc , tk
+Fs =∑L+1
+n=1 tk,n
+Fs , tF0 =∑L+1
+n=1 tn
+F0 ,
+where tk
+Fc ,tk
+c ,tk
+Fs ,tk
+s ,tF0 ,k = 1,...,K , denote the UA V’s ﬂying
+time for collecting DATA_k, collecting time for DATA_k, ﬂying
+time for transmitting DATA_k, transmitting time for DATA_k,
+and ﬂying time for ﬂying back to the starting position, respec-
+tively.
+Fig. 3 illustrates the UA V’s mission execution time sequence.
+Let Tk
+data denote the age of DATA_k, i.e., the time interval
+from the instant the UA V collects DATA_k to the instant the
+BS successfully receives DATA_k. According to Fig. 3,w eh a v e
+Tk
+data = tk
+s +tk
+Fs. (24)
+To ensure that DATA_k is still effective after being received by
+the BS, Tk
+data should meet the following condition:
+Tk
+data ≤Tk
+limit,k = 1,...,K, (25)
+where Tk
+limit denotes the time constraint of DATA_k.
+E. Energy Constraint Model
+The UA V’s energy consumption includes that for DC, that for
+DT, and that for propulsion. Let Pc and Ps denote the UA V’s
+power consumption for DC and that for DT, respectively. Thus,
+the energy consumption models for DC and DT are respectively
+given by
+Ec =
+K∑
+k=1
+(Pctk
+c), (26)
+Es =
+K∑
+k=1
+(Pstk
+s). (27)
+According to [22], for a 3D UA V trajectory(q(t)T,H(t)),t h e
+UA V’s energy consumption for propulsion can be approximated
+to
+Ep ≈
+∫ Ttotal
+0
+Pp(v(t))dt+ 1
+2Mu(v(Ttotal)2 −v(0)2)
++Mug(H(Ttotal)−H(0)), (28)
+wherev(t) denotes the UA V’s instantaneous speed,Mu denotes
+the UA V’s weight,g denotes the gravitational acceleration and
+Pp(v(t)) denotes the UA V’s power consumption for propulsion.
+For a rotary-wing UA V ,Pp(v(t)) is given by
+Pp(v(t)) =c1(1+c2v(t)2)
++c3
+(√
+1+ v(t)4
+(c4)2 −v(t)2
+c4
+)1/2
++c5v(t)3, (29)
+whereci,i = 1,..., 5 denotes a set of parameters which depend
+on the UA V’s characteristics and environmental conditions, as
+described in [22].
+Since the UA V ﬂies back to the starting position after com-
+pleting the overall mission, and the UA V’s starting speed and
+ending speed are equal to 0, we have
+v(Ttotal)= v(0)= 0,
+H(Ttotal)= H(0)= H0.
+By substituting these two equations into(28), (28) can be further
+expressed as
+Ep ≈
+∫ Ttotal
+0
+Pp(v(t))dt. (30)
+Moreover, since the UA V executes the overall mission in a
+successive-hover-ﬂy manner, the UA V’s energy consumption for
+propulsion can also be expressed as
+Ep = Eh +Ef, (31)
+where Eh and Ef denote the UA V’s energy consumption for
+hovering and that for ﬂying, respectively.
+By substituting v(t)= 0i n t o(29), we can obtain the UA V’s
+power consumption for hovering, i.e.,
+Ph = c1 +c3.
+Thus, the UA V’s energy consumption for hovering is given by
+Eh =
+K∑
+k=1
+Ph(tk
+c +tk
+s). (32)
+According to the analyses in Section III-C and Fig. 3,t h eU A V ’ s
+energy consumption for ﬂying is given by
+Ef =
+K∑
+k=1
+L+1∑
+n=1
+[Pp(vk,n
+Fc )tk,n
+Fc +Pp(vk,n
+Fs )tk,n
+Fs ]
++
+L+1∑
+n=1
+[Pp(vn
+F0)tn
+F0]. (33)
+Therefore, the UA V’s total energy consumption is
+Etotal = Ep +Ec +Es, (34)
+and the UA V’s energy constraint model is
+Etotal ≤Elimit, (35)
+whereElimit denotes the UA V’s maximum available energy.
+F . Obstacle Model
+We consider a typical obstacle model [5], i.e.,
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+ZHENG AND LIU: 3D UA V TRAJECTORY PLANNING WITH OBSTACLE A VOIDANCE FOR UA V -ENABLED TIME-CONSTRAINED DC SYSTEMS 1465
+Fig. 4. A map of the obstacle model for a geographical area.
+zobs(x,y)
+=
+G∑
+i=1
+{
+hi
+obs ×exp
+[
+−
+(x−xi
+obs
+aix
+)2
+−
+(y −yi
+obs
+aiy
+)2]}
+,
+(36)
+wherei = 0,...,G ,(x,y) denotes the horizontal coordinate of a
+particular position,zobs(x,y) denotes the altitude of the obstacle
+at the position (x,y), G denotes the number of obstacles in the
+area, hi
+obs denotes the altitude of the ith obstacle, (xi
+obs,yi
+obs)
+denotes the horizontal coordinate of theith obstacle’s center,ai
+x
+and ai
+y denote the ith obstacle’s attenuation on axis x and axis
+y, respectively. Fig.4 illustrates a map of the obstacle model for
+the geographical area.
+In the UA V ﬂying process, the UA V should avoid collisions
+with obstacles to ensure its ﬂying safety. Thus, the UA V’s ﬂying
+altitude at each hovering position or waypoint should be larger
+than the altitude of the obstacle at that position or waypoint
+during the overall mission, i.e.,
+zobs(xk
+q,yk
+q) <H k
+q , (37)
+zobs(xk
+p,yk
+p) <H k
+p, (38)
+zobs(xk,n
+Fc ,yk,n
+Fc ) <z k,n
+Fc , (39)
+zobs(xk,n
+Fs ,yk,n
+Fs ) <z k,n
+Fs , (40)
+zobs(xn
+F0,yn
+F0) <z n
+F0, (41)
+wheren = 1,...,L + 1 and k = 1,...,K .
+G. Problem F ormulation
+We consider the UA V trajectory-planning problem in a UA V -
+enabled DC system shown in Fig. 1. Since the UA V executes
+the overall mission in a successive-hover-ﬂy manner, the UA V’s
+trajectory can be represented by Ω= {Q, π, W, T }, where π
+denotes the UA V’s visiting sequence, Q denotes a set of the
+UA V’s hovering positions, W denotes a set of waypoints on
+each ﬂying path between different hovering positions, and T
+denotes a set of ﬂying durations on all segments of each ﬂying
+path between different hovering positions. Obviously, we have
+π =[ π(1),...,π (K)],
+Q = {˜qk,˜pk,Hk
+q ,Hk
+p,k = 1,...,K },
+W = {wk,n
+Fc ,wk,n
+Fs ,wn
+F0,zk,n
+Fc ,zk,n
+Fs ,zn
+F0,
+k = 1,...,K,n = 1,...,L },
+T = {tk,n
+Fs ,tk,n
+Fs ,tn
+F0,k = 1,...,K,n = 1,...,L + 1}.
+Let Ω∗ denote the UA V’s optimal trajectory. The UA V
+trajectory-planning problem under consideration is to ﬁnd Ω∗
+that minimizes the UA V’s total mission completion time with the
+time constraint of collected data, and the avoidance of obstacles,
+and the energy constraint of the UA V , i.e.,
+P0:
+Objective:
+min
+Ω
+Ttotal (42a)
+subject to:
+[π(1),π(2),...,π (K)] ∈Ψ, (42b)
+(1), (15), (20)–(22), (25), (35), (37)–(41),
+where (42b) guarantees that the UA V’s visiting sequence should
+be a random permutation of integers from 1 to K, (1) guaran-
+tees that the UA V’s sensing range should cover DCA ak, (15)
+guarantees that the SNR at the BS should exceed a threshold,
+(20)–(22) guarantee that the UA V’s ﬂying speed should not
+exceed its maximum speed, (25) indicates the time constraint of
+DATA_k, (35) indicates the UA V’s energy constraint,(37)–(41)
+guarantee that the UA V’s ﬂying altitude at each hovering position
+or waypoint should be higher than the altitude of the obstacle at
+that position or waypoint during the overall mission.
+Since the objective function (42a) and constraints (25), (35),
+(37)–(41) and (42b) of P0 are non-convex, P0 is a non-convex
+problem. Thus, it is hard to ﬁnd an optimal solution to the
+problem. Next, we will present a 3D trajectory optimization
+algorithm to ﬁnd a sub-optimal solution to the problem.
+IV . 3D TRAJECTORY OPTIMIZA TIONALGORITHM
+In this section, we ﬁrst decompose the formulated problem
+into a visiting sequence optimization sub-problem, and a hover-
+ing position and ﬂying path optimization sub-problem, and then
+propose two algorithms to solve the sub-problems, respectively,
+and a 3D trajectory optimization algorithm to solve the main
+problem.
+A. UA V Visiting Sequence Optimization
+Let π∗denote the UA V’s optimal visiting sequence. Given the
+UA V’s hovering positions and ﬂying paths between the hovering
+positions, the visiting sequence optimization problem is to ﬁnd
+π∗that minimizes the UA V’s total mission completion time, i.e.,
+P1:
+Objective:
+min
+π
+Ttotal (43a)
+subject to:
+(42b), (25), (35).
+According to (43), P1 is actually an asymmetric traveling
+salesman problem, which can be solved by using an existing
+algorithm, such as a greedy algorithm, heuristic algorithm, or
+dynamic programming. Similar to [14], we use a GA-based
+optimization algorithm to solve P1, which is described in Al-
+gorithm 1.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+1466 IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+Algorithm 1: GA-Based Optimization Algorithm.
+Input: a set of UA V’s hovering positions:
+Q = {˜qk,˜pk,Hk
+q ,Hk
+p,k = 1,...,K },
+a set of a waypoints on each ﬂying path:
+W = {wk,n
+Fc ,wk,n
+Fs ,wn
+F0,zk,n
+Fc ,zk,n
+Fs ,zn
+F0,k =
+1,...,K,n = 1,...,L },
+a set of ﬂying durations on all segments:
+T = {tk,n
+Fs ,tk,n
+Fs ,tn
+F0,k = 1,...,K,n = 1,...,L + 1}
+a set of AoI limitations: {Tk
+limit,k = 1,...,K },
+GA-related parameters: the initial population size Z,t h e
+chromosome selection probability Pselect, the crossover
+probability of two random chromosomes Pcross ,t h e
+mutation probability of a gene Pm and the maximum
+predetermined number of iterations Y ;
+the maximum on-board energy of the UA V:Elimit.
+1: Generate an initial population with Z chromosomes
+randomly with each chromosome satisfying the
+constraints of problem P1;
+2: Set the iteration variable: l = 0;
+3: Repeat
+4: Calculate the ﬁtness values of Z chromosomes
+according to (43a);
+5: Select part of the best chromosomes to directly pass
+down to the next generation with probability Pselect
+according to the ﬁtness values of Z chromosomes;
+6: Perform crossover operations on two random
+chromosomes with probability Pcross and produce
+new chromosomes;
+7: Perform mutation operations on Z chromosomes with
+probabilityPm and produce new chromosomes;
+8: Check whether each of the new chromosomes satisﬁes
+the constraints of problem P1. If it does, retain it;
+otherwise, discard it;
+9: Generate a new population with new Z chromosomes
+and calculate the ﬁtness value of each chromosome
+according to (43a);
+10: Perform l = l+ 1;
+11: Until l ≥Y
+12: Obtain the ﬁnal population with Z chromosomes and
+the ﬁtness value of each chromosome;
+13: Choose the chromosome with the minimum ﬁtness
+value as the optimal UA V’s visiting sequence;
+Output: the optimal UA V’s visiting sequence:
+π∗=[ π∗(1),...,π ∗(K)].
+B. UA V Hovering Position and Flying Path Optimization
+Let Q∗,W∗, and T∗ denote the optimal Q, W, and T,
+respectively. Given the UA V’s visiting sequence, the UA V hov-
+ering position and ﬂying path optimization problem is to ﬁnd
+{Q∗, W∗, T∗} that minimizes the UA V’s total mission com-
+pletion time, i.e.,
+P2
+Objective:
+min
+Q,W,T
+Ttotal (44a)
+subject to:
+(1), (15), (20)–(22), (25), (35), (37)–(41).
+Since constraints (25), (35), (37)–(41) are all non-convex,
+P2 is a typical non-convex problem. Thus, it is hard to ﬁnd an
+optimal solution to the problem.
+To solve the problem, we ﬁrst consider the non-convex ob-
+jective function (44a). According to (6), (16) and (23),w eh a v e
+Ttotal =
+K∑
+k=1
+L+1∑
+n=1
+tk,n
+Fc +
+K∑
+k=1
+L+1∑
+n=1
+tk,n
+Fs +
+L+1∑
+n=1
+tn
+F0
++
+K∑
+k=1
+(
+ln(1−ω)
+ln[1−e−τ(∥˜qk−ak∥2 +Hkq
+2 )
+1/2
+]
+×Ts
+)
++
+K∑
+k=1
+⎛
+⎝ Sk/B
+log2{1+γ0/[∥˜pk∥2 +(Hkp −Hb)2]
+α/2
+}
+⎞
+⎠.
+(45)
+In (45), the fourth and ﬁfth terms are non-convex. To
+tackle these two terms, we introduce two sets of slack
+variables:{ϕk},{ηk},k = 1,...,K , where
+ϕk =l n [ 1
+1−e−τ(∥˜qk−ak∥2 +(Hkq )2 )
+1/2 ], (46)
+ηk =l o g2{1+ γ0
+[∥˜pk∥2 +(Hkp −Hb)2)]α/2}. (47)
+Thus, the fourth and ﬁfth terms in(45) can be replaced by convex
+terms ∑K
+k=1 [Ts ln( 1
+1−ω)/ϕk] and ∑K
+k=1 [Sk/(Bηk)], respec-
+tively, with additional constraints (46) and (47). Accordingly,
+constraint (25) can be replaced by
+Sk
+Bηk
++
+L+1∑
+n=1
+tk,n
+Fs ≤Tk
+limit, (48)
+which is a convex constraint.
+Next, we consider constraint (35). According to the analyses
+in Section III-E, constraint (35) can be extended to constraint
+(49) shown at the bottom of the next page, which contains the
+following three non-convex terms:
+√(tk,n
+Fc )
+4
++ (Δk,n
+Fc )
+4
+(c4)2 −(Δk,n
+Fc )
+2
+c4
+,
+√(tk,n
+Fs )
+4
++ (Δk,n
+Fs )
+4
+(c4)2 −(Δk,n
+Fs )
+2
+c4
+,
+√(tn
+F0)4 + (Δn
+F0)4
+(c4)2 −(Δn
+F0)2
+c4
+.
+To tackle these three terms, we introduce three sets of slack
+variables:{μk,n
+Fc },{μk,n
+Fs },{μn
+F0},k = 1,..,K ,n = 1,...,L + 1,
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+ZHENG AND LIU: 3D UA V TRAJECTORY PLANNING WITH OBSTACLE A VOIDANCE FOR UA V -ENABLED TIME-CONSTRAINED DC SYSTEMS 1467
+where
+(tk,n
+Fc )
+4
+/(μk,n
+Fc )
+2
+=( μk,n
+Fc )
+2
++ 2(Δk,n
+Fc )
+2
+/c4, (50)
+(tk,n
+Fs )
+4
+/(μk,n
+Fs )
+2
+=( μk,n
+Fs )
+2
++ 2(Δk,n
+Fs )
+2
+/c4, (51)
+(tn
+F0)4/(μn
+F0)2 =( μn
+F0)2 + 2(Δn
+F0)2/c4. (52)
+Thus, the three terms can be replaced by convex terms μk,n
+Fc ,
+μk,n
+Fs and μn
+F0 , respectively, with additional constraints (50),
+(51) and (52). Finally, we consider constraints (37)–(41). Since
+constraints (37)–(41) are similar, we only discuss constraint(37).
+According to the analyses in Section III-F,w eh a v e
+G∑
+i=1
+⎧
+⎨
+⎩hi
+obs ×exp
+⎡
+⎣−
+(
+xk
+q −xi
+obs
+aix
+)2
+−
+(
+yk
+q −yi
+obs
+aiy
+)2⎤
+⎦
+⎫
+⎬
+⎭<Hk
+q .
+(53)
+Note that in (53), the exponential term exp[−(
+xk
+q−xi
+obs
+aix
+)
+2
+−
+(
+yk
+q −yi
+obs
+aiy
+)
+2
+] is non-convex. To tackle this term, we introduce
+a set of slack variable:{ψi,k
+q },i = 1,..,G ,k = 1,...,K , where
+ψi,k
+q =
+(
+xk
+q −xi
+obs
+aix
+)2
++
+(
+yk
+q −yi
+obs
+aiy
+)2
+. (54)
+Thus, the exponential term can be replaced by con-
+vex term e−ψi,k
+q with additional constraint (54). Accord-
+ingly, for constraints (38)–(41), we introduce another four
+sets of slack variables: {ψi,k
+p },{ψi,k,n
+Fc },{ψi,k,n
+Fs },{ψi,n
+F0 },i =
+1,..,G ,k = 1,...,K ,n = 1,..,L + 1. The non-convex expo-
+nential terms in constraints (38)–(41) can be replaced by
+convex terms e−ψi,k
+p ,e−ψi,k,n
+Fc ,e−ψi,k,n
+Fs and e−ψi,n
+F0 , respectively,
+with additional constraints. Since{ψi,k
+p },{ψi,k,n
+Fc },{ψi,k,n
+Fs }, and
+{ψi,n
+F0 } all have the similar form to that of {ψi,k
+q }, for ease
+of exposition, we will not unnecessarily give the formulas of
+{ψi,k
+p },{ψi,k,n
+Fc },{ψi,k,n
+Fs }, and {ψi,n
+F0 }here.
+Based on the above analyses, let L denote a set of all the
+introduced slack variables, i.e.,
+L = {ϕk,ηk,μk,n
+Fc ,μk,n
+Fs ,μn
+F0,ψi,k
+q ,ψi,k
+p ,ψi,k,n
+Fc ,ψi,k,n
+Fs ,ψi,n
+F0 ,
+i = 1,..,G,k = 1,...,K,n = 1,..,L + 1}.
+Then, P2 can be equivalently formulated as P2.1, i.e.,
+P2.1
+Objective:
+min
+Q,W,T,L
+{ K∑
+k=1
+(∑L+1
+n=1 tk,n
+Fc +∑L+1
+n=1 tk,n
+Fs + Sk
+Bηk
++Ts ln( 1
+1−ω)/ϕk
+)
++
+L+1∑
+n=1
+tn
+F0
+}
+,
+(55a)
+subject to:
+Sk
+Bηk
++
+L+1∑
+n=1
+tk,n
+Fs ≤Tk
+limit, (55b)
+K∑
+k=1
+L+1∑
+n=1
+c1
+⎡
+⎣tk,n
+Fc +tk,n
+Fs +c2
+⎛
+⎝(Δk,n
+Fc )
+2
+tk,n
+Fc
++ (Δk,n
+Fs )
+2
+tk,n
+Fs
+⎞
+⎠
+⎤
+⎦
++
+K∑
+k=1
+L+1∑
+n=1
+c3(μk,n
+Fc +μk,n
+Fs )+
+K∑
+k=1
+L+1∑
+n=1
+c5
+(
+(Δk,n
+Fc )
+3
+(tk,n
+Fc )
+2 + (Δk,n
+Fs )
+3
+(tk,n
+Fs )
+2
+)
++
+L+1∑
+n=1
+c1(tn
+F0 +c2
+(Δn
+F0)2
+tn
+F0
+)+
+L+1∑
+n=1
+c3μn
+F0 +
+L+1∑
+n=1
+c5
+(Δn
+F0)3
+(tn
+F0)2
++
+K∑
+k=1
+Ph
+(
+Ts ln
+( 1
+1−ω
+)
+/ϕk + Sk/B
+ηk
+)
++
+K∑
+k=1
+PcTs ln
+( 1
+1−ω
+)
+/ϕk +
+K∑
+k=1
+Ps
+Sk/B
+ηk
+≤Elimit,
+(55c)
+G∑
+i=1
+(hi
+obs ×e−ψi,k
+q ) <H k
+q , (55d)
+G∑
+i=1
+(hi
+obs ×e−ψi,k
+p ) <H k
+p, (55e)
+G∑
+i=1
+(hi
+obs ×e−ψi,k,n
+Fc ) <z k,n
+Fc , (55f)
+G∑
+i=1
+(hi
+obs ×e−ψi.k.n
+Fs ) <z k,n
+Fs , (55g)
+K∑
+k=1
+L+1∑
+n=1
+c1
+⎛
+⎝tk,n
+Fc +tk,n
+Fs +c2
+⎡
+⎣(Δk,n
+Fc )
+2
+tk,n
+Fc
++ (Δk,n
+Fs )
+2
+tk,n
+Fs
+⎤
+⎦
+⎞
+⎠+
+K∑
+k=1
+L+1∑
+n=1
+c3
+⎛
+⎜⎝
+⎡
+⎣
+√
+(tk,n
+Fc )
+4
++ (Δk,n
+Fc )
+4
+c42 −(Δk,n
+Fc )
+2
+c4
+⎤
+⎦
+1/2
++
+⎡
+⎣
+√
+(tk,n
+Fs )
+4
++ (Δk,n
+Fs )
+4
+c42 −(Δk,n
+Fs )
+2
+c4
+⎤
+⎦
+1/2⎞
+⎟⎠+
+K∑
+k=1
+L+1∑
+n=1
+c5
+[
+(Δk,n
+Fc )
+3
+(tk,n
+Fc )
+2 + (Δk,n
+Fs )
+3
+(tk,n
+Fs )
+2
+]
++
+L+1∑
+n=1
+c1
+[
+tn
+F0 +c2
+(Δn
+F0)2
+tn
+F0
+]
++
+L+1∑
+n=1
+c3
+⎡
+⎣
+√
+(tn
+F0)4 + (Δn
+F0)4
+c42 −(Δn
+F0)2
+c4
+⎤
+⎦
+1/2
++
+L+1∑
+n=1
+c5
+(Δn
+F0)3
+(tn
+F0)2 +
+K∑
+k=1
+Ph
+[
+Ts ln
+( 1
+1−ω
+)/
+ϕk + Sk/B
+ηk
+]
++
+K∑
+k=1
+PcTs ln
+( 1
+1−ω
+)/
+ϕk +
+K∑
+k=1
+Ps
+Sk/B
+ηk
+≤Elimit. (49)
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+1468 IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+G∑
+i=1
+(hi
+obs ×e−ψi,n
+F0 ) <z n
+F0, (55h)
+ϕk ≤ln
+[
+1
+1−e−τ(∥˜qk−ak∥2 +(Hkq )2 )
+1/2
+]
+, (55i)
+ηk ≤log2
+⎧
+⎨
+⎩1+ γ0
+[∥˜pk∥2 +(Hkp −Hb)2]
+α/2
+⎫
+⎬
+⎭, (55j)
+(tk,n
+Fc )
+4
+/(μk,n
+Fc )
+2
+≤(μk,n
+Fc )
+2
++ 2(Δk,n
+Fc )
+2
+/c4, (55k)
+(tk,n
+Fs )
+4
+/(μk,n
+Fs )
+2
+≤(μk,n
+Fs )
+2
++ 2(Δk,n
+Fs )
+2
+/c4, (55l)
+(tn
+F0)4/(μn
+F0)2 ≤(μn
+F0)2 + 2(Δn
+F0)2/c4, (55m)
+ψk
+q,i ≤
+(
+xk
+q −xi
+obs
+aix
+)2
++
+(
+yk
+q −yi
+obs
+aiy
+)2
+, (55n)
+ψk
+p,i ≤
+(
+xk
+p −xi
+obs
+aix
+)2
++
+(
+yk
+p −yi
+obs
+aiy
+)2
+, (55o)
+ψk,n
+Fc,i ≤
+(
+xk,n
+Fc −xi
+obs
+aix
+)2
++
+(
+yk,n
+Fc −yi
+obs
+aiy
+)2
+, (55p)
+ψk,n
+Fs,i ≤
+(
+xk,n
+Fs −xi
+obs
+aix
+)2
++
+(
+yk,n
+Fs −yi
+obs
+aiy
+)2
+, (55q)
+ψn
+F0,i ≤
+(
+xn
+F0 −xi
+obs
+aix
+)2
++
+(
+yn
+F0 −yi
+obs
+aiy
+)2
+, (55r)
+(1), (15), (20)–(22),
+where n = 1,...,L + 1, i = 1,..,G and k = 1,...,K .S i m -
+ilar to [20], constraints (55i)–(55r) are obtained by replacing
+the equality sign with an inequality sign from corresponding
+constraints. Since constraints (55i)–(55r) are non-convex [23],
+P2.1 is a non-convex problem.
+To solve P2.1, we ﬁrst deal with the non-convex constraints
+by ﬁnding the global upper bounds or lower bounds of the
+non-convex terms in the non-convex constraints. For constraint
+(55i), its right hand side (RHS) is non-convex. According to
+optimization theory, the RHS satisﬁes the following inequity
+constraint [23], i.e.,
+ln
+[
+1
+1−e−τ(∥˜qk−ak∥2 +(Hkq )2 )
+1/2
+]
+≥ln
+[
+1
+1−e−τ(∥˜ql
+k−ak∥
+2
++(Hk,l
+q )
+2
+)
+1/2
+]
+−ζk(∥˜qk −ak∥2 +(Hk
+q )
+2
+−
+˜ql
+k −ak
+2
+−(Hk,l
+q )
+2
+)
+= Yl,k
+lb , (56)
+where l denotes an iteration number, (˜ql
+k
+T
+,Hk,l
+q ) denotes the
+UA V’s hovering position for DC at thelth iteration,Yl,k
+lb denotes
+the global lower bound (GLB) of the RHS at the lth iteration,
+andζk is given by
+ζk =
+τ·e−τ(∥˜ql
+k−ak∥
+2
++(Hk,l
+q )
+2
+)
+1/2
+2[1−e−τ(∥˜ql
+k−ak∥
+2
++(Hk,l
+q )
+2
+)
+1/2
+](
+˜ql
+k −ak
+2
++(Hk,l
+q )
+2
+)
+1/2.
+For constraint (55j),l e tRl,k
+lb denote the GLB of its RHS at the
+lth iteration. Similarly, we have
+log2
+⎧
+⎨
+⎩1+ γ0
+[∥˜pk∥2 +(Hkp −Hb)2]
+α/2
+⎫
+⎬
+⎭
+≥log2
+⎧
+⎨
+⎩1+ γ0
+[
+˜pl
+k
+2
++(Hk,l
+p −Hb)
+2
+]
+α/2
+⎫
+⎬
+⎭
+−φl
+k[∥˜pk∥2 +(Hk
+p −Hb)
+2
+−
+˜pl
+k
+2
+−(Hk,l
+p −Hb)
+2
+]
+= Rl,k
+lb , (57)
+where (˜pl
+k
+T
+,Hk,l
+p ) denotes the UA V’s local hovering position
+for DT at the lth iteration and φl
+k is given by
+φl
+k =
+(log2e)γ0α/2
+[
+˜pl
+k
+2
++(Hk,l
+p −Hb)
+2
+]{[
+˜pl
+k
+2
++(Hk,l
+p −Hb)
+2
+]
+α/2
++γ0}
+.
+For constraints (55k)–(55m),l e t
+⌣
+U
+k,n,l
+Fc ,
+⌣
+U
+k,n,l
+Fs and
+⌣
+U
+n,l
+F0 de-
+note the GLBs of their RHSs, respectively. Similarly, we have
+(μk,n
+Fc )
+2
++ 2(Δk,n
+Fc )
+2
+/c4 ≥−(μk,n,l
+Fc )
+2
++ 2μk,n,l
+Fc μk,n
+Fc
+−2/c4 ×
+[wk,n−1,l
+Fc −wk,n,l
+Fc
+
+2
++(zk,n−1,l
+Fc −zk,n,l
+Fc )
+2
++ 2(wk,n−1,l
+Fc −wk,n,l
+Fc )
+T
+(wk,n−1
+Fc −wk,n
+Fc )
++ 2(zk,n−1,l
+Fc −zk,n,l
+Fc )(zk,n−1
+Fc −zk,n
+Fc )
+]
+=
+⌣
+U
+k,n,l
+Fc , (58)
+where(wk,n,l
+Fc
+T
+,zk,n,l
+Fc )denotes the UA V’s waypoint for collect-
+ing DATA_kat the lth iteration. Since
+⌣
+U
+k,n,l
+Fs and
+⌣
+U
+n,l
+F0 both have
+the similar form to that of
+⌣
+U
+k,n,l
+Fc , we will not unnecessarily give
+the formulas of
+⌣
+U
+k,n,l
+Fs and
+⌣
+U
+n,l
+F0 here.
+For constraints (55n)–(55r),l e t
+⌣
+O
+k,l
+q,i ,
+⌣
+O
+k,l
+p,i,
+⌣
+O
+k,n,l
+Fc,i ,
+⌣
+O
+k,n,l
+Fs,i and
+⌣
+O
+n,l
+F0,i denote the GLBs of their RHSs, respectively. Similarly,
+we have(
+xk
+q −xi
+obs
+aix
+)2
++
+(
+yk
+q −yi
+obs
+aiy
+)2
+≥2
+(
+xk,l
+q −xi
+obs
+(aix)2
+)
+(xk
+q −xk,l
+q )
++ 2
+(
+yk,l
+q −yi
+obs
+(aiy)2
+)
+(yk
+q −yk,l
+q )
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+ZHENG AND LIU: 3D UA V TRAJECTORY PLANNING WITH OBSTACLE A VOIDANCE FOR UA V -ENABLED TIME-CONSTRAINED DC SYSTEMS 1469
++
+(
+xk,l
+q −xi
+obs
+aix
+)2
++
+(
+yk,l
+q −yi
+obs
+aiy
+)2
+=
+⌣
+O
+k,l
+q,i, (59)
+where (xk,l
+q ,yk,l
+q )
+T
+= ˜ql
+k denotes the UA V’s hovering position
+for DC at the lth iteration. Since
+⌣
+O
+k,l
+p,i,
+⌣
+O
+k,n,l
+Fc,i ,
+⌣
+O
+k,n,l
+Fs,i and
+⌣
+O
+n,l
+F0,i all
+have the similar form to that of
+⌣
+O
+k,l
+q,i , we will not unnecessarily
+give the formulas of
+⌣
+O
+k,l
+p,i,
+⌣
+O
+k,n,l
+Fc,i ,
+⌣
+O
+k,n,l
+Fs,i , and
+⌣
+O
+n,l
+F0,i here.
+By replacing the RHSs of constraints (55i)–(55r) with their
+GLBs at the lth iteration, respectively, P2.1 can be rewritten as
+P2.2, i.e.,
+P2.2
+Objective:
+min
+Q,W,T,L
+{ K∑
+k=1
+(∑L+1
+n=1 tk,n
+Fc +∑L+1
+n=1 tk,n
+Fs + Sk
+Bηk
++Ts ln( 1
+1−ω)/ϕk
+)
++
+L+1∑
+n=1
+tn
+F0
+}
+,
+(60a)
+subject to:
+ηk ≤Rl,k
+lb , (60b)
+ϕk ≤Yl,k
+lb , (60c)
+(tk,n
+Fc )
+4
+/(μk,n
+Fc )
+2
+≤
+⌣
+U
+k,n,l
+Fc , (60d)
+(tk,n
+Fs )
+4
+/(μk,n
+Fs )
+2
+≤
+⌣
+U
+k,n,l
+Fs , (60e)
+(tn
+F0)4/(μn
+F0)2 ≤
+⌣
+U
+n,l
+F0 , (60f)
+ψk
+q,i ≤
+⌣
+O
+k,l
+q,i, (60g)
+ψk
+p,i ≤
+⌣
+O
+k,l
+p,i, (60h)
+ψk,n
+Fc,i ≤
+⌣
+O
+k,n,l
+Fc,i , (60i)
+ψk,n
+Fs,i ≤
+⌣
+O
+k,n,l
+Fs,i , (60j)
+ψn
+F0,i ≤
+⌣
+O
+n,l
+F0,i, (60k)
+(1), (15), (20)–(22), (55b)–(55h),
+where n = 1,...,L + 1, k = 1,...,K and i = 1,...,G .A c -
+cording to [23], all constraints of P2.2 are convex. Thus, P2.2
+is a convex problem, which can be efﬁciently solved by using
+CVX [24].
+Based on the above analyses, P2 can be solved by solving P2.1
+because P2.1 is equivalent to P2. Since the optimal objective
+value of P2.2 actually provides a global upper bound to that of
+P2.1, P2.1 can be solved by using an SCA method [14], [20].
+Therefore, we propose a SCA-based optimization algorithm to
+solve P2.1 or P2, which is described in Algorithm 2.
+C. 3D Trajectory Optimization Algorithm and Computational
+Complexity
+The 3D trajectory optimization algorithm is based on Al-
+gorithm 1 and Algorithm 2 proposed to respectively solve P1
+and P2, as described in Algorithm 3. The main idea of the 3D
+trajectory optimization algorithm is to alternatively optimize the
+Algorithm 2: SCA-Based Optimization Algorithm.
+Input: the UA V’s visiting sequence:
+π =[ π(1),...,π (N)],
+a set of the UA V’s initial hovering positions:
+Q 0 = {˜q0
+k,˜p0
+k,Hk,0
+q ,Hk,0
+p ,k = 1,...,K },
+a set of the UA V’s initial waypoints:
+W 0 = {wk,n,0
+Fc ,wk,n,0
+Fs ,wn,0
+F0 ,zk,n,0
+Fc ,zk,n,0
+Fs ,zn,0
+F0 ,
+k = 1,...,K,n = 1,...,L };
+1: Set l = 0;
+2: Repeat: Solve P2.2 with
+Ql = {˜ql
+k,˜pl
+k,Hk,l
+q ,Hk,l
+p ,k = 1,...,K } and
+Wl = {wk,n,l
+Fc ,wk,n,l
+Fs ,wn,l
+F0 ,zk,n,l
+Fc ,zk,n,l
+Fs ,zn,l
+F0 ,
+k = 1,...,K,n = 1,...,L }
+by using CVX to ﬁnd
+Ql+1 = {˜ql+1
+k ,˜pl+1
+k ,Hk,l+1
+q ,Hk,l+1
+p ,k = 1,...,K },
+Wl+1={wk,n,l+1
+Fc ,wk,n,l+1
+Fs ,wn,l+1
+F0 ,zk,n,l+1
+Fc ,zk,n,l+1
+Fs ,
+zn,l+1
+F0 ,k = 1,...,K,n = 1,...,L }
+and obtain Tl+1
+total;
+3: Perform l = l+ 1;
+4: Until the objective value Ttotal converges;
+Output: Q∗= {˜qk∗,˜pk∗,Hk∗
+q ,Hk∗
+p ,k = 1,...,K ),
+W∗= {wk,n∗
+Fc ,wk,n∗
+Fs ,wn∗
+F0 ,zk,n∗
+Fc ,zk,n∗
+Fs ,zn∗
+F0 ,
+k = 1,...,K,n = 1,...,L } ,
+T∗= {tk,n∗
+Fs ,tk,n∗
+Fs ,tn∗
+F0 ,k = 1,...,K,n = 1,...,L + 1}.
+UA V’s visiting sequence, hovering positions, and ﬂying paths
+between the hovering positions until the UA V’s total mission
+completion time converges.
+The computational complexity of the 3D trajectory opti-
+mization algorithm mainly consists of two components: the
+complexity of Algorithm 1 and that of Algorithm 2. Similar to
+[14], the complexity of Algorithm 1 is approximatelyO(YZK )
+and that of Algorithm 2 is approximatelyO((2KGL + 2KG +
+GL+ 10KL + 12K + 5L+ 2)3.5 log(1/ε)), where Y and Z
+denote the maximum number of iterations and the initial popu-
+lation size used in Algorithm 1, respectively,(2KGL + 2KG +
+GL+ 10KL + 12K + 5L+ 2) denotes the total number
+of the optimization variables in P2.2, and ε denotes
+a solution accuracy [14]. Therefore, the total computa-
+tional complexity of the 3D trajectory optimization al-
+gorithm is approximately O(L3(YZK +( 10KL + 2KGL)3.5
+log(1/ε))), where L3 denotes the number of iterations in the
+algorithm.
+V. S IMULA TIONRESULTS
+We show simulation results to evaluate the performance of
+the proposed 3D trajectory optimization algorithm. We use
+MA TLAB to conduct the simulation experiments, and use the
+parameter values given in Table I[ 4 ], [14], [20] and Table II [5]
+in the experiments.
+For evaluation, a 2D avoidance trajectory optimization (AoI-
+EaTO) algorithm proposed in [14] is used as a benchmark
+algorithm. Unlike the proposed 3D trajectory optimization al-
+gorithm, the AoI-EaTO algorithm assumes that the UA V ﬂies
+at a constant altitude. In this case, only when the UA V ﬂies at
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+1470 IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+Algorithm 3: 3D Trajectory Optimization Algorithm.
+Input: a set of the UA V’s initial hovering positions:
+Q 0 = {˜q0
+k,˜p0
+k,Hk,0
+q ,Hk,0
+p ,k = 1,...,K };
+a set of the UA V’s initial waypoints:
+W
+0
+= {wk,n,0
+Fc ,wk,n,0
+Fs ,wn,0
+F0 ,zk,n,0
+Fc ,zk,n,0
+Fs ,zn,0
+F0 ,
+k = 1,...,K,n = 1,...,L };
+1: Set l = 0;
+2: Repeat: Solve P1 with
+Ql = {˜ql
+k,˜pl
+k,Hk,l
+q ,Hk,l
+p ,k = 1,...,K } and
+Wl = {wk,n,l
+Fc ,wk,n,l
+Fs ,wn,l
+F0 ,zk,n,l
+Fc ,zk,n,l
+Fs ,zn,l
+F0 ,
+k = 1,...,K,n = 1,...,L }
+by using Algorithm 1 to ﬁnd
+πl+1 =[ πl+1(1),...,π l+1(N)];
+3: Solve P2 with πl+1 =[ πl+1(1),...,π l+1(N)],
+Ql = {˜ql
+k,˜pl
+k,Hk,l
+q ,Hk,l
+p ,k = 1,...,K } and
+Wl = {wk,n,l
+Fc ,wk,n,l
+Fs ,wn,l
+F0 ,zk,n,l
+Fc ,zk,n,l
+Fs ,zn,l
+F0 ,
+k = 1,...,K,n = 1,...,L }
+by using Algorithm 2 to ﬁnd
+Ql+1 = {˜ql+1
+k ,˜pl+1
+k ,Hk,l+1
+q ,Hk,l+1
+p ,k = 1,...,K },
+W
+l+1
+={wk,n,l+1
+Fc ,wk,n,l+1
+Fs ,wn,l+1
+F0 ,zk,n,l+1
+Fc ,zk,n,l+1
+Fs ,
+zn,l+1
+F0 ,k = 1,...,K,n = 1,...,L }
+and obtain Tl+1
+total;
+4: Perform l = l+ 1;
+5: Until the objective value Ttotal converges;
+Output: π∗=[ π∗(1),...,π ∗(N)],
+Q∗= {˜qk∗,˜pk∗,Hk∗
+q ,Hk∗
+p ,k = 1,...,K ),
+W∗= {wk,n∗
+Fc ,wk,n∗
+Fs ,wn∗
+F0 ,zk,n∗
+Fc ,zk,n∗
+Fs ,zn∗
+F0 ,
+k = 1,...,K,n = 1,...,L } ,
+T∗= {tk,n∗
+Fs ,tk,n∗
+Fs ,tn
+F0
+∗,k = 1,...,K,n =
+1,...,L + 1}.
+TABLE I
+SIMULA TIONPARAMETERS
+TABLE II
+OBSTACLE MODEL PARAMETERS
+Fig. 5. The iteration process of the proposed algorithm in situation I.
+an altitude high enough can it avoid collisions with all obsta-
+cles. Moreover, we introduce the following metrics: the UA V’s
+trajectory, total mission completion time, average ﬂying speed,
+total ﬂying distance, total hovering time and total ﬂying time.
+Fig. 5 shows the UA V’s total mission completion time (Ttotal)
+vs the number of iterations with the proposed algorithm in a
+situation (Situation I), where Tk
+limit = 45 s,k = 1,...,K and
+Elimit = 280 KJ. It is seen that Ttotal quickly decreases and
+tends to stabilize within a few iterations, which shows that the
+proposed algorithm can converge quickly.
+Figs. 6 and 7 show the UA V’s trajectories with the proposed
+algorithm and the AoI-EaTO algorithm, respectively, in Situa-
+tion I. Table III shows the other performance metrics with the
+two algorithms, respectively. It can be seen that the UA V’s min-
+imum total mission completion time (Ttotal
+∗) with the proposed
+algorithm is smaller than that with the AoI-EaTO algorithm. The
+reason is that with the proposed algorithm the UA V can hover
+at a lower altitude to collect or transmit data compared with the
+AoI-EaTO algorithm. Based on the analyses in Section III-B,a
+lower altitude for collecting or transmitting data always leads
+to a shorter DC time or DT time for the UA V . Thus, the UA V’s
+total hovering time with the proposed algorithm is smaller than
+that with the AoI-EaTO algorithm, resulting a smaller UA V’s
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+ZHENG AND LIU: 3D UA V TRAJECTORY PLANNING WITH OBSTACLE A VOIDANCE FOR UA V -ENABLED TIME-CONSTRAINED DC SYSTEMS 1471
+Fig. 6. The UA V’s trajectory with the proposed algorithm in situation I.
+Fig. 7. The UA V’s trajectory with the AoI-EaTO algorithm in situation I.
+TABLE III
+PERFORMANCE COMPARISON
+energy consumption for hovering with the proposed algorithm.
+As a result, with the proposed algorithm, the UA V has more
+energy for ﬂying and thus the UA V’s average ﬂying speed is
+larger than that with the AoI-EaTO algorithm. Moreover, the
+UA V’s total ﬂying distance with the proposed algorithm is larger
+than that with the AoI-EaTO algorithm. The reason is with the
+proposed algorithm the UA V needs to maneuver around or ﬂy
+over obstacles to avoid collisions, resulting the longer ﬂying
+distance for the UA V compared with that with the AoI-EaTO
+algorithm.
+Figs. 8 and 9 show the UA V’s minimum total mission com-
+pletion time (Ttotal
+∗) and average ﬂying speed ( vavg ) with the
+proposed algorithm under different energy constraints (Elimit),
+respectively, where Tk
+limit = 45 s,k = 1,...,K . It can be ob-
+served that an increase in Elimit causesTtotal
+∗to decrease and
+Fig. 8. Ttotal∗vs Elimit.
+Fig. 9. vavg vs Elimit.
+subsequently stabilize. Meanwhile, vavg increases and tends to
+vmax. The reason is that asElimit increases, the UA V can obtain
+more energy to ﬂy at a faster speed, which would in turn lead to a
+corresponding decrease inTtotal
+∗. However, ifElimit exceeds a
+certain value (e.g., 310KJ in Fig. 8) ,t h eU A Vw o u l dﬂ ya tvmax,
+resulting in Ttotal
+∗to stabilize.
+Figs. 10 and 11 show the UA V’s minimum total mission com-
+pletion time (Ttotal
+∗) and average ﬂying speed ( vavg ) with the
+proposed algorithm under different time constraints of collected
+data (Tk
+limit), respectively, where Elimit = 280KJ. It is seen
+that asTk
+limit increases,Ttotal
+∗ﬁrst decreases and subsequently
+stabilizes, and meanwhile vavg ﬁrst increases and then tends
+to stabilize. The reason is that when Tk
+limit increases, the UA V
+would have more time to transmitDATA_k. In this case, the UA V
+would not have to ﬂy to a position closer to the GBS to reduce the
+age of DATA_k, resulting in a decrease in the UA V’s total ﬂying
+distance and thus an increase invavg given the energy constraint.
+Consequently,Ttotal
+∗would decrease. But whenTk
+limit exceeds
+a certain value (e.g., 39s in Fig. 10), the UA V’s total ﬂying
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+1472 IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+Fig. 10. Ttotal∗vs T k
+limit.
+Fig. 11. vavg vs T k
+limit.
+distance cannot be further reduced, resulting invavg andTtotal
+∗
+to stabilize.
+Fig. 12 shows the UA V’s trajectory with the proposed algo-
+rithm in a situation (Situation II), where the time constraints of
+data collected in a1, a3, and a6 are set to smaller values, com-
+pared with Situation I, i.e.,T 1
+limit = 26 s,T 3
+limit = 36 s,T 6
+limit =
+35 s, to investigate the impact of Tk
+limiton the UA V’s trajectory.
+Comparing Fig. 12 with Fig. 6, the UA V’s hovering positions
+for transmitting data collected ina1,a3 anda6 in Situation II are
+closer to the GBS than those in Situation I. This is because in
+Situation II, the time constraints of data collected in a1, a3 and
+a6 are smaller than those in Situation I. Thus, the UA V needs
+to ﬂy faster and select hovering positions closer to the BS for
+transmitting collected data in order to meet the time constraints.
+Figs. 13 and 14 show the UA V’s total mission completion time
+(Ttotal) vs the number of iterations, and the UA V’s trajectory
+with the proposed algorithm in a situation (called Situation III),
+where the parameters of the obstacle model are set differently
+from those in Situation I. It is seen that similar to Situation
+Fig. 12. The UA V’s trajectory in situation II.
+Fig. 13. The iteration process of the proposed algorithm in situation III.
+I,Ttotal also quickly decreases and tends to stabilize within a
+few iterations, and the UA V can avoid collisions with spatial
+obstacles during the overall mission as well, which further
+demonstrates the efﬁciency of the proposed algorithm.
+Fig. 15 shows the UA V’s total ﬂying distance with the pro-
+posed algorithm vs the packet size of collected data (Sk), where
+Tk
+limit = 50 s,k = 1,...,K and Elimit = 300 KJ. It is seen
+that asSk increases, the UA V’s total ﬂying distance ﬁrst remains
+unchanged, then gradually increases, and tends to stabilize. The
+reason is that as Sk increases, if the UA V’s hovering positions
+for DT remains unchanged, the UA V’s DT time would increase,
+which would result in the increasing of the age of collected
+data. WhenSk is smaller than a certain value (i.e., 40Mbits), the
+age of collected data is within the time constraint of collected
+data and thus the UA V’s hovering positions for DT can remain
+unchanged. As a result, the UA V’s total ﬂying distance remains
+unchanged. WhenSk becomes larger, to meet the time constraint
+of collected data, the UA V’s hovering positions for DT would
+be closer to the BS to reduce the age of collected data. Thus, the
+UA V’s total ﬂying distance would increase. However, whenSk
+increases to a certain value (i.e., 90Mbits), the UA V’s hovering
+positions for DT have already been closest to the BS. As a result,
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+ZHENG AND LIU: 3D UA V TRAJECTORY PLANNING WITH OBSTACLE A VOIDANCE FOR UA V -ENABLED TIME-CONSTRAINED DC SYSTEMS 1473
+Fig. 14. The UA V’s trajectory in situation III.
+Fig. 15. The UA V’s total ﬂying distance vs Sk .
+the age of collected data cannot further be reduced and thus the
+UA V’s total ﬂying distance would not continue to change asSk
+further increases.
+Fig. 16 shows the UA V’s total ﬂying time with the proposed
+algorithm vs the packet size of collected data ( Sk), where
+Tk
+limit = 50 s,k = 1,...,K and Elimit = 300 KJ.I ti ss e e n
+that the UA V’s total ﬂying time keeps increasing, but increases
+slowly when Sk is small or large. The reason is that as Sk
+increases, no matter whether the UA V’s DT time increases or
+the UA V’s hovering positions for DT are closer to the BS, the
+UA V’s energy consumption for ﬂying decreases, which would
+reduce the UA V’s average ﬂying speed. Since the UA V’s total
+ﬂying time mainly depends on the UA V’s average ﬂying speed
+and total ﬂying distance, the UA V’s total ﬂying time keeps
+increasing with the reduction of the UA V’s average ﬂying speed
+and the increase of the UA V’s total ﬂying distance. Accord-
+i n gt oF i g . 15, when Sk is small or large, the UA V’s total
+ﬂying distance remains unchanged. In this case, the UA V’s
+total ﬂying time only increase with the reduction of the UA V’s
+average ﬂying speed, thus the UA V’s total ﬂying time increases
+slowly.
+Fig. 16. The UA V’s total ﬂying time vs Sk .
+VI. C ONCLUSION AND FUTURE WORK
+In this paper, we investigated the 3D UA V trajectory-planning
+problem in a UA V -enabled DC system, in which a UA V is
+deployed to execute a DC mission to collect time-constrained
+data in a number of DCAs in a geographical area with various
+spatial obstacles. The problem was formulated as an optimiza-
+tion problem with an objective to minimize the UA V’s total
+mission completion time, taking into account the time con-
+straint of collected data, the avoidance of the obstacles, and
+the UA V’s energy constraint. To solve the formulated prob-
+lem, the problem was decomposed into a visiting sequence
+optimization sub-problem, and a hovering position and ﬂy-
+ing path optimization sub-problem. Correspondingly, a GA
+based algorithm, and a SCA based algorithm were proposed
+to solve the two sub-problems, respectively. Based on the
+two algorithms, a 3D trajectory optimization algorithm was
+further proposed to solve the main problem. The simulation
+results show that the proposed 3D trajectory optimization al-
+gorithm outperforms the 2D benchmark algorithm in terms
+of the UA V’s total mission completion time, and the UA V’s
+trajectory planned with the proposed algorithm can avoid colli-
+sions with obstacles and meet the time constraints of collected
+data.
+In this paper, we considered a DC/DT mode in which a
+UA V performs DC/DT while hovering and used an energy
+consumption model which results in a UA V to ﬂy over, not
+around obstacles. For future work, it is interesting to investigate
+a DC/DT mode in which a UA V performs DC/DT while ﬂying
+in the planning of a 3D trajectory, and investigate whether ﬂying
+around obstacles is better than ﬂying over obstacles in energy
+saving for a whole 3D trajectory.
+REFERENCES
+[1] M. Mozaffari, W. Saad, M. Bennis, Y .-H. Nam, and M. Debbah, “A
+tutorial on UA Vs for wireless networks: Applications, challenges, and open
+problems,” IEEE Commun. Surveys Tuts. , vol. 21, no. 3, pp. 2334–2360,
+thirdquarter 2019.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 
+1474 IEEE TRANSACTIONS ON VEHICULAR TECHNOLOGY, VOL. 74, NO. 1, JANUARY 2025
+[2] H. Zeng, Z. Su, Q. Xu, K. Zhang, and Q. Y e, “Game theoretical in-
+centive for USV ﬂeet-assisted data sharing in maritime communication
+networks,” IEEE Trans. Netw. Sci. Eng. , vol. 11, no. 2, pp. 1398–1412,
+Mar./Apr. 2024.
+[3] Z. Wei et al., “UA V -assisted data collection for Internet of Things:
+As u r v e y , ”IEEE Internet Things J. , vol. 9, no. 17, pp. 15460–15483,
+Sep. 2022.
+[4] S. Zhang, H. Zhang, Z. Han, H. V . Poor, and L. Song, “Age of information
+in a cellular internet of UA Vs: Sensing and communication trade-off
+design,” IEEE Trans. Wireless Commun., vol. 19, no. 10, pp. 6578–6592,
+Oct. 2020.
+[5] Z. Y u, Z. Si, X. Li, D. Wang, and H. Song, “A novel hybrid particle swarm
+optimization algorithm for path planning of UA Vs,”IEEE Internet Things
+J., vol. 9, no. 22, pp. 22547–22558, Nov. 2022.
+[6] C. Y ou and R. Zhang, “Hybrid ofﬂine-online design for UA V -enabled data
+harvesting in probabilistic LoS channels,”IEEE Trans. Wireless Commun.,
+vol. 19, no. 6, pp. 3753–3768, Jun. 2020.
+[7] Y . Wang et al., “Trajectory design for UA V -based Internet of Things data
+collection: A deep reinforcement learning approach,”IEEE Internet Things
+J., vol. 9, no. 5, pp. 3899–3912, Mar. 2022.
+[8] M. Li, S. He, and H. Li, “Minimizing mission completion time of UA Vs
+by jointly optimizing the ﬂight and data collection trajectory in UA V -
+enabled WSNs,” IEEE Internet Things J., vol. 9, no. 15, pp. 13498–13510,
+Aug. 2022.
+[9] G. Chen, X. B. Zhai, and C. Li, “Joint optimization of trajectory and
+user association via reinforcement learning for UA V -aided data collection
+in wireless networks,” IEEE Trans. Wireless Commun. , vol. 22, no. 5,
+pp. 3128–3143, May 2023.
+[10] X. Y uan, Y . Hu, J. Zhang, and A. Schmeink, “Joint user scheduling
+and UA V trajectory design on completion time minimization for UA V -
+aided data collection,” IEEE Trans. Wireless Commun. , vol. 22, no. 6,
+pp. 3884–3898, Jun. 2023.
+[11] K. K. Nguyen, T. Q. Duong, T. Do-Duy, H. Claussen, and L. Hanzo,
+“3D UA V trajectory and data collection optimization via deep reinforce-
+ment learning,” IEEE Trans. Commun. , vol. 70, no. 4, pp. 2358–2371,
+Apr. 2022.
+[12] C. Sun, X. Xiong, Z. Zhai, W. Ni, T. Ohtsuki, and X. Wang, “Max–min
+fair 3D trajectory design and transmission scheduling for solar-powered
+ﬁxed-wing UA V -assisted data collection,”IEEE Trans. Wireless Commun.,
+vol. 22, no. 12, pp. 8650–8665, Dec. 2023.
+[13] M. Samir, S. Sharafeddine, C. M. Assi, T. M. Nguyen, and A. Ghrayeb,
+“UA V trajectory planning for data collection from time-constrained IoT
+devices,” IEEE Trans. Wireless Commun. , vol. 19, no. 1, pp. 34–46,
+Jan. 2020.
+[14] K. Liu and J. Zheng, “UA V trajectory optimization for time-
+constrained data collection in UA V -enabled environmental monitoring
+systems,” IEEE Internet Things J. , vol. 9, no. 23, pp. 24300–24314,
+Dec. 2022.
+[15] Z. Li, P . Tong, J. Liu, X. Wang, L. Xie, and H. Dai, “Learning-
+based data gathering for information freshness in UA V -assisted IoT
+networks,” IEEE Internet Things J. , vol. 10, no. 3, pp. 2557–2573,
+Feb. 2023.
+[16] A. Al-Hilo, M. Samir, M. Elhattab, C. Assi, and S. Sharafeddine, “RIS-
+assisted UA V for timely data collection in IoT networks,” IEEE Syst. J. ,
+vol. 17, no. 1, pp. 431–442, Mar. 2023.
+[17] X. Gao, X. Zhu, and L. Zhai, “AoI-sensitive data collection in multi-
+UA V -assisted wireless sensor networks,”IEEE Trans. Wireless Commun.,
+vol. 22, no. 8, pp. 5185–5197, Aug. 2023.
+[18] X. Y uan, Y . Hu, D. Li, and A. Schmeink, “Novel optimal trajectory
+design in UA V -assisted networks: A mechanical equivalence-based strat-
+egy,” IEEE J. Sel. Areas Commun. , vol. 39, no. 11, pp. 3524–3541,
+Nov. 2021.
+[19] V . V . Shakhov and I. Koo, “Experiment design for parameter estima-
+tion in probabilistic sensing models,” IEEE Sens. J. , vol. 17, no. 24,
+pp. 8431–8437, Dec. 2017.
+[20] Y . Zeng, J. Xu, and R. Zhang, “Energy minimization for wireless commu-
+nication with rotary-wing UA V,”IEEE Trans. Wireless Commun., vol. 18,
+no. 4, pp. 2329–2345, Apr. 2019.
+[21] H. Shen, Q. Y e, W. Zhuang, W. Shi, G. Bai, and G. Y ang, “Drone-
+small-cell-assisted resource slicing for 5G uplink radio access net-
+works,” IEEE Trans. V eh. Technol. , vol. 70, no. 7, pp. 7071–7086,
+Jul. 2021.
+[22] Y . Zeng, Q. Wu, and R. Zhang, “Accessing from the sky: A tutorial on
+UA V communications for 5G and beyond,” Proc. IEEE, vol. 107, no. 12,
+pp. 2327–2375, Dec. 2019.
+[23] S. P . Boyd and L. V andenberghe,Convex Optimization. Cambridge, U.K.:
+Cambridge Univ. Press, 2004.
+[24] M. Grant and S. Boyd, “CVX: Matlab software for disciplined convex
+programming, version 2.0 beta,” Sep. 2013. [Online]. Available: http://
+cvxr.com/cvx
+Jun Zheng (Senior Member, IEEE) received the
+Ph.D. degree in electrical and electronic engineering
+from The University of Hong Kong, Hong Kong, in
+2000. He is currently a Full Professor with the School
+of Information Science and Engineering, Southeast
+University (SEU), Nanjing, China. Before joining
+SEU in 2008, he was with the School of Information
+Technology and Engineering, University of Ottawa,
+Ottawa, ON, Canada. He has coauthored (ﬁrst au-
+thor) two books published by Wiley-IEEE Press and
+nearly 200 technical papers in refereed journals and
+peer-reviewed conference proceedings. His research interests include mobile
+communication networks, vehicular ad hoc networks, and UA V -connected net-
+works, focused on network architectures and protocols. He is a Member of
+Purple Mountain Laboratories, China. He was the co-recipient of the Best
+Paper Awards at IEEE ICC 2014 and WCSP 2018. He is an editorial board
+Member of several international journals, including IEEE T RANSACTIONS ON
+VEHICULAR TECHNOLOGY. He has co-edited fourteen special issues for different
+refereed journals and magazines, including IEEE Communications Magazine ,
+IEEE Network and IEEE J OURNAL ON SELECTED AREAS IN COMMUNICA-
+TIONS, all as the Lead Guest Editor. He was the founding General Chair of
+AdHocNets’2009, General Chair of AccessNets’2007, AdHocNets’2018/2019,
+ICNC 2024, and TPC or Symposium Co-Chair for a number of international
+conferences and symposia, including IEEE ICC’2009/2011/2015/2021 and
+GLOBECOM’2008/2010/2012/2018/2019. He was a TPC Member for a number
+of international conferences and symposiums. He is a Senior Member of IEEE
+Communications Society and IEEE V ehicular Technology Society. He is the
+Chair of IEEE V ehicular Technology Society Nanjing Chapter. He was the Chair
+of IEEE ComSoc Communications Switching and Routing Technical Commit-
+tee. He was the recipient of 2021 IEEE ComSoc Communications Software
+Technical Committee “Technical Achievement Award” and 2023 IEEE ComSoc
+Communications Switching & Routing Technical Committee “Distinguished
+Technical Achievement Award”.
+Kai Liu received the bachelor’s degree from
+Hangzhou Dianzi University, Hangzhou, China, in
+2017. He is currently working toward the Ph.D. de-
+gree with the School of Information Science and
+Engineering, Southeast University, Nanjing, China.
+His research interests include the area of UA V com-
+munication and networks, focusing on UA V trajectory
+optimization.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:25:57 UTC from IEEE Xplore.  Restrictions apply. 

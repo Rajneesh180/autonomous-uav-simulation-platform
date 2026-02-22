@@ -78,6 +78,24 @@ class EnergyModel:
             node, distance
         ) + EnergyModel.hover_energy(node, hover_time)
 
+    @staticmethod
+    def mechanical_energy(node, acceleration_vec: tuple) -> float:
+        """
+        Acceleration-based mechanical energy model.
+        E_ME = \Delta \sum wc || a[i] - ag ||^2
+        """
+        ax, ay, az = acceleration_vec
+        ag_x, ag_y, ag_z = 0.0, 0.0, -Config.GRAVITY
+        
+        # w: weather resistance, c: mass/inertia coefficient
+        w = 1.0  
+        c = Config.UAV_MASS
+        
+        norm_sq = (ax - ag_x)**2 + (ay - ag_y)**2 + (az - ag_z)**2
+        power = w * c * norm_sq
+        
+        return power * float(Config.TIME_STEP)
+
     # ---------------------------------------------------------
     # Feasibility Checks
     # ---------------------------------------------------------

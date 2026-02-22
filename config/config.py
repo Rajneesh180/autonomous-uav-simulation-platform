@@ -97,6 +97,15 @@ class Config:
     DEFAULT_DATA_RATE_MBPS = 0.5    
 
     # =========================================================
+    # Phase 3.5: Probabilistic Sensing & Age of Information
+    # =========================================================
+    ENABLE_PROBABILISTIC_SENSING = True
+    SENSING_TAU = 0.05             # Decay parameter for Prob(success)
+    MIN_SENSING_PROB_THRESH = 0.7  # Threshold below which sensing is invalid
+    MAX_AOI_LIMIT = 200            # Time-steps until data expires
+    ENABLE_AOI_EXPIRATION = True
+
+    # =========================================================
     # Temporal Engine
     # =========================================================
     TIME_STEP = 1
@@ -136,10 +145,13 @@ class Config:
     MIN_NODE_FLOOR = 15
 
     # =========================================================
-    # UAV Motion Model
+    # UAV Motion Model (Agent-Centric Kinematics)
     # =========================================================
     UAV_STEP_SIZE = 5.0
     COLLISION_MARGIN = 3.0
+    MAX_YAW_RATE = 30.0    # degrees per second
+    MAX_PITCH_RATE = 15.0  # degrees per second
+    MAX_ACCELERATION = 2.0 # m/s^2
 
     # =========================================================
     # Predictive Avoidance Layer (NEW)
@@ -147,6 +159,10 @@ class Config:
     ENABLE_PREDICTIVE_AVOIDANCE = True
     ENABLE_LOCAL_STEERING = True
     REPLAN_COOLDOWN_STEPS = 5
+    
+    # Phase 3.5: ISAC and Digital Twin Obstacle Mapping
+    ENABLE_ISAC_DIGITAL_TWIN = True
+    ISAC_SENSING_RADIUS = 150.0
 
     # These will be derived from hostility
     PREDICTION_HORIZON = 3

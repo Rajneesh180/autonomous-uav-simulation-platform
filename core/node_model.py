@@ -12,6 +12,15 @@ class Node:
     z: float = 0.0
 
     # ---------------------------------------------------------
+    # Kinematics State
+    # ---------------------------------------------------------
+    yaw: float = 0.0
+    pitch: float = 0.0
+    vx: float = 0.0
+    vy: float = 0.0
+    vz: float = 0.0
+
+    # ---------------------------------------------------------
     # Semantic Fields
     # ---------------------------------------------------------
     priority: int = 1
@@ -26,6 +35,8 @@ class Node:
     buffer_capacity: float = field(default_factory=lambda: Config.DEFAULT_BUFFER_CAP_MBITS)
     current_buffer: float = 0.0
     data_generation_rate: float = field(default_factory=lambda: Config.DEFAULT_DATA_RATE_MBPS)
+    
+    aoi_timer: float = 0.0  # Age of Information counter
     
     time_window_start: float = 0.0
     time_window_end: float = float("inf")

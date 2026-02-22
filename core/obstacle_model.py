@@ -1,5 +1,10 @@
 class Obstacle:
+    _id_counter = 0
+    
     def __init__(self, x1, y1, x2, y2, obstacle_type="hard"):
+        self.id = Obstacle._id_counter
+        Obstacle._id_counter += 1
+        
         self.x1 = min(x1, x2)
         self.y1 = min(y1, y2)
         self.x2 = max(x1, x2)

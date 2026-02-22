@@ -1,12 +1,13 @@
-import os
-import json
 import argparse
+import json
+import os
 
-from core.simulation_runner import run_simulation
-from metrics.metric_engine import MetricEngine
-from core.batch_runner import BatchRunner
-from config.feature_toggles import FeatureToggles
 from config.config import Config
+from config.feature_toggles import FeatureToggles
+from core.batch_runner import BatchRunner
+from core.simulation_runner import run_simulation
+from docs.auto_logger import IEEEDocLogger
+from metrics.metric_engine import MetricEngine
 
 
 def run_single(render: bool = True):
@@ -45,6 +46,9 @@ def run_single(render: bool = True):
 
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=4)
+        
+    # Generate automated IEEE report
+    IEEEDocLogger.generate_experiment_doc(results, metrics, results["run_id"])
 
 
 def run_batch():

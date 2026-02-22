@@ -14,6 +14,7 @@ from core.buffer_aware_manager import BufferAwareManager
 
 from core.clustering.cluster_manager import ClusterManager
 from path.pca_gls_router import PCAGLSRouter
+from core.digital_twin_map import DigitalTwinMap
 
 
 class MissionController:
@@ -38,6 +39,9 @@ class MissionController:
         safe_start = self.env.get_safe_start(center)
         self.uav.x, self.uav.y = safe_start
         self.base_position = safe_start
+        
+        # ISAC Digital Twin
+        self.digital_twin = DigitalTwinMap()
 
         # Semantic Intelligence Engine
         self.cluster_manager = ClusterManager()
@@ -287,43 +291,90 @@ class MissionController:
             distance = math.hypot(dx, dy)
             base_pitch = 0.0
 
-        # Target reached
-        if distance < 1e-3:
-            # We are hovering over the node to drain the buffer.
-            dt = float(Config.TIME_STEP)
-            data_collected = BufferAwareManager.process_data_collection(
-                self.uav.position(), self.current_target, dt
-            )
+        dt = float(Config.TIME_STEP)
+
+        # -------------------------------------------------------------
+        # Buffer-Aware Dynamic Service Time (DST-BA): 'Chord-Fly' Check
+        # -------------------------------------------------------------
+        # The UAV is capable of collecting data while in transit 
+        # (probabilistic sensing over distance).
+        data_collected = BufferAwareManager.process_data_collection(
+            self.uav.position(), self.current_target, dt
+        )
+        
+        if data_collected > 0 and distance > 5.0:
+            print(f"[Chord-Fly] Node {self.current_target.id} at {distance:.1f}m | Collected {data_collected:.2f}Mb | Rem: {self.current_target.current_buffer:.2f}Mb")
             
-            # Hover energy computation
+        # Check if the buffer is empty. If so, we bypass reaching the exact coordinate!
+        if self.current_target.current_buffer <= 1e-3:
+            self.visited.add(self.current_target.id)
+            print(f"[Visited] Node {self.current_target.id} (Buffer completely drained via DST-BA)")
+            self.current_target = None
+            return
+
+        # -------------------------------------------------------------
+        # Target Reached: 'Center-Hover' Fallback
+        # -------------------------------------------------------------
+        if distance < 1e-3:
+            # We are exactly above the node, but buffer is still not empty. Hover in place.
             hover_e = EnergyModel.hover_energy(self.uav, dt)
             EnergyModel.consume(self.uav, hover_e)
             self.energy_consumed_total += hover_e
             
-            # If buffer is empty, mark as visited
-            if self.current_target.current_buffer <= 1e-3:
-                self.visited.add(self.current_target.id)
-                print(f"[Visited] Node {self.current_target.id} (Buffer Drained)")
-                self.current_target = None
-            else:
-                hover_strategy = BufferAwareManager.get_optimal_hover_strategy(self.uav.position(), self.current_target)
-                print(f"[Hovering] Node {self.current_target.id} ({hover_strategy['strategy']}) | Reqd Time: {hover_strategy['required_service_time']:.2f}s | Vol: {self.current_target.current_buffer:.2f}Mb")
+            hover_strategy = BufferAwareManager.get_optimal_hover_strategy(self.uav.position(), self.current_target)
+            print(f"[Center-Hover] Node {self.current_target.id} | Reqd Time: {hover_strategy['required_service_time']:.2f}s | Vol: {self.current_target.current_buffer:.2f}Mb")
             return
 
-        step_size = min(Config.UAV_STEP_SIZE, distance)
-        base_angle = math.atan2(dy, dx)
+        dt = float(Config.TIME_STEP)
+        
+        # Acceleration Dynamics
+        v_current_mag = math.sqrt(self.uav.vx**2 + self.uav.vy**2 + self.uav.vz**2)
+        target_v_mag = min(Config.UAV_STEP_SIZE / dt, distance / dt) if dt > 0 else 0.0
+        
+        # Max acceleration constraint
+        max_dv = Config.MAX_ACCELERATION * dt
+        if target_v_mag - v_current_mag > max_dv:
+            v_mag = v_current_mag + max_dv
+        elif v_current_mag - target_v_mag > max_dv:
+            v_mag = max(0.0, v_current_mag - max_dv)
+        else:
+            v_mag = target_v_mag
+            
+        step_size = v_mag * dt
+        
+        ideal_yaw = math.atan2(dy, dx)
+        max_yaw_change = math.radians(Config.MAX_YAW_RATE) * dt
+        max_pitch_change = math.radians(Config.MAX_PITCH_RATE) * dt
+        
+        def constrain_angle(ideal, current, max_change):
+            diff = (ideal - current)
+            diff = (diff + math.pi) % (2 * math.pi) - math.pi
+            if abs(diff) > max_change:
+                return current + math.copysign(max_change, diff)
+            return ideal
+            
+        base_yaw = constrain_angle(ideal_yaw, self.uav.yaw, max_yaw_change)
+        # Using base_pitch calculated from earlier which correctly extracts dz against dx,dy
+        c_base_pitch = constrain_angle(base_pitch, self.uav.pitch, max_pitch_change)
 
         best_score = float("inf")
         best_move = None
+        
+        # Phase 3.5: ISAC Digital Twin Scan (Update local map)
+        if Config.ENABLE_ISAC_DIGITAL_TWIN:
+            self.digital_twin.scan_environment(self.uav.position(), self.env.obstacles)
+            routing_obstacles = self.digital_twin.known_obstacles
+        else:
+            routing_obstacles = self.env.obstacles
 
-        # Generate motion primitives
+        # Generate motion primitives around the constrained base angles
         yaw_offsets = [0] + Config.STEERING_ANGLES
         pitch_offsets = [0, -15, 15] if FeatureToggles.DIMENSIONS == "3D" else [0]
         
         for yaw_offset in yaw_offsets:
             for pitch_offset in pitch_offsets:
-                yaw = base_angle + math.radians(yaw_offset)
-                pitch = base_pitch + math.radians(pitch_offset)
+                yaw = base_yaw + math.radians(yaw_offset)
+                pitch = c_base_pitch + math.radians(pitch_offset)
 
                 # Spherical to Cartesian representation
                 new_x = current_pos[0] + step_size * math.cos(pitch) * math.cos(yaw)
@@ -359,7 +410,7 @@ class MissionController:
                 # 2. Obstacle proximity penalty
                 obstacle_penalty = 0.0
 
-                for obs in self.env.obstacles:
+                for obs in routing_obstacles:
                     clearance = self._predicted_clearance(new_x, new_y, obs)
 
                     # Hard rejection if inside safety margin
@@ -386,7 +437,7 @@ class MissionController:
 
                 if total_score < best_score:
                     best_score = total_score
-                    best_move = (new_x, new_y, new_z, adjusted_distance)
+                    best_move = (new_x, new_y, new_z, adjusted_distance, yaw, pitch, v_mag, step_size)
 
         # If no valid motion primitive found
         if best_move is None:
@@ -395,10 +446,24 @@ class MissionController:
             self.current_target = None
             return
 
-        new_x, new_y, new_z, adjusted_distance = best_move
+        new_x, new_y, new_z, adjusted_distance, chosen_yaw, chosen_pitch, v_mag, step_size = best_move
+        
+        dt = float(Config.TIME_STEP)
+
+        # Update Kinematics
+        new_vx = (new_x - self.uav.x) / dt if dt > 0 else 0.0
+        new_vy = (new_y - self.uav.y) / dt if dt > 0 else 0.0
+        new_vz = (new_z - self.uav.z) / dt if dt > 0 else 0.0
+        
+        ax = (new_vx - self.uav.vx) / dt if dt > 0 else 0.0
+        ay = (new_vy - self.uav.vy) / dt if dt > 0 else 0.0
+        az = (new_vz - self.uav.vz) / dt if dt > 0 else 0.0
 
         # --- Energy Prediction ---
-        predicted_energy = EnergyModel.energy_for_distance(self.uav, adjusted_distance)
+        # Propulsion aerodynamic power + Mechanical Acceleration Power
+        mechanical_energy = EnergyModel.mechanical_energy(self.uav, (ax, ay, az))
+        aerodynamic_energy = EnergyModel.energy_for_distance(self.uav, adjusted_distance)
+        predicted_energy = mechanical_energy + aerodynamic_energy
 
         EnergyModel.consume(self.uav, predicted_energy)
         self.energy_consumed_total += predicted_energy
@@ -426,6 +491,11 @@ class MissionController:
         self.uav.x = new_x
         self.uav.y = new_y
         self.uav.z = new_z
+        self.uav.yaw = chosen_yaw
+        self.uav.pitch = chosen_pitch
+        self.uav.vx = new_vx
+        self.uav.vy = new_vy
+        self.uav.vz = new_vz
 
         self.env.uav_trail.append((new_x, new_y, new_z))
         if len(self.env.uav_trail) > 30:
@@ -443,7 +513,8 @@ class MissionController:
             sim_y = current_pos[1] + i * step_size * math.sin(angle)
 
             # Predict obstacle future positions
-            for obs in self.env.obstacles:
+            routing_obstacles = self.digital_twin.known_obstacles if Config.ENABLE_ISAC_DIGITAL_TWIN else self.env.obstacles
+            for obs in routing_obstacles:
                 future_x1 = obs.x1 + i * obs.vx * Config.OBSTACLE_VELOCITY_SCALE
                 future_y1 = obs.y1 + i * obs.vy * Config.OBSTACLE_VELOCITY_SCALE
                 future_x2 = obs.x2 + i * obs.vx * Config.OBSTACLE_VELOCITY_SCALE

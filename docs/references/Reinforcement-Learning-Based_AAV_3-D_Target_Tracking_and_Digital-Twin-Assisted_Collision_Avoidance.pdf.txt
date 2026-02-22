@@ -1,0 +1,1375 @@
+24916 IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 13, 1 JULY 2025
+Reinforcement-Learning-Based AA V 3-D Target
+Tracking and Digital-Twin-Assisted Collision
+Avoidance With Integrated Sensing
+and Communication
+Minghao Chen ,F e n gS h u , Member, IEEE, Min Zhu, Di Wu, Yu Yao , Member, IEEE,
+and Qi Zhang, Student Member, IEEE
+Abstract—The ﬂexibility and maneuverability of autonomous
+aerial vehicles (AA Vs) lend themselves to tracking users and
+operating as an aerial base station carrying out communication
+enhancement functionality. A core challenge neglected by most
+existing works is that the true-but-unknown obstacles can jeop-
+ardize AA V ﬂight security and shadow its communication links
+with users, resulting in poor achievable rate and high collision
+risks. In this article, a deep-reinforcement-learning (DRL)-based
+AA V target tracking and digital-twin (DT)-assisted collision
+avoidance method is proposed to optimize AA V’s communication
+performance while tracking moving users. Toward this end, twin
+delayed deep deterministic policy gradient (TD3) as a novel
+and policy-based DRL algorithm is used to construct an agent
+responsible for adaptive deciding AA V ﬂying control actions.
+To efﬁciently detect unknown obstacles in a ﬂight environment,
+an orthogonal frequency-division multiple (OFDM)-based inte-
+grated sensing and communication (ISAC) system is investigated,
+endowing AA V’s agent with real-time obstacle distance. Finally,
+we present a DT obstacle model construction mechanism and
+integrate it with TD3 agent training. The extensive simulations
+demonstrate the reward convergence of the TD3 algorithm
+and the communication improvement with stable user tracking
+and reliable collision avoidance, compared with conventional
+approaches.
+Index Terms—Autonomous aerial vehicle (AA V), communica-
+tion optimization, deep reinforcement learning (DRL), digital
+twin (DT), integrated sensing and communication (ISAC), target
+tracking.
+Received 24 November 2024; revised 7 February 2025; accepted 27 March
+2025. Date of publication 9 April 2025; date of current version 27 June 2025.
+This work was supported by the Scientiﬁc Research Fund Project of Hainan
+University under Grant XJ2400010496. (Corresponding author: Feng Shu.)
+Minghao Chen, Min Zhu, Yu Yao, and Qi Zhang are with
+the School of Information and Communication Engineering,
+Hainan University, Haikou 570228, China (e-mail: chenming-
+hao2023@126.com; 13320902031@163.com; shell8696@hotmail.com;
+hdzhangqi0509@163.com).
+Feng Shu is with the School of Information and Communication
+Engineering, Hainan University, Haikou 570228, China, and also with the
+School of Electronic and Optical Engineering, Nanjing University of Science
+and Technology, Nanjing 210094, China (e-mail: shufeng0101@163.com).
+Di Wu is with the School of Information and Communication Engineering,
+Hainan University, Haikou 570228, Hainan, China, and also with the PRISMA
+Lab, Department of Electrical Engineering and Information Technology,
+University of Naples Federico II, 80125 Naples, Italy (e-mail: hainuwudi@
+hainanu.edu.cn).
+Digital Object Identiﬁer 10.1109/JIOT.2025.3559078
+I. I NTRODUCTION
+A. Background and Motivations
+A
+UTONOMOUS aerial vehicles (AA Vs), as aerial base
+stations (BSs), feature with the expanding network’s
+coverage and the utilizing of high-quality Line-of-Sight (LoS)
+channels due to their high ﬂexibility, friendly cost, maneu-
+verability, and hovering ability [1], [2]. Nowadays, AA Vs
+have gained recognition for improving communication ability
+in remote, complex, and changing environments, such as
+earthquake relief and ocean cruises, whose communication
+requirements cannot be matched up solely by current terrestrial
+networks. Therefore, in the incoming sixth-generation (6G)
+communication system, developing AA V-enabled communi-
+cation system with advanced information technology, such
+as nonorthogonal multiple access (NOMA) [3], Angle-of-
+Departure (AoD) estimation [4], and energy harvesting [5],i s
+bound to become the focus of attention in both military and
+civilian ﬁelds and the future, as the supplement of terrestrial
+networks.
+Despite the performance enhancements provided by AA Vs,
+there are still prominent challenges that the utilization of
+AA V-aided communication would yield. For providing steady
+signals relaying/accessing service, AA Vs start with ensuring
+their ﬂight security, i.e., AA Vs are called for dynamical but
+reliable adjusting of their ﬂight trajectory to track mobile users
+and assist their communication while avoiding collision with
+environmental obstacles [6], [7]. Different tracking trajectories
+of AA Vs decide the distance between them and ground users,
+which further affects the magnitudes of signals fading. Though
+keeping the AA V as close to these users is able to mitigate this
+effect, it still would increase the likelihood of twofold risks,
+i.e., AA V–ground channels are shadowed as Non-Line-of-Sight
+(NLoS) channels, and the AA Vs crashed with the unknown
+obstacles [8], [9]. Thus, researching how and to what extent
+do AA V’s tracking trajectory design affects its communication
+enhancements by ﬁnding unknown obstacles and avoiding
+collisions with them holds paramount importance.
+B. Related Works
+Numerous studies have been conducted on improving AA V-
+aided secure, high-capacity, and efﬁcient communication,
+2327-4662 c⃝ 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artiﬁcial intelligence
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+CHEN et al.: REINFORCEMENT-LEARNING-BASED AA V 3-D TARGET TRACKING AND DIGITAL-TWIN-ASSISTED COLLISION A VOIDANCE 24917
+including tracking moving users, allocating multidomain
+resources, and designing trajectories. Sun et al. [10] compre-
+hensively reviewed AA V-based moving target tracking over the
+previous decade and demonstrated the superiority of current
+tracking algorithms categorized into three main techniques
+categories. AA V-enabled Internet of Things (IoT) networks
+for both time-division multiple access (TDMA) and NOMA
+are studied in [11], in which the maximum secure comput-
+ing capacity problems are formulated and solved by jointly
+allocating the resource of communication, computing, and
+trajectories. The maximization problem of the sum of the
+worst case average secrecy rate is investigated in [12] by
+jointly optimizing dual-AA V trajectories and sender transmit
+power for confusing eavesdroppers. The last ﬁve years have
+witnessed an unprecedented improvement and advantage of
+model-free deep reinforcement learning (DRL) technologies,
+in which the AA V controlling agent can learn from its
+ﬂight environment and make the best actions in a “trial-and-
+error” manner. The DRL-based AA V controlling technology
+generally can be divided into two main categories: 1) value-
+based and 2) policy-based. For value-based DRL algorithms, in
+order to adapt the constraints in computational resources and
+energy consumption, Kong et al. [13] proposed a AA V path
+planning method with tiny machine learning technology and
+a multiagent DRL framework. Subsequently, the decentralized
+federated-assisted multiagent DRL algorithm was proposed
+in [14], where users independently make decisions using a
+deep Q network to ﬁnd the optimal jamming channel and
+power against a ground jammer. However, since the value
+function could only quantify speciﬁed actions, the value-based
+DRL algorithms are only suitable for discrete actions. In
+contrast, policy-based DRL algorithms utilize a continuous
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+24918 IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 13, 1 JULY 2025
+action space suitable for complex AA V ﬂight control with
+continuous variables. The philosophy behind the DRL is
+learning an optimal management policy through the trial-
+and-error interaction between the DRL agent and the AA V
+ﬂight environment. Yin and Yu [15] proposed a AA V resource
+allocation and trajectory design method based on multiple
+parameterized deep Q-network (P-DQN) agents to optimize
+the system’s overall throughput and training efﬁciency without
+information sharing. Using a double deep Q-network (DDQN)
+algorithm to solve the deployment issues of AA Vs in agri-
+cultural IoT scenarios can signiﬁcantly increase the network
+throughout [16]. While most publications in this ﬁeld focus
+on jointly adjusting AA V’s location, trajectory, and resources
+with DRL or model-based methods, the demand for ensuring
+AA V’s ﬂight security is neglected, which is necessary for
+further communication improvement.
+A wide range of AA V anti-collision studies aiming at
+minimizing its collision rate or ﬂight-security risk have been
+carried out so far. Wei et al. [17] provided an overview of the
+anti-collision technology for AA Vs, e.g., analyzing the pros
+and cons of existing methods of collision sensing, collision
+predicting, and collision avoiding. Song et al. [18] proposed
+a scheme that provides two anti-collision methods, i.e., addi-
+tional constraints anti-collision and initial delay anti-collision,
+while optimizing the energy consumption of AA V’s trajectory.
+An extended version of this work has been suggested in [19]
+to prevent the collision while saving the AA V’s energy con-
+sumption by leveraging DRL algorithms deployed on AA Vs
+or multiaccess-edge computing (MEC). However, these works
+mainly consider the case of a single AA V and always assume
+that all obstacles are known in the ﬂight environment. For
+multiple AA Vs forming a swarm, Xu et al. [20] proposed
+a collision avoidance and interference mitigation method by
+introducing an artiﬁcial potential ﬁeld (APF) and mean-ﬁeld
+game (MFG) model. With the unprecedented complexity of the
+AA V’s ﬂying environment, overcoming the curse of dimension
+and realizing the DRL model training for the above-mentioned
+anti-collision methods is a challenging task. Fortunately, as
+a promising technology, digital twins (DTs) can understand
+obstacles and create virtual models through obtained data,
+which can be feedbacked and help train AA V’s DRL-based
+model [21]. Two case studies with or without DT, subdivided
+into several scenarios to assess three different DRL-based
+optimization methods as to their impact on the obstacle
+collision risks, are deployed in this work [22]. However, it
+remains unsolved how to detect unknown obstacles effectively.
+The new concept of the ISAC has thus been presented as
+a possible solution and has since then taken the forefront in
+future advanced research, such as sensing data sharing among
+vehicular communication networks [23], [24] and secure
+rate maximization among AA Vs against multiple eavesdrop-
+pers [25]. Existing research on AA V-enabled ISAC systems
+can generally be divided into two categories, depending on the
+optimization objectives, e.g., the perception accuracy and the
+communication performance optimization, including through-
+out, safe rate, and resource utilization. The former category
+tries to mathematically provide the closed-form formulas of
+sensing accuracy and increase this performance by designing
+ISAC signals in time, frequency, and beamform domains.
+In [26], a cooperative multi-AA Vs ISAC network adopted
+OFDM waveform and equivalent Fisher information matrix
+(EFIM) was constructed, minimizing the Cramer–Rao lower
+bound (CRLB) for target location estimation while follow-
+ing the communication Quality-of-Service (QoS) constraints.
+To satisfy each user’s signal-to-interference-plus-noise ratio
+(SINR) requirement for each user, Li et al. [27] proposed a
+multistatic cellular ISAC system and investigates a closed-
+form expression of the optimal ISAC beamforming. The latter
+category focuses on increasing communication performance by
+utilizing ISAC signals to detect environmental eavesdroppers
+and moving users. To further enhance the resource utilization
+and the integration gain of communication and sensing, a
+AA V-empowered adaptive ISAC system based on beamform-
+ing design and trajectory optimization was proposed in [28],
+in which the sensing duration can be ﬂexibly conﬁgured while
+maximizing the average throughput. In order to simultaneously
+increase the secrecy rate of real-time communication and
+track legitimate users, a novel AA V-based ISAC technology
+uses extended Kalman ﬁltering (EKF) to measure the delay
+of sensing echoes from users [29]. Most research incor-
+porating AA V and ISAC still focuses on providing extra
+unknown-targets sensing service and more timely servicing
+communication users, whereas it remains unsolved on how to
+utilize this sensing function for detecting unknown obstacles
+and enhancing the AA V’s ﬂight security. In [30], a DRL-
+based AA V formation path-following and dynamic obstacle
+position estimation algorithm was proposed to minimize the
+CRLB of obstacle sensing and ensure conﬂict-free AA V ﬂight.
+However, most current works ignored the feedback and the
+utilization of obstacle sensing results by ISAC signals, i.e.,
+how to store and utilize them to help AA Vs avoid collisions
+while improving communication capacity. That is the moti-
+vation and core novelty of our research. To clearly display
+the relationship between existing works and our research,
+Fig. 1 is a Venn diagram that illustrates the research trends
+in the ﬁeld of AA V ﬂight control and AA V-enabled ISAC
+systems.
+C. Contributions
+In light of the above, how can AA V dynamically track users
+to improve communication performance and precisely avoid
+unknown obstacles with ISAC and DT technology remains
+an open problem. Unlike the existing works that assume
+AA V works in an obstacle-known environment, in this article,
+we propose a DRL-based AA V 3-D moving-target tracking
+method that can optimize the achievable communication rate,
+simultaneously detect unknown obstacles using ISAC sensing
+signal and construct corresponding virtual DT obstacle models,
+thus offering collision avoidance ability to improve the ﬂight
+security. The main contributions of this article are summarized
+as follows.
+1) Different from previous research, we propose a AA V
+moving target tracking and communication service pro-
+viding method under an unknown environment. An
+OFDM-based waveform is adopted, and the ISAC
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+CHEN et al.: REINFORCEMENT-LEARNING-BASED AA V 3-D TARGET TRACKING AND DIGITAL-TWIN-ASSISTED COLLISION A VOIDANCE 24919
+Fig. 1. Venn diagram displaying the two pivotal sectors, including AA V ﬂight control and AA V-enabled ISAC system.
+framework and spectrum-time multidomain usage are
+elaborated.
+2) We describe the ﬂight process of a AA V as a Markov
+decision process (MDP) and formulate its service
+process as an optimization problem to maximize its
+achievable communication rate and minimize its colli-
+sion risk. To tackle this problem, twin delayed deep
+deterministic policy gradient (TD3), as a cutting-edge
+DRL algorithm, is introduced to construct an automatic
+AA V control unit (hereinafter, “TD3 agent”).
+3) A DT-assisted collision avoidance mechanism is
+designed during the TD3 agent’s training and operation.
+The DT obstacle model is built and stored in the
+ground BS, which provides spatial obstacle information
+to decrease the AA V collision risk.
+D. Roadmaps
+The remainder of this article is organized as follows.
+Section II introduces the system model of AA V-ISAC and
+states the formulated problem of AA V trajectory optimization.
+A systematic combination of the DRL algorithm and DT
+technology is presented in Section III for dealing with sensing
+results of environmental obstacles. In Section IV, we evaluate
+the AA V’s communication and ﬂight security performance of
+the proposed method. Finally, the research conclusions and
+future challenges are drawn in the last section.
+II. S
+YSTEM MODEL AND PROBLEM STATEMENT
+The proposed 3-D target tracking and obstacle avoidance by
+optimizing the AA V’s trajectory has been displayed in Fig. 1.
+In addition to providing communication service for ground-
+moving users, AA V also performs obstacle sensing using
+ISAC sensing signals, i.e., the AA V interactively estimates the
+obstacle’s distance and direction based on the received echo
+signals and optimizes its trajectory for collision avoidance and
+ensure communication performance.
+A. System Description
+As shown in Fig. 2(a), the rotary-wing AA V moves from a
+predetermined initial location. Its ﬂight trajectory is spatially
+free in 3-D, which can be continuously adjusted to improve
+the channel state and communication performance among it
+and multiple moving ground users during ﬂying.
+However, some unknown obstacles with nonnegligible
+heights in the ﬂying environment bring collision risks to AA V
+ﬂights. In order to avoid collisions and keep ﬂight safety, AA V
+should perform simultaneous obstacle sensing and ranging via
+predesigned ISAC waveform and uniform linear array (ULA),
+while tracking moving users, providing them communication
+service, and adjusting itself ﬂight state. As shown in Fig. 2(b),
+this workﬂow can be summarized as two subloops alternately
+executed within discrete time intervals (TIs).
+The ﬁrst subcycle, represented by a black circle, is obstacle
+detection and its digital model construction. In this cycle,
+the AA V is responsible for emitting an ISAC sensing signal
+in its current ﬂying direction. Then, the reﬂected echoes are
+transferred to the closest BS equipped with an edge computing
+server (ECS) and caching devices for generating the DTs of
+obstacles.
+The second subcycle, represented with a red circle, is that
+the DRL-agent controls the AA V’s ﬂight state for tracking
+moving users and avoiding possible collision with obstacles,
+based on the input state from BS’s loaded digital obstacle
+model and physical environment. Then, the TD3-agent is
+responsible for selecting and executing current optimal ﬂight
+control actions based on its Actor and Critic networks. Finally,
+executed actions would change the AA V’s height, speed, and
+direction and obtain a feedbacked reward for updating the
+agent’s neural networks with function gradients based on the
+AA V’s achievable communication performance and current
+collision risks.
+The ﬂying process of AA V can be discretized into I
+independent TI within a ﬂying period. During this ﬂying
+period, AA V remains in communication withK single-antenna
+ground-moving users, and K is smaller than the number of
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+24920 IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 13, 1 JULY 2025
+antennas of ULA. We assume the AA V communicates with
+these users via OFDM access with Nc subcarriers, avoiding
+mutual interference among downlinks. The spectrum usage
+of the OFDM and the time-domain structure of the proposed
+system are displayed in Fig. 3.I nt h e ith TI, the OFDM-ISAC
+signal transmitted by the AA V can be deﬁned as
+si(t) = ej2πfct ∑
+n∈Nc
+M−1∑
+m=0
+αi
+nCi
+n,mej2πn/Delta1f(t−mT)
+×rect
+[ (t − mT)
+T
+]
+(1)
+where αi
+n is the amplitude of the nth subcarrier with the
+transmitted power P = ∑
+n∈Nc |αi
+n|2. /Delta1f = 1/T is the
+frequency interval of subcarriers.
+B. Obstacle Sensing and Ranging
+AA V detects the obstacle j in front of its trajectory by
+transmitting ISAC signals and receiving reﬂected echoes. In
+any TI i, reﬂected echoes can be deﬁned as
+r
+i
+j(t) =
+∑
+n∈Nc
+M−1∑
+m=0
+⌢
+α
+i
+j,nβi
+j Ci
+n,me
+j2πn/Delta1f
+(
+t−mT−τi
+j
+)
+×e
+j2π
+[
+fc
+(
+t−τi
+j
+)
++f i
+dmT
+]
+rect
+⎡
+⎣
+(
+t − mT − τi
+j
+)
+T
+⎤
+⎦+ nSens(t).
+(2)
+Even though βi
+j usually is related to its radar cross section
+(RCS), we premise that the RCS of all obstacles is large
+enough to be easily detected without any false alarm, and
+we set β
+i
+j = 0.6. nSens(t) ∼ N(0,σ 2
+s ) is the additive white
+Gaussian noise (AWGN) with sensing variance σ2
+s . Thus, the
+Euclidean distance between the AA V and obstacle can be
+obtained
+di
+j =
+τi
+j SL
+2 . (3)
+Under the premise that all obstacles are stationary, we
+reckon that the Doppler shifts fd caused by the movement
+of AA V are constant and can be compensated within each
+time interval due to the relatively small AA V’s speed. We
+assume that the intercarrier interference (ICI) caused by the
+relative movement and the simultaneous transmission and
+reception can be canceled by employing proper interference
+mitigation methods. Thus, the received matrix Y
+i ∈ RNc×M
+can be obtained using discrete Fourier transform (DFT) with
+the known mth OFDM symbol Ci
+n,m in the nth subcarrier
+Yi(n, m) =
+⌢
+α
+i
+j,nβi
+j e−j2π(fc+n/Delta1f)τi
+j + ni(n, m) (4)
+where ni(n, m) ∈ RNc×M is the corresponding AWGN matrix.
+C. Communication Model
+The communication performance between the AA V and user
+k signiﬁcantly dependents on the propagation loss with respect
+to their distance and obstacle situation. Since the multipath
+Fig. 2. Proposed AA V-enabled ISAC system considering altitude-varying
+3-D trajectory. (a) System model. (b) Workﬂow of system components.
+effect in the air is relatively small, we assume that the channel
+gain on each AA V’s subcarrier is the same and its state is
+entirely known. According to whether there is any obstacle
+among them and shadowed their connection, the situation of
+communication channels included the LoS and NLoS links.
+The large-scale fading effects of two kinds of link can be
+formulated as
+γ
+i
+k =
+{
+γ0
+(
+di
+k
+)−ϖ , LoS link
+κγ0
+(
+di
+k
+)−ϖ , NLoS link. (5)
+The channel coefﬁcient between AA V and user k at the ith
+TI can be described by
+hi
+k =
+√
+γi
+k
+˜hi
+k (6)
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+CHEN et al.: REINFORCEMENT-LEARNING-BASED AA V 3-D TARGET TRACKING AND DIGITAL-TWIN-ASSISTED COLLISION A VOIDANCE 24921
+Fig. 3. Spectrum usage of the OFDM and the time interval domain structure
+of AA V’s ISAC signals.
+where ˜hi
+k is a complex-valued random variable accounting for
+the small-scale fading, with E[ | ˜hi
+k|
+2
+] = 1.
+Consequently, the achievable communication rate of AA V
+in the ith TI, representing channel capacity, is given by
+Ri
+c = B
+∑
+k∈K
+log2
+(
+1 +
+⏐⏐αi
+nhi
+k
+⏐⏐2
+nComm
+)
+(7)
+where nComm ∼ N(0,σ 2
+c ) is the communication AWGN with
+a variance σ2
+c at uplink/downlink channels, and B = Nc/Delta1f .
+D. AAV Kinetics
+In any TI i, the 3-D spatial coordinate of the AA V is given
+as qi = (xi, yi, zi), where the x-axis, y-axis, and z-axis point
+to the east, north, and vertically upward. Thus, as displayed
+in Fig. 4, the kinetic model of the AA V is formulated as
+xi =
+⏐⏐Vi⏐⏐ cos γi cos χi = xi−1 +
+⏐⏐/Delta1Vi⏐⏐ cos /Delta1γi cos /Delta1χi (8)
+yi =
+⏐⏐Vi⏐⏐ cos γi sinχi = yi−1 +
+⏐⏐/Delta1Vi⏐⏐ cos /Delta1γi sin /Delta1χi (9)
+zi =
+⏐⏐Vi⏐⏐ sinγi = zi−1 +
+⏐⏐/Delta1Vi⏐⏐ sin /Delta1γi (10)
+Vi = /Delta1Vi + Vi−1 (11)
+⏐⏐Vi⏐⏐ =
+√(
+zi)2 +
+(
+xi)2 +
+(
+yi)2 (12)
+where /Delta1Vi = (|/Delta1Vi|,/Delta1 γi,/Delta1 χi). The AA V’s ﬂight can be
+regarded as a movement of mass point, so other inﬂuencing
+factors, such as the aerodynamic layout and counterweight
+balancing, are beyond the research scope of this study.
+It is clear that in the ith TI, we can change the AA V’s
+location by adjusting /Delta1V
+i, and further optimize its 3-D spatial
+trajectory for tracking users. The updating of AA V’s track
+angle and heading angle can be displayed as
+γi = arcsin
+⏐⏐/Delta1Vi⏐⏐sin/Delta1γi +
+⏐⏐Vi−1⏐⏐sinγi−1
+⏐⏐Vi⏐⏐
+= arcsin
+Fig. 4. Kinetics model of AA V in the 3-D coordinate environment.
+×
+⏐⏐/Delta1Vi⏐⏐sin/Delta1γi +
+√(
+zi−1)2 +
+(
+xi−1)2 +
+(
+yi−1)2sinγi−1
+√(
+zi)2 +
+(
+xi)2 +
+(
+yi)2
+(13)
+χi = arccos xi − xi−1
+⏐⏐Vi⏐⏐cosγi
+= arccos xi−1 +
+⏐⏐/Delta1Vi⏐⏐ cos /Delta1γi cos /Delta1χi − xi−1
+√(
+zi)2 +
+(
+xi)2 +
+(
+yi)2cosγi
+. (14)
+E. Problem Formulation
+As mentioned, the AA V’s communication performance is
+mainly determined by the distance and obstacle occlusion.
+There is an unavoidable contradiction that better communi-
+cation performance requires a AA V’s altitude to be as low
+as possible, which increases its probability of ﬂight collision
+with obstacles. In this study, the central goal lies in optimizing
+the available communication rate of the AA V by adjusting
+its 3-D trajectory and tracking mobile users, accompanied
+by automatic sensing and avoiding unknown obstacles during
+ﬂight.
+The AA V should provide the best communication service
+for all ground users while ensuring ﬂight security, e.g., the
+maximum difference between the achievable communication
+rates and collision risks, by decreasing the ﬂying altitude and
+the occurrence probability of NLoS when obstacles occur
+max 1
+I
+I−1∑
+i=0
+⎛
+⎝Ri
+c −
+J∑
+j=1
+ri
+risk,j
+⎞
+⎠
+ri
+risk,j =
+{ ωriskdi
+j, if di
+j ≤ ˜d
+0, otherwise (15)
+s.t. zmin < zi. (16)
+In addition, we reckon that the AA V’s motion still satisﬁes
+the power and 3-D spatial boundary constraints. We assume
+that AA V has enough energy for tracking users and providing
+communication services because considering the AA V replen-
+ishment process will make the system model over complex,
+and this assumption can be seen as a fundamental step in the
+AA V replenishment scenario.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+24922 IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 13, 1 JULY 2025
+The AA V should automatically avoid possible collisions
+with environmental obstacles. Relying on the reﬂected ISAC
+sensing signal, the location of obstacle j can be obtained with
+the current AA V’s location and sensed distance. We noticed
+that with the increase in the number of SLA antennas, this
+distance estimation dependent on the Angle of Arrival (AoA)
+of the reﬂected signals and the AoD of the AA V’s transmitting
+signals is conducive to improving the ranging accuracy and
+even the proﬁle description of obstacles [29].
+However, dealing with this information would drasti-
+cally increase AA V’s computing overhead and delay. This
+energy-limited and computation-limited platform is also delay-
+sensitive for the ﬂight-controlling decision. Therefore, in this
+article, under the assumption that the transmitting direction of
+ISAC sensing signals is identical to the direction of current
+AA V’s moving, i.e., we can range the obstacles with the round-
+trip propagation delay of ISAC sensing signal, rather than the
+phase difference of AoA and AoD. The reason is that obstacles
+ranging in this direction are beneﬁcial in obtaining the least
+ﬂight adjusting time so that the AA V may collide with this
+obstacle if it remains in this ﬂying state. Remarkably, this
+ranging result is a spatial spot that belongs to an enough-larger
+obstacles, meaning that we can describe the obstacle proﬁle
+with enough spots. Then, in the ith TI, the detected spatial
+spot of obstacle j can be formulated as j
+i = (xi
+j, yi
+j, zi
+j)
+xi
+j = xi + di
+j cos γi cos χi
+yi
+j = yi + di
+j cos γi sin χi
+zi
+j = zi + di
+j sinγi. (17)
+III. D IGITAL -TWIN -ASSISTED AND TD3-B ASED AA V
+TARGET TRACKING AND COLLISION AVOIDANCE
+In this section, to deal with the aforementioned problem, a
+AA V target tracking and collision avoidance method based on
+the DRL algorithm and training assisted by the DT technology
+is proposed. First, we introduce the DRL preliminaries of
+the TD3 algorithm [31]. Then, we design the DT model
+to decrease the collision risks of sensed obstacles. Finally,
+we present the proposed method and detail the training and
+deployment procedures of the TD3 agent.
+A. Preliminaries of DRL and the TD3 Agent Construction
+As a branch of machine learning, RL/DRL has already
+been proven to have the ability to optimize the AA V’s com-
+munication by constructing an intelligence agent [19], [21].
+This agent can adaptively execute the AA V’s ﬂight-controlling
+actions, which satisﬁes the Markov property. On the one
+hand, this property means that the AA V’s next ﬂying state
+only depends on its current state and executed actions. On
+the other hand, it allows us to describe the proposed AA V
+communication optimization problem as an MDP, represented
+with a tuple ⟨S, A, T, R⟩.
+1) Finite set of environment state S: describe the current
+environment and ﬂight state of AA V .
+2) Finite set of selectable action A: describe the adjustment
+action of AA V faced with its environment.
+3) Conditional transition probability function T: represent
+the probability of transitioning into a particular environ-
+ment state if the DRL agent executes one action, where
+T : S × A → T(S).
+4) Reward function R: represent the reward of executed
+action feedbacked by the environment, where R : S ×
+A × S → R.
+The AA V communication optimization problem with target
+tracking and collision avoidance is now transferred into a
+time-continuous MDP decision process, enabling the AA V
+controller to adaptively adjust its ﬂying condition by con-
+structing a DRL agent. Following the above preliminaries, we
+separately formulate the mathematical model components of
+this agent constructed with the TD3 algorithm. TD3 is a kind
+of DRL algorithm and one of the most novel versions of the
+deep deterministic policy gradient (DDPG) algorithm.
+State Space: In the ith TI, the state space what AA V’s TD3
+agent faces is deﬁned as follows:
+S =
+{
+i, q
+i, di
+obst, di
+user, cci}
+(18)
+where di
+user ={ di
+1,..., di
+k,..., di
+K}, di
+obst =
+{di
+1,..., di
+j,..., di
+J} and cci ={ cci
+1,..., cci
+k,..., cci
+K}.
+Action Space: According to the aforementioned AA V kinet-
+ics, each TI has three action variables: the adjustment of track
+angle, heading angle, and speed
+A =
+(⏐⏐Vi⏐⏐,/Delta1 γi,/Delta1 χi)
+. (19)
+It is obvious that after the AA V executes one action in (19),
+it will arrive at a new location qi+1 and update new distances
+di
+user and di
+obst with users and obstacles, i.e., next environment
+state.
+Reward Function: The collision risk and achievable com-
+munication rate have changed with the state transition. In order
+to analyze to what extent the results can be improved by the
+TD3 agent’s action selection and state transition, we design
+the reward function for feedbacking an immediate reward and
+training it as follows, based on the optimization target in (15)
+R = R
+i
+c −
+J∑
+j=1
+ri
+risk,j. (20)
+B. Twin Delayed Deep Deterministic Policy Gradient
+Currently, there are kinds of policy-based DRL algorithms
+[e.g., proximal policy optimization (PPO) and soft-actor–critic
+(SAC)] that can be selected to realize the continuous-variable
+control problem of AA V’s target tracking. However, due to the
+sampling inefﬁciency and the dependence on the distribution
+of the initial state, PPO and SAC have some limitations in
+solving the communication-optimized AA V control problem
+while tracking moving targets and avoiding collisions. As
+a revamped and policy-based DRL algorithm adopting an
+actor–critic structure, the TD3 algorithm’s most signiﬁcant
+advantage is its ability to overcome the action-value function’s
+overestimation problem, a prevailing intractability faced by
+most other algorithms. The ﬂowchart of the TD3 agent is
+shown in the right part of Fig. 5, where it encompasses
+(evaluate and target) actor networks, a pair of (evaluate and
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+CHEN et al.: REINFORCEMENT-LEARNING-BASED AA V 3-D TARGET TRACKING AND DIGITAL-TWIN-ASSISTED COLLISION A VOIDANCE 24923
+Fig. 5. Spectrum usage of the OFDM and the time interval structure of ISAC AA V-enabled system.
+target) critic networks, a replay buffer, and the optimizer. The
+Replay buffer is a knowledge container storing an agent’s
+learning experience, in which a tetrad (si, ai, ri, si+1) is called
+an interaction obtained during one TI.
+In detail, based on the current state si ∈ S, evaluate actor
+network θφ is responsible for selecting an action, that is
+estimated to be the optimal under its current policy π. Then,
+two evaluate critic networks θz, z = 1, 2 evaluate this selected
+action with the corresponding Q-value function
+ai ∼ N
+(
+πφ(si),σ 2
+a
+)
+∈ A (21)
+Qθz (si, ai) = E
+(
+ri + γQθz (si+1, ai+1)
+)
+ai+1 ∼ πφ′ (si+1), z = 1, 2 (22)
+where σ2
+a is the standard deviation for determining an actual
+action, and γ is the discount factor. Thus, the core training
+task of TD3 agent lies in optimizing policy π to obtain a
+larger reward ri ∈ R and further Q-value. Its actor–critic
+structure utilizes the target networks (θ′
+1,θ′
+2,θ′
+φ) to softly
+update corresponding evaluate networks with a proportionality
+coefﬁcient τ, when the number of TI recursively reaches a
+preset ζ
+θ
+′
+1 = τθ′
+1 + (1 − τ)θ1
+θ′
+2 = τθ′
+2 + (1 − τ)θ2 if imodζ = 0
+θ′
+φ = τθ′
+φ + (1 − τ)θφ
+θ′
+1 = θ′
+1,θ′
+2 = θ′
+2,θ′
+φ = θ′
+φ else. (23)
+For updating the evaluate networks, the Bellman equation
+is used to minimize and backward propagate the temporal
+difference (TD) error for two critic networks, and the gradi-
+ent of expected return, i.e., deterministic policy gradient, is
+minimized for evaluate actor networks
+L
+θz = 1
+/Psi1
+/Psi1∑
+b=1
+(
+yb − Qθz (sb, ab)
+)2, z = 1, 2
+yb = ri + γ min
+z=1,2
+Qθ′z
+(
+si+1, a′
+i+1
+)
+, a′
+i+1 ∼ πφ′ (si+1) (24)
+∇θz L = 1
+/Psi1
+/Psi1∑
+b=1
+(
+2
+(
+yb − Qθz (sb, ab)
+)
+∇θz Qθz (sb, ab)
+)
+z = 1, 2 (25)
+J
+(
+θφ
+)
+= 1
+/Psi1
+/Psi1∑
+b=1
+[
+Q(sb, a)|a∼πφ(sb) − yi
+]2
+yi = rt + γ min
+j=1,2
+Qθ′
+i
+(
+st+1, a′
+t+1
+)
+, a′
+t+1 ∼ πφ′ (st+1) + ε
+ε∼ clip(N(0, ˜σ),−c, c) (26)
+∇θφ J ≈ 1
+/Psi1
+/Psi1∑
+b=1
+∇aQ(sb, a)|a∼πφ(sb)∇θφπ(sb) (27)
+where clip(N(0, ˜σ),−c, c) restricts the random noise εwithin
+an (−c, c) interval of distribution N(0, ˜σ) whose variance is
+˜σ. yb and yi are the target values used to calculate the TD of
+evaluating Critic and Actor networks and further gradients of
+Loss function and Expected return, respectively.
+C. DT-Assisted TD3-Agent Training and Collision Avoidance
+Although TD3 agents can learn optimal AA V
+ﬂight-controlling strategy from the environment, these time-
+continuous interactions generally are under the hypothesis that
+the AA V’s ﬂying environment is totally known. Unfortunately,
+one of the most signiﬁcant challenges is that the environment
+with multiple obstacles is unknown in practice, endangering
+the AA V ﬂight at a certain altitude. To tackle this, in this
+article, ISAC sensing signals are used to discover these
+obstacles and range the distance between the AA V and them
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+24924 IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 13, 1 JULY 2025
+in its ﬂight direction while the AA V is still communicating
+with ground users. However, since the sensing result is
+characterized as a spatial spot in each TI, it is required to
+facilitate TD3 agent training, evaluate the collision risks, and
+obtain the AA V’s evasive actions.
+To overcome this challenge, we construct the high-ﬁdelity
+DT obstacle model on the ground BS’s EMC devices, provid-
+ing real-time distance information with the known and most
+closest obstacle for the AA V’s TD3 agent. Due to the relatively
+large transmit power and a large number of receiving arrays
+of BS, the fading and interference problems of transmitting
+distance and sensing results between it and AA V are not
+considered. Therefore, as demonstrated in the left parts of
+Fig. 5, the state space in (18) is real-timely calibrated to ensure
+the training validity of the TD3 agent. In any TI i, the virtual
+obstacle in DT is a ﬁnite coordinate set and can be expressed
+as
+DT
+i = DTi−1 + ji. (28)
+It is stressed that the obstacle contour features and the
+belonging of the spatial spots are out of the scope of the
+proposed DT obstacle models.
+Relying on the DT obstacle model, in any TI i, the closest
+spatial spot for the current AA V location can be used to
+calculate its penalty of the collision risk in (21) and provide
+environmental state to the TD3 agent in (18), equations (21)
+and (18) can be restated as
+r
+i
+risk,j =
+⎧
+⎨
+⎩
+ωrisk
+(
+˜d −
+⌢
+d
+i
+j
+)
+, if
+⌢
+d
+i
+j ≤ ˜d
+0, otherwise
+(29)
+S =
+{
+i, qi,
+⌢
+d
+i
+obst, di
+user, cci
+}
+⌢
+d
+i
+obst =
+{ ⌢
+d
+i
+1,...,
+⌢
+d
+i
+j
+,...,
+⌢
+d
+i
+J
+}
+(30)
+where
+⌢
+d
+i
+j is the distance between the AA V and the known
+obstacle spot. For a AA V entering this unknown environment
+in the early phase of training, it is easy to collide due to the
+insufﬁcient collision risk information provided by DT obstacle
+model.
+Since the AA V collision means it is no longer able to track
+the target and provide it with communication service, the
+reward function in (20) is reformulated as
+R =
+{ R
+i
+c −∑J
+j=1 ri
+risk,j,ς i = 0 ∀i
+ωcoll, else (31)
+where ωcoll is the collision penalty factor, and ςi is the binary
+variable that ςi = 1 means the collision event happened.
+The process of DT-assisted TD3-agent training and AA V
+collision avoidance is displayed in Algorithm 1.
+IV . NUMERICAL STUDY
+In this section, the effectiveness of our proposal is eval-
+uated by conducting extensive simulations and comparing
+with referenced benchmarks. First, we provide the simulation
+setting in detail. Next, we validate the convergence of the
+Algorithm 1 DT-Assisted Training of AA V’s TD3 Agent for
+Target Tracking and Collision Avoidance
+Input: TD3 agents for controlling AA V
+Output: Trained TD3 agents for AA V
+Initialize the DT model deployed in BS.
+Initialize the replay buffer, actor networks, and critic
+networks of TD3 agent
+for each episode do
+for each TI within an episode do
+Agent selects an action a
+i for state si using their actor
+network
+Send ISAC sensing signal in direction of action in
+(19),
+if receives echo then
+Range the distance between AA V and obstacle
+using (1)-(4), return results to BC for updating DT
+obstacle model in (29)
+end if
+Calculate the achievable communication rate using
+(5)-(7) and communication service to tracked user.
+Evaluate the penalty of collision risk and total reward
+using (30)-(31).
+Randomly sampled /Psi1interactions to calculate TD
+error for updating evaluate critic networks using (25)-
+(26) and to calculate expected return for updating
+evaluate actor network using (27)-(28)
+if imodζ = 0 then
+soft update the target actor and critic networks
+using (24)
+end if
+Update next state s
+i+1 in (18) with new AA V location
+and DT obstacle model using (8)-(14)
+if ς = 1 then
+Break
+end if
+end for
+end for=0
+TD3 agent’s reward. Finally, we verify the optimization of
+the AA V’s available communication rate and collision avoid-
+ance performance derived from the DRL algorithm and DT
+technology, comparing it with other benchmarks.
+A. Simulation Setting
+System Model Setting:We design a 3-D space of 100 (m)*100
+(m)*10 (m) (length*width*height) for AA V tracking moving
+targets. A legitimate test for the TD3 agent’s action is employed,
+and if executing any action would make the AA V violate the
+boundary constraints, this action would not be executed. The
+maximum ground speeds of AA V and users are 3.5 (m/s) and 2
+(m/s), ensuring that AA V has the ability to catch up with moving
+users, whose speed is randomly distributed. Three obstacles are
+the cubes whose top-down projection coordinates of (10, 5; 10,
+15; 20, 5; 20, 15), (35, 30; 35, 40; 45, 30; 45, 40), and (55, 55;
+55, 70; 70, 55; 70, 70) and height is 3, 5, and 2, respectively.
+The number of subcarriers N
+c, signal transmit power P, carrier
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+CHEN et al.: REINFORCEMENT-LEARNING-BASED AA V 3-D TARGET TRACKING AND DIGITAL-TWIN-ASSISTED COLLISION A VOIDANCE 24925
+frequency fc, frequency interval/Delta1f , and lowest ﬂight altitude of
+AA Vzmin is 1024, 0.1 (W), 2.44 (GHz), 10 (kHz), and 0.5 (m).
+The path loss γ0, path-loss exponent ϖ , the number of OFDM
+symbols M in each TI, variance of sensing and communication
+AWGN σ2
+s /σ2
+c , and additional attenuation factor κ of LoS and
+NLoS links have given as -50 (dB), 2, 10 000, 0.1/0.1, and
+0.2 [26].
+Parameter Setting of TD3 Agent: The total number of TI
+I within one episode is 120, where the length of a TI T
+is 1 (s), and the maximum number of episodes for agent
+training is 3000. The target actor/critic networks have the
+same conﬁguration as their corresponding evaluate actor/critic
+networks, and all of them comprise ﬁve full-connected layers,
+each with 128 neurons. The capacity of replay buffer, learning
+rate, optimizer, size of mini-batch /Psi1, discount factor γ,s o f t
+update factor τ, exploration noise σ
+2
+a , and policy smoothing
+noise ˜σ are determined as 100 000, 0.00025, Adam, 128,
+0.99, 0.009, 1.3, and 1.6, respectively. In terms of the reward
+function, the collision penalty factor ωcoll, safety distance ˜d,
+and risk factor ωrisk are set as 25, 1 (m), and 0.
+Simulation Environment: All algorithms are running on
+Pycharm 2024.2.1 with Python 3.8 and Pytorch, whose hard-
+ware conﬁguration includes the Intel Core i7-14650HX CPU
+and an Nvidia 4080 Super graphic card.
+B. Reward Convergence of TD3 Agent
+In order to validate the learning ability of the AA V’s TD3
+agent under the unknown 3-D space, we have conducted ﬁve
+times training experiments in which AA V tracks and services
+one moving target to observe the convergence of obtained
+reward, in which the lower value means the AA V achieve a
+larger achievable communication rate and a lower collision
+risk. The cumulative reward result of the TD3 agent is shown
+in Fig. 6, in which the gray violet interval and the dark purple
+line are the ﬂuctuation range and average value of the agent-
+obtained reward for ﬁve training exams, respectively. It is
+clear that the reward curves gradually decrease and converge
+through trial-and-error interactions and cumulated experience,
+and it ﬁnally obtained the optimal ﬂight control policy after
+about 2500 episodes. What should be emphasized is that when
+the number of episodes closes to 3000, the reason why the
+reward value still ﬂuctuates to a light extent is because the
+moving speed of the user is randomly distributed in the interval
+[0, 2] in any TI, causing the difﬁculty of tracking user and
+providing communication service for AA V is slightly different.
+C. AAV 3-D User Tracking Optimization Assisted by
+Obstacle Sensing ISAC and DT
+In order to reveal the assistance of the DT obstacle model
+for designing AA V ﬂight trajectories, in Figs. 7–9,w ed i s -
+played the 2-D movement of the user and the 3-D AA V
+tracking trajectories in 1000th, 2000th, and 3000th episodes
+of the TD3 agent’s training, respectively. For a clearer exhibit
+of the user’s and AA V’s trajectories, we use the color bar on
+the left side to mark their location in different TI intervals
+within this episode. We also separately provide the 3-D side,
+2-D front, and 2-D top view of Figs. 7–9 in (a)–(c), since
+Fig. 6. Reward convergence of AA V’s TD3 agent with the training episodes.
+most of the works still adopt the ﬁxed AA V-altitude tracking.
+The initial location of the AA V and user is selected as [50,
+100, 2] and [85,80,0], and triangles and pentagrams mark their
+trajectories for distinction.
+As Figs. 7–9 shows, as the number of episodes grows, AA V
+detected more and more spatial spots of three obstacles by
+ISAC sensing signals, and these spatial spots continuously
+made up the DT obstacle models in BS. On the one hand, we
+ﬁnd that the construction of the DT obstacle models is related
+to the direction of AA V tracking behavior. For instance, in
+Fig. 7(a), the east and north sides of obstacles 2 and 3 have
+detected more spatial spots compared with the other two
+sides because the initial location of the user and the tracking
+behavior decide the AA V has more opportunity to pass through
+this side and detect obstacle spots in its moving direction. On
+the other hand, the construction of the DT obstacle models
+is also affected by the distance between the obstacles and the
+AA V . Compared with obstacles 2 and 3, the detected spots
+of obstacle 1 are less since it is relatively far away from the
+user’s moving path, resulting in few opportunities for the AA V
+to sense it in iterative learning.
+Combined with Figs. 7–9, we can observe the AA V 3-D
+tracking trajectory optimization by TD3 agent and DT obstacle
+models. Since the initial altitude of the AA V is not high
+enough, until the 40th TI, AA V tracked the user and ensured
+its ﬂight security by simultaneously increasing altitude and
+bypassing obstacle 3 in Fig. 7; with the construction improve-
+ment of DT obstacle model, AA V has explored a more efﬁcient
+ﬂight strategy in Figs. 8 and 9, i.e., direct increasing the
+altitude to climb over obstacle 3 and maintain the LoS links
+between user and it, and this climbing trajectory is more stable
+and efﬁcient in Fig. 9. In the 40th–70th TI, the AA V in all
+three ﬁgures choose to bypass obstacle 2 rather than cross over
+it, since the height of this obstacle feedbacked by DT obstacle
+models is so high that crossing it is ineffective for AA V .
+D. Analysis of AAV 3-D Multiusers Tracking Optimization
+and Fitness of Initial Location
+To further verify the effectiveness of our proposal with
+multiple users, we let AA V track two users simultaneously.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+24926 IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 13, 1 JULY 2025
+Fig. 7. DT obstacle models and trajectories of user and AA V tracking in the 1000th episode: (a) side view; (b) front view; and (c) top view.
+Fig. 8. DT obstacles model and trajectories of user and AA V tracking in the 2000th episode: (a) side view; (b) front view; and (c) top view.
+Fig. 9. DT obstacles model and trajectories of user and AA V tracking in the 3000th episode: (a) side view; (b) front view; and (c) top view.
+What is more, we adjust the AA V’s initial location to
+[10, 10, 0] to evaluate the ﬁtness of our proposal for different
+initial location selections. In order to satisfy the space need
+for the two users’ movement, we appropriately reduced the
+volume of obstacle 2. Currently, the AA V and users’ initial
+position is on the X–Y plane’s diagonal with all three obstacles,
+which undoubtedly increases the AA V’s difﬁculty in tracking
+two user’s movements and providing their communication
+service. The trajectories of the AA V and two users and the
+constructed DT obstacle model are shown in Fig. 10, where
+the lines with squares and pentagrams represent the trajectories
+of users 1 and 2.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+CHEN et al.: REINFORCEMENT-LEARNING-BASED AA V 3-D TARGET TRACKING AND DIGITAL-TWIN-ASSISTED COLLISION A VOIDANCE 24927
+Fig. 10. DT obstacles model and trajectories of two users and AA V tracking with a far initial location: (a) side view; (b) front view; and (c) top view.
+Due to the initial location, AA V will try to close to both
+users as soon as possible before the ﬁrst 40 TI, and the DT
+obstacle model of obstacle 1 is built better than the other two,
+as we explained before. About in the 40th TI, AA V made
+the rendezvous with two users and successfully reversed its
+ﬂight direction as the user’s movement. Since the 50th TI, the
+movement of two users has started to be different, and it is
+evident in Fig. 10(c) that the AA V can ﬂy in approximately
+the middle of two users to balance their communication
+performance. In terms of the AA V’s altitude, we noticed
+that the AA V efﬁciently crossed obstacle 1 by climbing and
+with the assistance of the DT obstacle model at the initial
+stage, and it gradually decreased its altitude to optimize the
+communication service during subsequent ﬂights. The above
+results demonstrate that our proposed method is adaptable to
+multiple-user scenarios and different initial location selections.
+E. Comparison of AAV’s Communication and Flight Security
+Performance
+The comparison of the overall achievable commu-
+nication rate and collision rate between our proposal
+(TD3+DT+ISAC), the TD3 agent with ISAC obstacle sensing
+but without DT assistance (TD3 +ISAC), and the TD3 agent
+without both DT assistance and ISAC obstacle sensing (TD3)
+is shown in Table I. The reason why we do not consider the
+benchmark of “TD3 agent with DT assistance but without
+ISAC obstacle sensing” is that utilizing ISAC signal to detect
+unknown obstacle is the premise of building DT obstacle
+models, and it violates our research springboard that the
+AA V should safely improve its communication ability in an
+unknown environment. These results for the three approaches
+are obtained by a fully trained TD3 agent and averaged over
+a 50-times simulation, in which the average communication
+rate and average collision rate refer to the E[R
+i
+c] and E[ςi]i n
+testing.
+It shows that the average communication rate and average
+collision rate obtained by all three methods gradually decrease
+and increase, respectively, with the increase in the number
+of obstacles. It is due to the coincidence of the ramp-up of
+collision probability in the environment with more obstacles
+and the ramp-up of shadowing probability of communica-
+tion links simultaneously. In general, by coupling the ISAC
+technique, the TD3+ISAC system can timely adjust AA V
+ﬂight-control actions with distance information of reﬂected
+echoes, obtaining a better communication and collision avoid-
+ance performance than the traditional TD3 agent. However,
+without the assistance of the DT obstacle model, it can not
+record the history of spatial spots of detected obstacles. It is
+also why our proposal can obtain optimal communication and
+minimum collision rates in all three scenarios.
+V. C
+ONCLUSION
+This article studies the optimization problem of moving
+target tracking, collision avoidance, and communication ser-
+vice provided in a AA V-ISAC system in order to solve the
+problem of poor user achievable communication rate restrained
+by security considerations under an obstacle-unknown envi-
+ronment. First, we propose a novel obstacle-detecting and
+ranging mechanism in which the OFDM-based ISAC sensing
+signal is transmitted from the AA V to identify collision risk
+in its instant ﬂying direction. Second, according to the real-
+time obstacle sensing results, DT technology is introduced to
+construct a virtual model in BS, allowing the system to explore
+and record the situation of an unknown environment. Then, in
+the AA V ﬂight, the control behavior of the AA V is decided
+by a trained TD3 agent to track moving users, improve the
+communication rate, and achieve collision avoidance, based
+on immediate state with the assistance of the DT model.
+Numerical studies witness reward convergence of TD3 agent’s
+training, the tracking effectiveness of AA V trajectories, and
+the enhancement of system collision rate and achievable
+communication rate, superior over other existing benchmarks.
+Although the above simulations have proven that our pro-
+posal is a powerful way for the AA V-ISAC system to track
+moving targets and optimize their communication, some basic
+assumptions in this article will affect its ﬁnal performance
+in practice. On the one hand, one assumption that only one
+AA V is ﬂying and working is unable to satisfy future needs,
+so how to fully tap the achievable potential and mutual
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 
+24928 IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 13, 1 JULY 2025
+TABLE I
+COMPARISON OF COMMUNICATION AND COLLISION AVOIDANCE
+PERFORMANCE WITH BENCHMARKS
+assistance for providing communication service for a multi-
+AA V system is bound to become the focus of attention in
+the future. By jointly constructing digital obstacle models and
+training DRL agents, the DT technology can be extended
+from the single-agent–single-AA V scenario researched in this
+article to the DRL-based multiagent control problem, proving
+the applicability of the proposed methods in the multi-AA Vs
+network. On the other hand, for applying the DRL algorithm
+in realizing AA V moving-multitarget tracking and collision
+avoidance of complex multiobstacles, the curse of dimension-
+ality for complex agent state space and action space makes the
+training of DRL agent more tough and unable to guarantee its
+reward convergence.
+R
+EFERENCES
+[1] A. V . Savkin, W. Ni, and M. Eskandari, “Effective UA V navigation for
+cellular-assisted radio sensing, imaging, and tracking,” IEEE Trans. Veh.
+Technol., vol. 72, no. 10, pp. 13729–13733, Oct. 2023.
+[2] Z. Lu, Z. Jia, Q. Wu, and Z. Han, “Joint trajectory planning and
+communication design for multiple UA Vs in intelligent collaborative
+air–ground communication systems,” IEEE Internet Things J. , vol. 11,
+no. 19, pp. 31053–31067, Oct. 2024.
+[3] J. Lu, Y . Wang, T. Liu, Z. Zhuang, X. Zhou, and F. Shu, “UA V-
+enabled uplink non-orthogonal multiple access system: Joint deployment
+and power control,” IEEE Trans. Veh. Technol. , vol. 69, no. 9,
+pp. 10090–10102, Sep. 2020.
+[4] H. Jiang, Z. Zhang, C. Wang,Y . Xu, Z. Liu, and C. Huang, “A novel
+3-D UA V channel model for A2G communication environments using
+AoD and AoA estimation algorithms,” IEEE Trans. Commun. , vol. 68,
+no. 11, pp. 7232–7246, Nov. 2020.
+[5] Y . Xu, Z. Liu, C. Huang, and C. Yuen, “Robust resource allocation
+algorithm for energy-harvesting-based D2D communication underlay-
+ing UA V-assisted networks,” IEEE Internet Things J. , vol. 8, no. 23,
+pp. 17161–17171, Dec. 2021.
+[6] X. Wang and M. C. Gursoy, “Learning-based UA V trajectory
+optimization with collision avoidance and connectivity constraints,”
+IEEE Trans. Wireless Commun. , vol. 21, no. 6, pp. 4350–4363, Jun.
+2022.
+[7] S. Huang, H. Zhang, and Z. Huang, “E2CoPre: Energy efﬁcient
+and cooperative collision avoidance for UA V swarms with trajec-
+tory prediction,” IEEE Trans. Intell. Transp. Syst. , vol. 25, no. 7,
+pp. 6951–6963, Jul. 2024.
+[8] X. Zhou, Q. Wu, S. Yan, F. Shu, and J. Li, “UA V-enabled secure
+communications: Joint trajectory and transmit power optimization,”
+IEEE Trans. Veh. Technol., vol. 68, no. 4, pp. 4069–4073, Apr. 2019.
+[9] Y . Li, F. Shu, B. Shi, X. Cheng, Y . Song, and J. Wang, “Enhanced RSS-
+based UA V localization via trajectory and multi-base stations,” IEEE
+Commun. Lett., vol. 25, no. 6, pp. 1881–1885, Jun. 2021.
+[10] N. Sun, J. Zhao, Q. Shi, C. Liu, and P. Liu, “Moving target tracking
+by unmanned aerial vehicle: A survey and taxonomy,” IEEE Trans. Ind.
+Informat., vol. 20, no. 5, pp. 7056–7068, May 2024.
+[11] Y . Xu, T. Zhang, D. Yang, Y . Liu, and M. Tao, “Joint resource and
+trajectory optimization for security in UA V-assisted MEC systems,”
+IEEE Trans. Commun. , vol. 69, no. 1, pp. 573–588, Jan. 2021.
+[12] H. Kang, X. Chang, J. Mišic, V . B. Mišic, J. Fan, and J. Bai, “Improving
+dual-UA V aided ground-UA V bi-directional communication security:
+Joint UA V trajectory and transmit power optimization,”IEEE Trans. Veh.
+Technol., vol. 71, no. 10, pp. 10570–10583, Oct. 2022.
+[13] X. Kong, C. Ni, G. Duan, G. Shen, Y . Yang, and S. K. Das, “Energy
+consumption optimization of UA V-assisted trafﬁc monitoring scheme
+with tiny reinforcement learning,” IEEE Internet Things J. , vol. 11,
+no. 12, pp. 21135–21145, Jun. 2024.
+[14] Z. Yin, J. Li, Z. Wang, Y . Qian, Y . Lin, and F. Shu, “UA V communication
+against intelligent jamming: A Stackelberg game approach with feder-
+ated reinforcement learning,” IEEE Trans. Green Commun. Netw.,v o l .8 ,
+no. 4, pp. 1796–1808, Dec. 2024, doi: 10.1109/TGCN.2024.3373886.
+[15] S. Yin and F. R. Yu, “Resource allocation and trajectory design in UA V-
+aided cellular networks based on multiagent reinforcement learning,”
+IEEE Internet Things J. , vol. 9, no. 4, pp. 2933–2943, Feb. 2022.
+[ 1 6 ] R .F u ,X .R e n ,Y .L i ,Y .W u ,H .S u n ,a n dM .A .A l - A b s i ,
+“Machine-learning-based UA V-assisted agricultural information security
+architecture and intrusion detection,” IEEE Internet Things J. , vol. 10,
+no. 21, pp. 18589–18598, Nov. 2023.
+[17] Z. Wei, Z. Meng, M. Lai, H. Wu, J. Han, and Z. Feng, “Anti-collision
+technologies for unmanned aerial vehicles: Recent advances and future
+trends,” IEEE Internet Things J. , vol. 9, no. 10, pp. 7619–7638, May
+2022.
+[18] S. Song, M. Choi, D.-E. Ko, and J.-M. Chung, “Multi-UA V tra-
+jectory optimization considering collisions in FSO communication
+networks,” IEEE J. Sel. Areas Commun., vol. 39, no. 11, pp. 3378–3394,
+Nov. 2021.
+[19] S. Ouahouah, M. Bagaa, J. Prados-Garzon, and T. Taleb, “Deep-
+reinforcement-learning-based collision avoidance in UA V environment,”
+IEEE Internet Things J. , vol. 9, no. 6, pp. 4015–4030, Mar. 2022.
+[20] W. Xu, L. Xiang, T. Zhang, M. Pan, and Z. Han, “Cooperative
+control of physical collision and transmission power for UA V swarm:
+A dual-ﬁelds enabled approach,” IEEE Internet Things J. , vol. 9, no. 3,
+pp. 2390–2403, Feb. 2022.
+[21] X. He, Q. Chen, L. Tang, W. Wang, T. Liu, and L. Li, “Federated
+continuous learning based on stacked broad learning system assisted by
+digital twin networks: An incremental learning approach for intrusion
+detection in UA V networks,” IEEE Internet Things J. , vol. 10, no. 22,
+pp. 19825–19838, Nov. 2023.
+[22] G. Shen, L. Lei, Z. Li, S. Cai, L. Zhang, and P. Cao, “Deep reinforcement
+learning for ﬂocking motion of multi-UA V systems: Learn from a digital
+twin,” IEEE Internet Things J. , vol. 9, no. 13, pp. 11141–11153, Jul.
+2022.
+[23] Q. Zhang, H. Sun, X. Gao, X. Wang, and Z. Feng, “Time-division ISAC
+enabled connected automated vehicles cooperation algorithm design and
+performance evaluation,” IEEE J. Sel. Areas Commun. , vol. 40, no. 7,
+pp. 2206–2218, Jul. 2022.
+[24] X. Cheng, D. Duan, S. Gao, and L. Yang, “Integrated sensing and
+communications (ISAC) for vehicular communication networks (VCN),”
+IEEE Internet Things J. , vol. 9, no. 23, pp. 23441–23451, Dec. 2022.
+[25] Y . Liu, X. Liu, Z. Liu, Y . Yu, M. Jia, and Z. Na, “Secure
+rate maximization for ISAC-UA V assisted communication amidst
+multiple eavesdroppers,” IEEE Trans. Veh. Technol. , vol. 73, no. 10,
+pp. 15843–15847, Oct. 2024.
+[26] Y . Pan, R. Li, X. Da, H. Hu, M. Zhang, and D. Zhai, “Cooperative
+trajectory planning and resource allocation for UA V-enabled integrated
+sensing and communication systems,” IEEE Trans. Veh. Technol. ,
+vol. 73, no. 5, pp. 6502–6516, May 2024.
+[27] R. Li, Z. Xiao, and Y . Zeng, “Toward seamless sensing cover-
+age for cellular multi-static integrated sensing and communication,”
+IEEE Trans. Wireless Commun. , vol. 23, no. 6, pp. 5363–5376,
+Jun. 2024.
+[28] C. Deng, X. Fang, and X. Wang, “Beamforming design and trajec-
+tory optimization for UA V-empowered adaptable integrated sensing
+and communication,” IEEE Trans. Wireless Commun. , vol. 22, no. 11,
+pp. 8512–8526, Nov. 2023.
+[29] J. Wu, W. Yuan, and L. Hanzo, “When UA Vs meet ISAC: Real-
+time trajectory design for secure communications,” IEEE Trans. Veh.
+Technol., vol. 72, no. 12, pp. 16766–16771, Dec. 2023.
+[30] C. Wang, Z. Wei, W. Jiang, H. Jiang, and Z. Feng, “Cooperative sensing
+enhanced UA V path-following and obstacle avoidance with variable
+formation,” IEEE Trans. Veh. Technol. , vol. 73, no. 6, pp. 7501–7516,
+Jun. 2024.
+[31] M. Chen, Y . Sun, Z. Xie, N. Lin, and P. Wu, “An efﬁcient and
+privacy-preserving algorithm for multiple energy hubs scheduling with
+federated and matching deep reinforcement learning,” Energy, vol. 284,
+Dec. 2023, Art. no. 128641.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:28:54 UTC from IEEE Xplore.  Restrictions apply. 

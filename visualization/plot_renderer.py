@@ -293,17 +293,30 @@ class PlotRenderer:
             flash = env.temporal_engine.consume_replan_flash()
             if flash:
                 ax.set_facecolor((1.0, 0.85, 0.85))
-                ax.text2D(
-                    0.5,
-                    0.95,
-                    "REPLAN TRIGGERED",
-                    transform=ax.transAxes,
-                    ha="center",
-                    va="top",
-                    fontsize=12,
-                    color="red",
-                    fontweight="bold",
-                )
+                if is_3d:
+                    ax.text2D(
+                        0.5,
+                        0.95,
+                        "REPLAN TRIGGERED",
+                        transform=ax.transAxes,
+                        ha="center",
+                        va="top",
+                        fontsize=12,
+                        color="red",
+                        fontweight="bold",
+                    )
+                else:
+                    ax.text(
+                        0.5,
+                        0.95,
+                        "REPLAN TRIGGERED",
+                        transform=ax.transAxes,
+                        ha="center",
+                        va="top",
+                        fontsize=12,
+                        color="red",
+                        fontweight="bold",
+                    )
 
         filename = f"{step:04d}.png"
         fig.savefig(f"{save_dir}/{filename}", dpi=200)

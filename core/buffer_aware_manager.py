@@ -54,6 +54,13 @@ class BufferAwareManager:
         Processes data collection over a time step dt.
         Returns the amount of data collected in Mbits.
         """
+        from metrics.metric_engine import MetricEngine
+        dist = MetricEngine.euclidean_distance(node.position(), uav_pos)
+        
+        if not CommunicationEngine.probabilistic_sensing_success(dist):
+            # Packet loss or sensing failure
+            return 0.0
+            
         rate_mbps = CommunicationEngine.achievable_data_rate(
             node.position(), uav_pos
         )
@@ -62,6 +69,8 @@ class BufferAwareManager:
         data_collected = min(node.current_buffer, collectable_data)
         
         node.current_buffer -= data_collected
+        if data_collected > 0:
+            node.aoi_timer = 0.0  # Reset Age of Information timer
         
         # Structure safeguard
         if node.current_buffer < 0:

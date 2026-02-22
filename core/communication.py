@@ -105,10 +105,31 @@ class CommunicationEngine:
         return rate_bps / 1e6
 
     @staticmethod
+    def probabilistic_sensing_success(distance: float) -> bool:
+        if not Config.ENABLE_PROBABILISTIC_SENSING:
+            return True
+            
+        import random
+        prob = math.exp(-Config.SENSING_TAU * distance)
+        
+        if prob < Config.MIN_SENSING_PROB_THRESH:
+            prob = 0.0
+            
+        return random.random() <= prob
+
+    @staticmethod
     def fill_buffer(node, dt: float):
         """
         Increases the node's buffer filling based on generation rate over time dt.
+        Also tracks Age of Information (AoI) and expires data if too old.
         """
         generated = node.data_generation_rate * dt
         node.current_buffer = min(node.buffer_capacity, node.current_buffer + generated)
+        
+        if Config.ENABLE_AOI_EXPIRATION:
+            node.aoi_timer += dt
+            if node.aoi_timer >= Config.MAX_AOI_LIMIT:
+                # Data expires due to Age of Information limits
+                node.current_buffer = 0.0
+                node.aoi_timer = 0.0
 

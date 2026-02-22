@@ -1,0 +1,1637 @@
+IEEE INTERNET OF THINGS JOURNAL, VOL. 9, NO. 17, 1 SEPTEMBER 2022 16663
+Learning-Based UA V Path Planning for
+Data Collection With Integrated
+Collision Avoidance
+Xueyuan Wang ,M .C e n kG u r s o y, Senior Member, IEEE, Tugba Erpek,
+and Yalin E. Sagduyu , Senior Member, IEEE
+Abstract—Unmanned aerial vehicles (UA Vs) are expected to
+be an integral part of wireless networks, and determining
+collision-free trajectory in multi-UA V noncooperative scenarios
+while collecting data from distributed Internet of Things (IoT)
+nodes is a challenging task. In this article, we consider a path-
+planning optimization problem to maximize the collected data
+from multiple IoT nodes under realistic constraints. The con-
+sidered multi-UA V noncooperative scenarios involve a random
+number of other UA Vs in addition to the typical UA V , and UA Vs
+do not communicate or share information among each other. We
+translate the problem into a Markov decision process (MDP) with
+parameterized states, permissible actions, and detailed reward
+functions. Dueling double deep Q-network (D3QN) is proposed
+to learn the decision-making policy for the typical UA V , without
+any prior knowledge of the environment (e.g., channel propaga-
+tion model and locations of the obstacles) and other UA Vs (e.g.,
+their missions, movements, and policies). The proposed algorithm
+can adapt to various missions in various scenarios, e.g., different
+numbers and positions of IoT nodes, different amount of data to
+be collected, and different numbers and positions of other UA Vs.
+Numerical results demonstrate that real-time navigation can be
+efﬁciently performed with high success rate, high data collection
+rate, and low collision rate.
+Index Terms—Collision avoidance, data collection, deep rein-
+forcement learning (RL), multiunmanned aerial vehicle (UA V)
+scenarios, path planning.
+I. I NTRODUCTION
+U
+NMANNED aerial vehicles (UA Vs), also commonly
+known as drones, are aircrafts piloted by remote control
+or embedded computer programs without human onboard [1].
+UA Vs have been one of the main targets of industrial and
+academic research in recent years. Due to their mobility,
+autonomy and ﬂexibility, UA Vs can be used in a variety of
+Manuscript received 17 December 2021; accepted 7 February 2022. Date
+of publication 23 February 2022; date of current version 24 August 2022.
+(Corresponding author: M. Cenk Gursoy.)
+Xueyuan Wang was with the Department of Electrical Engineering
+and Computer Science, Syracuse University, Syracuse, NY 13244 USA.
+She is now with the School of Computer Science and Artiﬁcial
+Intelligence, Changzhou University, Changzhou 213164, China (e-mail:
+xwang173@syr.edu).
+M. Cenk Gursoy is with the Department of Electrical Engineering and
+Computer Science, Syracuse University, Syracuse, NY 13244 USA (e-mail:
+mcgursoy@syr.edu).
+Tugba Erpek and Yalin E. Sagduyu are with the National Security
+Institute, Virginia Tech, Arlington, V A 22201 USA (e-mail: terpek@vt.edu;
+yalinsagduyu@gmail.com).
+Digital Object Identiﬁer 10.1109/JIOT.2022.3153585
+real-world scenarios, such as delivery of medical supplies,
+disaster relief, environment monitoring, aerial surveillance
+and inspection, trafﬁc control, and emergency search and
+rescue [2], [3]. In order to take advantage of ﬂexible deploy-
+ment opportunities and high possibility of Line-of-Sight (LoS)
+connections with ground user equipments (UEs), UA Vs can be
+deployed as base stations (BSs) to support wireless connec-
+tivity and improve the performance of cellular networks [4],
+leading to a UA V-assisted cellular network architecture. UA Vs
+have shown particular promise in collecting data from dis-
+tributed Internet of Thing (IoT) sensor nodes, as IoT operators
+can deploy UA V data harvesters in the absence of other expen-
+sive cellular infrastructure nearby [5]. For example, UA Vs can
+move toward potential ground nodes and establish reliable con-
+nections with low transmit power, and hence they can provide
+an energy-efﬁcient solution for data collection from ground
+UEs that are spread over a geographical area with limited ter-
+restrial infrastructure [6]. However, optimizing the ﬂight path
+of UA Vs is challenging as it requires the consideration of many
+physical constraints and parameters. In particular, the trajec-
+tory of a UA V is signiﬁcantly affected by different factors such
+as ﬂight time, kinematic constraints, ground UEs demands,
+and collision avoidance [3]. Effective UA V trajectory plan-
+ning allows the UA Vs to adapt their movement based on the
+communication requirements of both the UA Vs and the ground
+UEs, thus improving the overall network performance [7] and,
+therefore, UA V path plans and control policies need to be
+carefully designed such that the application requirements are
+satisﬁed [8]–[10].
+A. Related Prior Work
+UA V trajectory design for data collection in IoT networks
+has been intensively studied in the literature. For example,
+to minimize the weighted sum of the propulsion energy con-
+sumption and operation costs of all UA Vs and the energy
+consumption of all sensor nodes, the nodes’ wake-up time
+allocation and the transmit power and the UA V trajectories
+were jointly optimized in [11], and collision-avoidance con-
+straint was also considered in this article. Wang et al. [12]
+aimed to minimize the energy consumption of IoT devices
+by jointly optimizing the UA V trajectory and device transmis-
+sion scheduling over time. In [13], the UA V trajectory, altitude,
+velocity and data links with the ground UEs were optimized to
+2327-4662 c⃝ 2022 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+16664 IEEE INTERNET OF THINGS JOURNAL, VOL. 9, NO. 17, 1 SEPTEMBER 2022
+minimize the total mission time for UA V-aided data collection.
+Samir et al. [14] aimed to optimize the UA V trajectory and the
+radio resource allocation to maximize the number of served
+IoT devices, where each device has a data upload deadline.
+The minimum throughput over all ground UEs in downlink
+communication was maximized in [15], by optimizing the
+multiuser communication scheduling and association jointly
+with the UA V’s trajectory and power control. Moreover, UA V
+path planning for data collection has also been investigated
+in [16]–[19]. Nonlearning-based algorithms and optimization
+techniques, e.g., block coordinate descent, successive convex
+approximation, and alternating optimization, were proposed
+and utilized to solve the problems in these studies.
+Reinforcement learning (RL) is the study of how an agent
+can interact with the environment to learn a policy that max-
+imizes the expected cumulative reward for a task [20]. In
+the areas of communications and networking, RL has been
+recently used as an emerging tool to effectively address various
+problems and challenges. Speciﬁcally, RL-based algorithms
+have been proposed as solutions to UA V path planning for
+data collection tasks. For example, [21]–[26] addressed the
+trajectory optimization in single-UA V data collection scenar-
+ios. Yi et al. [21] used double deep Q-network (DDQN)
+algorithms to ﬁnd the optimal ﬂight trajectory and transmis-
+sion scheduling to minimize the weighted sum of the age
+of the information. Zhang et al. [22] used deep Q-network
+(DQN) algorithms to decide the UA V trajectory to collect
+the required data, and determined the charging car trajectory
+to reach its destination to charge the UA V . DQN was also
+used in [23] to decide the transmission schedule to minimize
+the data loss, given the waypoint of the UA V’s trajectory.
+Bouhamed et al. [24] ﬁrst used a deep deterministic policy
+gradient (DDPG) algorithm to ﬁnd the trajectory with no colli-
+sion with obstacles, and then employedQ-learning (QL) to ﬁnd
+the scheduling strategy to minimize the data collection time.
+Fu et al. [25] provided a QL framework as an energy-efﬁcient
+solution for the UA V trajectory optimization. Moreover, QL
+was also used in [26] to ﬁnd the UA V trajectory to maximize
+the sum rate of transmissions.
+Different RL-based path-planning approaches for data col-
+lection in multi-UA V networks have been developed in the
+literature as well, such as in [5] and [27]–[30]. Particularly,
+Bayerlein et al. [5] utilized the DDQN algorithm to solve the
+UA V path-planning problem to maximize the collected data
+from IoT nodes, subject to ﬂying time and collision-avoidance
+constraints. However, the learning was centralized, and the
+UA Vs needed to share their information and a part of their
+reward among each other. Hsu and Gau [27] considered a sce-
+nario where the UA Vs took charge of delivering objects in the
+forward path, and collected data from IoT devices in the back-
+ward path. QL was used to solve the forward collision-avoidance
+problem, and auxiliary no-return traveling salesman algorithm
+was used to ﬁnd the shortest backward path. However, the
+collision-avoidance and communication constraints were not
+taken into account together. Moreover, Liu et al. [28] consid-
+ered the problem of joint trajectory design and power control
+for multi-UA Vs for maximizing the instantaneous sum transmit
+rate of mobile UEs. To solve the problem, a framework that
+involves a multiagent QL-based placement algorithm for initial
+deployment of UA Vs, an echo-state-network-based algorithm
+for predicting the mobility of UEs, and a multiagent QL-based
+trajectory-acquisition and power control algorithm for UA Vs,
+was proposed. However, collision-avoidance constraint was not
+taken into account in this article. Vehicles and UA Vs were con-
+sidered to collect data from multiple IoT nodes cooperatively
+in [29] without accounting for collision-avoidance constraints.
+Genetic algorithm was utilized to select vehicular collectors,
+and Asynchronous Advantage Actor–Critic (A3C) algorithm
+was employed to plan collection routes of UA Vs subject to
+energy constraints. In [30], a joint trajectory design and power
+allocation problem was considered, and a multiagent DDPG
+method was proposed to obtain the optimal policy under UEs’
+quality of service requirements. In these studies, all agents were
+assumed to use the same policy or operate cooperatively. The
+key challenge for these models is that they cannot generalize
+well to crowded scenarios (in which different policies are typ-
+ically adopted) or decentralized settings with noncooperating
+agents.
+B. Contributions
+In this article, we propose and implement a dueling DDQN
+(D3QN)-based path-planning algorithm for data collection in
+multi-UA V noncooperative decentralized scenarios. The objec-
+tive for a typical UA V is to plan a collision-free trajectory
+to destination and collect data from multiple distributed IoT
+nodes, based on the information sensed from the environ-
+ment and received from IoT nodes. The main contributions
+are summarized as follows.
+1) We study the UA V trajectory optimization to maximize
+the collected data from distributed IoT nodes in multi-
+UA V noncooperative scenarios under realistic con-
+straints, e.g., collision-avoidance, mission completion
+deadline, and kinematic constraints. The considered
+multi-UA V noncooperative scenarios involve random
+number of other UA Vs in addition to the typical UA V ,
+and UA Vs do not communicate and share information
+among each other. The typical UA V can only observe
+nearby UA Vs in its sensing region.
+2) Due to the uncertainty in the environment, other
+UA Vs’ existence and unobservable intents, the con-
+sidered problem is translated to a Markov decision
+process (MDP) with parameterized states, permissible
+actions, and detailed reward functions. D3QN frame-
+work is proposed for learning the policy without any
+prior knowledge of the environment (e.g., channel prop-
+agation model and locations of the obstacles) and other
+UA Vs (e.g., their missions, intents, and policies). The
+proposed D3QN RL algorithm is tailored to the UA V
+path-planning problem by meticulously designing the
+state space, action space, and reward mechanisms in
+a novel way to accurately reﬂect the objectives and
+constraints.
+3) The proposed algorithm has high adaptation capability.
+More speciﬁcally, without further training, the ofﬂine
+learned policy can be used for real-time navigation for
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+W ANGet al.: LEARNING-BASED UA V PATH PLANNING FOR DATA COLLECTION 16665
+various missions with different number and locations of
+IoT nodes, different amount of data to be collected,
+in various scenarios, including different number and
+locations of other UA Vs.
+4) The proposed algorithm operates in a decentralized
+fashion without requiring cooperation. Particularly, the
+UA Vs do not communicate or share any information
+among each other, and other UA Vs may have different
+missions and use different policies (which is unknown
+to the typical UA V). Regardless of the mission, intents,
+and decision making policies, as long as nearby UA Vs
+are sensed, the typical UA V can adjust its movements
+accordingly using a learned policy.
+5) We extensively evaluate the proposed D3QN path-
+planning algorithm. We show that real-time navigation
+can be efﬁciently performed with high success rate (SR)
+and high data collection rate (DR) for various mis-
+sions in various scenarios (including crowded ones). We
+demonstrate that the proposed algorithm can achieve
+much lower collision rate (CR) in testing compared with
+the algorithm not considering collision avoidance. For
+example, in scenarios with 20 other UA Vs, if colli-
+sion avoidance is not considered, the CR rises up to
+29.1%, while it is only 0.6% with the proposed algo-
+rithm. In addition, the proposed algorithm has high
+tolerance to noisy observations (as demonstrated in
+Section IV-E). Furthermore, we show that D3QN has
+better performance than Dueling DQN, DDQN, DQN,
+and nodes-as-waypoints algorithm when solving the
+considered problem.
+The remainder of this article is organized as follows:
+Section II provides the details of the considered system model,
+and formulates the path-planning optimization problem for
+data collection in multi-UA V scenarios. Section III describes
+the RL framework and presents the details of the proposed
+D3QN path planning algorithm. Section IV focuses on numer-
+ical and simulation results to evaluate the performance of the
+proposed algorithm. Finally, concluding remarks are provided
+in Section V .
+II. S
+YSTEM MODEL AND PROBLEM FORMULATION
+In this section, we ﬁrst introduce the system model in detail,
+and then we formulate the path-planning optimization problem
+for data collection.
+A. System Model
+We assume that the area of interest is a cubic volume, which
+can be speciﬁed by C : X × Y × Z and X ≜ [xmin, xmax],
+Y ≜ [ymin, ymax], and Z ≜ [zmin, zmax]. There are multiple no-
+ﬂy zones (obstacles) in the area through which UA Vs cannot
+ﬂy. The no-ﬂy zones are denoted as N : XN × YN × Z.
+1) UAV: In the considered multi-UA V scenario, we choose
+one UA V as the typical one, whose mission is to collect data
+from multiple ground IoT nodes. The UA V is modeled as
+disc-shaped with radius r.L e t p = [px, py, HV ] denote the
+3-D position of the UA V , where HV is the altitude of the
+UA V which is assumed to be ﬁxed. It is further assumed that
+Fig. 1. Illustration of data collection in a multi-UA V scenario.
+the typical UA V has speciﬁc areas for departure and land-
+ing, which can be denoted by S and D, respectively. More
+speciﬁcally, S : XS × YS × Z, where XS ≜ [xS
+min, xS
+max],
+YS ≜ [yS
+min, yS
+max], and D : XD × YD × Z, where XD ≜
+[xD
+min, xD
+max], YD ≜ [yD
+min, yD
+max]. pS = [psx, psy, HV ] and
+pD = [pgx, pgy, HV ] are used to denote the coordinates of the
+starting point and the destination for the typical UA V , respec-
+tively. The typical UA V’s information forms a vector that
+consists of the UA V’s position, current velocity v = [vx, vy],
+radius r, destination pD, maximum speed vmax, and orientation
+φ, i.e., s = [p, v, r, pD, vmax,φ ] ∈ R11.
+In this multi-UA V scenario, there are also J other UA Vs
+traveling within region C. None of the UA Vs communi-
+cate with each other. Therefore, the missions, destinations,
+movements, and decision-making policies of other UA Vs are
+unknown. It is assumed that the typical UA V is equipped with
+a sensor, with which it is able to sense the existence of other
+UA Vs when they are closer than a certain distance. The circular
+sensing region is denoted by O. Speciﬁcally, if the jth UA V is
+in O, some information of this UA V can be known by the typ-
+ical UA V . The observable information includes thejth UA V’s
+position p
+j = [pxj, pyj , HV ], current velocity vj = [vxj, vyj ], and
+radius rj, i.e., so
+j = [pj, vj, rj] ∈ R6. The total number of other
+UAVs in O is denoted by Jo. It is worth noting that Jo varies
+over time.
+2) IoT Nodes: In this UA V-assisted network, there are N
+static IoT nodes that need to upload data to the typical UA V via
+uplink transmission. The nth node has transmit power P
+n, and
+is located at ground position pn = [pxn, pyn ]. Each node has a
+ﬁnite amount of data DL
+n0 that needs to be collected over the
+entire mission duration of the typical UA V . It is assumed that
+pn and DL
+n0 are known by the typical UA V in advance before
+a mission. The IoT nodes have two modes: active mode, if the
+node still has data to transmit; and silent mode, if data upload
+is completed.
+An illustration of the system model is provided in Fig. 1.
+Notations of key parameters are summarized in Table I.
+B. Channel Model
+1) Path Loss: Due to high UA V altitude, air-to-ground
+channels usually constitute strong LOS links, and hence LOS
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+16666 IEEE INTERNET OF THINGS JOURNAL, VOL. 9, NO. 17, 1 SEPTEMBER 2022
+TABLE I
+TABLE OF NOTATIONS
+links are dominant [1], [2]. In addition, if UA V’s altitude HV
+is greater than a threshold, 3GPP speciﬁcations suggest a LOS
+link with probability 1. For example, as stated in the 3GPP
+speciﬁcations in [31], the altitude threshold is suggested to
+be 40 m for RMa (Rural Macro) deployment, and 100 m for
+UMa (Urban Macro) deployment. Therefore, we assume that
+all links between the UA V and IoT nodes are LOS. Then, the
+path loss can be expressed as
+L(d) =
+(
+d
+2 + H2
+V
+) α/2
+(1)
+where d is the horizontal distance between the ground pro-
+jection of the UA V and a node, and α is the path-loss
+exponent.
+2) Antenna Conﬁguration: The IoT nodes are assumed to
+have the omnidirectional antenna gain of Gn = 0 dB. The
+UA Vs are assumed to be equipped with a receiver with a
+horizontally oriented antenna, and a simple analytical approx-
+imation for antenna gain provided by UA V can be expressed
+as [32]
+G
+V(d) = sin(θ)= HV√
+d2 + (HV)2
+(2)
+where θ is elevation angle between the UA V and a node. An
+illustration of the UA V’s antenna pattern is given in Fig. 2.
+While we specify a certain antenna pattern here, the remainder
+of the analysis is applicable to any antenna pattern.
+C. Signal-to-Noise Ratio and Rate
+The received signal from the nth node at the typical UA V
+can be expressed as Pr
+n = PnGV(dn)L−1(dn). With this, the
+experienced signal-to-noise ratio (SNR) at the UA V if it is
+communicating with the nth IoT node can be formulated as
+Sn ≜ Pn
+Ns
+GV(dn)L−1(dn) = Pn
+Ns
+HV
+(
+d2 + H2
+V
+) − 1+α
+2
+(3)
+Fig. 2. Illustration of the UA V’s antenna pattern.
+where Ns is the noise power. The maximum achievable
+information rate if the UA V is connected with the nth
+node is
+Rmax
+n = log2(1 + Sn). (4)
+To support data ﬂows, UA V has to maintain a reliable commu-
+nication link to the IoT nodes. To achieve this, it is assumed
+that the experienced SNR at the UA V when connecting with
+a node should be larger than a certain threshold Ts. Then, the
+UA V can communicate with the node successfully. Otherwise,
+the UA V is not able to collect data from the node. Therefore,
+the effective information rate according to the SNR threshold
+T
+s can be given as
+Rn =
+{ Rmax
+n , if Sn ≥ Ts
+0, otherwise. (5)
+D. Scheduling
+Since the typical UA V needs to communicate with multiple
+nodes, we adopt the standard time-division multiple access
+(TDMA) model. Then, the UA Vs can communicate with at
+most one node at each time. Using qn ∈{ 0, 1} to indicate the
+connection with the nth node, we have
+N∑
+n = 1
+qn ≤ 1. (6)
+The scheduling is according to the largest received signal
+power strategy, meaning that the UA V is connected with the
+active node providing the largest Pr
+n. We can mathematically
+express the scheduling strategy as
+qn =
+{ 1, if n = argmaxn′∈{active nodes} Pr
+n′
+0, otherwise. (7)
+E. Problem Formulation
+We can partition each mission duration in the discrete-time
+domain to a number of time steps t ∈ [0, T], with each time
+step describing a period of /Delta1t. Now, the integer-valued t is
+used to denote each time step. We next consider the follow-
+ing realistic and practical constraints in the design of UA V
+trajectories:
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+W ANGet al.: LEARNING-BASED UA V PATH PLANNING FOR DATA COLLECTION 16667
+1) Collision-Avoidance Constraints: In scenarios involving
+multiple UA Vs, a fundamental challenge is to safely control
+the interactions with other dynamic agents in the environment.
+Therefore, for collision-avoidance purposes, the minimum dis-
+tance between the typical UA V and any other UA Vs should not
+be smaller than the sum of their radii at all times. In addition,
+it is important for UA Vs to navigate while staying free of col-
+lisions with ﬁxed obstacles and avoiding no-ﬂy zones. In this
+setting, we can write the collision-avoidance constraints as
+|p
+t − pjt||2 > r + rj ∀j ∀t (8)
+pt /∈ N ∀t (9)
+where pt is the position of the typical UA V at time step t,
+pjt is the position of the jth UA V at time t, and r and rj are
+the radii of typical UA V and the jth other UA V , respectively.
+Equation (9) is to avoid collision with the obstacles and avoid
+no-ﬂy zones.
+We note that unmanned vehicles/systems are typically
+equipped with sensors (including, e.g., laser ranging, radar,
+electro-optical, infrared, or thermal imaging sensors, and
+motion detectors) for safe and robust operation. UA Vs,
+equipped with one or two types of such sensors, will have the
+capability to detect the observable state of the nearby UA Vs
+at low cost.
+2) Mission Completion Deadline Constraint: A UA V with
+a mission has to complete the required tasks in a certain
+time period. Moreover, ﬁnite amount of energy available at
+the battery-operated UA V also restricts the UA V’s ﬂight time.
+Hence, we assume that the UA V has a mission completion
+deadline constraint that can be described as
+T · /Delta1t ≤ T
+t (10)
+where T is the total steps in discrete-time domain, and Tt is
+the maximum allowed mission completion time.
+3) Kinematic Constraints: In practice, the kinematic con-
+straints should be considered in operating UA Vs. Speciﬁcally,
+we impose the following speed and rotation constraints:
+vst ≤ vmax ∀t (11)
+|φt − φt−1|≤ /Delta1t · Tr ∀t (12)
+where vst and φt are the speed and the orientation of the typical
+UA V at time step t, respectively. vmax is the maximum speed
+of the UA V , andTr is the maximum rotation angle in unit time
+period.
+4) Start and Destination Constraints: A UA V with a mis-
+sion should ﬂy from a given start point and arrive at a required
+destination, and hence we have
+p0 = pS, pT = pD. (13)
+5) TDMA Constraint: Due to the utilization of TDMA, the
+UA V can communicate with at most one node at each time,
+and the constraint is given in (6).
+Our goal is to maximize the collected data from all
+nodes subject to these constraints. Therefore, the optimization
+problem can be formulated as
+(P1) :a r g m a x
+{pt ∀t}
+T∑
+t=0
+N∑
+n=1
+qnt/Delta1tRnt
+subject to (6) , (8), (9), (10), (11), (12), (13)
+where the subscript t in qnt and Rnt is used to indicate the
+scheduling result and the information rate, respectively, at time
+step t.
+III. D EEP -REINFORCEMENT -LEARNING -BASED
+PATH PLANNING
+In this section, we ﬁrst introduce the basic idea behind RL,
+then describe the RL formulation of decentralized path plan-
+ning for data collection in a multi-UA V scenario, and ﬁnally
+explain the proposed D3QN path-planning algorithm in detail.
+A. Reinforcement Learning
+RL is a class of machine learning methods that can be uti-
+lized for solving sequential decision making problems with
+unknown state-transition dynamics [33], [34]. Typically, a
+sequential decision-making problem can be formulated as an
+MDP [35], which is described by the tuple ⟨S, A, P, R,γ⟩,
+where S is the state space, A is the action space, P is the state-
+transition model, R is the reward function, and γ ∈ [0, 1]
+is a discount factor that trades off the importance of the
+immediate and future rewards. More speciﬁcally, at each time
+step, an agent, in state s
+t ∈ S, chooses an action at ∈ A,
+transitions to next state st+1, and receives reward Rt from
+the environment E. The cumulative discounted reward RC
+t is
+deﬁned as
+RC
+t ≜
+∞∑
+τ=0
+γτRt+τ. (14)
+The state–action-value function (also known as the Q-value)
+quantiﬁes the expected return from a state–action pair ( s, a),
+and can be expressed by the cumulative discounted reward
+Qπ(st, at) ≜ Eπ
+[
+RC
+t |st, at
+]
+(15)
+when policy π is followed. The Q-value satisﬁes the Bellman
+optimality equation [35]
+Qπ(st, at) = Eπ
+[
+rt + γ max
+a′
+Qπ(
+st+1, a′)
+|st, at
+]
+. (16)
+The essential task of many RL algorithms is to seek the
+optimal policy that maximizes the expected cumulative dis-
+counted reward by solving
+π∗(st) = argmax
+at
+Q(st, at). (17)
+QL is one of the most widely used algorithms for RL. In tra-
+ditional QL, a table (referred to as the Q-table) is constructed,
+in which the component in row s and column a is the Q-value
+Q(s, a). The QL update rule can be written as [36]
+Q(s, a) ← Q(s, a) + α
+[
+R + γ max
+a′
+Q
+(
+s′, a′)
+− Q(s, a)
+]
+(18)
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+16668 IEEE INTERNET OF THINGS JOURNAL, VOL. 9, NO. 17, 1 SEPTEMBER 2022
+where α is a scalar step size and s′ is the state in the next
+time step.
+In problems with large state and action spaces, it becomes
+infeasible to use the Q-table. A typical approach is to con-
+vert the update problem of the Q-table into a function ﬁtting
+problem, i.e., we can learn a parameterized value function
+Q(s, a;ξ) ≈ Q(s, a) with parameters ξ. When combined with
+deep learning, this leads to DQN. The operation of DQN con-
+sists of an online deep Q learning phase and an ofﬂine deep
+neural network (DNN) construction phase, which is used to
+learn the value function Q(s, a;ξ). Generally, the parameter set
+ξ is optimized by minimizing the following loss function [37]:
+L
+t(ξt) = E
+[(
+yt − Q(st, at;ξt)
+)2]
+(19)
+where yt = Rt + γ maxa′ Q(st+1, a′;ξ−
+t ) is the target, and ξ−
+t
+is copied at certain steps from ξt.
+The maximization operator in standard QL and DQN uses
+the same values both to select and to evaluate an action, which
+increases the probability to select overestimated values and
+results in overoptimistic value estimates. DDQN can be used to
+mitigate the above problem by using the following target [38]:
+y
+t = Rt + γQ
+(
+st+1, argmax
+a′
+Q
+(
+st+1, a′;ξt
+)
+;ξ−
+t
+)
+(20)
+where ξt is used for action selection, and ξ−
+t is used to evaluate
+the value of the policy, and ξ−
+t can be updated symmetrically
+by switching the roles of ξt and ξ−
+t .
+Furthermore, considering that Q-value measures how bene-
+ﬁcial a particular action a is when taken in state s, the dueling
+architecture is introduced to obtain a value V(s) and an advan-
+tage A(s, a) = Q(s, a) − V(s) [39]. The value V(s) is to
+measure how good it is to be in a particular state s. The advan-
+tage A(s, a) describes the advantage of the action a compared
+with other possible actions while in state s [40]. Therefore,
+the difference in dueling DQN, compared with DQN, is that
+the last layer of the DQN is split into two separate layers, ξV
+and ξA. ξV is used to obtain the value V(s;ξ,ξV), and the
+output of ξA is the advantage for each action A(s, a;ξ,ξA).
+The Q-value in dueling DQN can be expressed as [39]
+Q
+(
+s, a;ξ,ξV,ξA
+)
+= V
+(
+s;ξ,ξV)
++ A
+(
+s, a;ξ,ξA
+)
+− 1
+|A|
+∑
+a′
+A
+(
+s, a′;ξ,ξA
+)
+.
+(21)
+The general structure of dueling DQN is displayed in Fig. 3.
+Dueling DDQN (D3QN) is a combination of dueling DQN and
+DDQN. The learning strategy within D3QN is more rewarding,
+and we in this article utilize D3QN to achieve path planning
+for data collection in multi-UA V scenarios.
+B. Reinforcement Learning Formulation
+Considering the objective function in (P1) and the con-
+straints in (6)–(13), we can translate the considered problem
+into an MDP, and the tuple ⟨S, A, R⟩ is explained in detail as
+follows.
+Fig. 3. Structure of the dueling deep Q-network.
+1) State: In multi-UA V scenarios, the typical UA V is able
+to obtain the following information:
+1) Its own full information vector st at time step t, where
+st = [pxt , pyt , HV, vxt , vyt , r, pgx, pgy, HV, vmax,θt].
+2) The observable information vector of other UA Vs in O,
+which is the sensing region of the typical UA V . The
+total number of observed other UA Vs at time step t
+is J
+o
+t ≥ 0, and the joint information vector can be
+expressed as so
+t = [so
+jt : j ∈{ 1, 2,..., Jo
+t }], where
+so
+jt = [pxjt , pyjt , HV, vxjt , vyjt , r].
+3) The location information pnt of each IoT node, the
+amount of remaining data DL
+nt at each node, 1 and the
+received signal power Pr
+nt from each node. The joint
+vector is denoted by sn
+t = [sn
+nt : n ∈{ 1,..., N}], where
+sn
+nt = [pn, DL
+nt, Pr
+nt].
+4) The available time left for the given mission, stt.
+Note that there may be other UA Vs outside the typical
+UA V’s sensing region O, and thus they are not observed.
+However, since these UA Vs are far away from the typi-
+cal UA V , their existence do not inﬂuence the typical UA V’s
+action, and correspondingly can be neglected. Therefore, all
+the observed information represents the state of the typical
+UA V’s surrounding environment, which can be written as
+sjn
+t = [st, so
+t , sn
+t , stt] ∀t.
+To aid the UA V in interpreting the large state space and
+obtaining more information from the state, we implement the
+state parameterization process, which consists of the following
+three steps.
+1) Coordinate Transition: The policy should not be inﬂu-
+enced by the choice of coordinates. Therefore, we
+parameterize the position information into agent-centric
+coordinates, in which the current location of the typ-
+ical UA V is regarded as the origin, and the x-axis is
+pointing toward the UA Vs destination. The coordinate
+rotation angle can be expressed as
+θr
+t = arctan
+( pgy − pyt
+pgx − pxt
+)
+.
+Then, the transitions from global coordinates into UA V-
+centric coordinates can be expressed as
+˜pxjt =
+(
+pxjt − pxt
+)
+cos
+(
+θr
+t
+)
++
+(
+pyjt − pyt
+)
+sin
+(
+θr
+t
+)
+1DLnt can be obtained from DL
+nt−1, Prnt, and the scheduling strategy.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+W ANGet al.: LEARNING-BASED UA V PATH PLANNING FOR DATA COLLECTION 16669
+˜pyjt =
+(
+pyjt − pyt
+)
+cos
+(
+θr
+t
+)
+−
+(
+pxjt − pxt
+)
+sin
+(
+θr
+t
+)
+˜vxjt = vxjt cos
+(
+θr
+t
+)
++ vyjt sin
+(
+θr
+t
+)
+˜vyjt = vyjt cos
+(
+θr
+t
+)
+− vxjt sin
+(
+θr
+t
+)
+˜θt = θt − θr
+t .
+After the coordinate transition, we have the rotated
+information vectors as follows:
+˜st =
+[
+˜vxt , ˜vyt , r, ˜pgxt , ˜pgyt , vmax, ˜θt
+]
+˜so
+jt =
+[
+˜pxjt , ˜pyjt , ˜vxjt , ˜vyjt , rj
+]
+for j ∈
+{
+1,..., Jo
+t
+}
+˜sn
+nt =
+[
+˜pxnt , ˜pynt , DL
+nt, Pr
+nt
+]
+for n ∈{ 1,..., N}.
+2) Processing of the State Components: The distance, rela-
+tive direction, and how strong the received signal power
+is from each node have signiﬁcant inﬂuence on the typ-
+ical UA V’s decision making. Therefore, the components
+of the state are processed to provide more information,
+and we have
+d
+jt =
+√
+p2xjt + p2yjt
+ajt = arctan
+(
+pyjt
+pxjt
+)
+1nt =
+{
+1, if Pr
+nt
+Ns ≥ Ts
+0, otherwise
+where 1nt is the indicator function, which is used to
+indicate whether the SNR is larger than threshold Ts if
+the typical UA V is connected with the nth node.
+3) State Size Management: Since the typical UA V can only
+observe other UA Vs inside its sensing region, O,t h e
+total number of observed other UA Vs,Jo
+t , may vary over
+time. However, the size of the state needs to be ﬁxed to
+be the input of the DNN. Thus, we only consider the
+information vectors of the nearest J
+c (which is a ﬁxed
+positive integer) other UA Vs. In addition, the number of
+nodes in the environment may be different for different
+missions. Thus, we only consider the information vectors
+of the nearest N
+c active nodes. If Jo
+t < Jc or the number
+of active nodes is smaller than Nc, we do zero padding.
+After these three steps, we have the parameterized state as
+˜sjn
+t =
+[
+˜st,
+[
+˜so
+jt ∀j
+]
+,
+[˜sn
+nt ∀n
+]
+, stt
+]
+(22)
+where
+˜st =
+[
+˜vxt , ˜vyt , ˜pgxt , ˜pgyt , dgt , agt , r, vmax, ˜θt
+]
+˜so
+jt =
+[
+˜pxjt , ˜pyjt , ˜vxjt , ˜vyjt , djt, ajt, rj
+]
+for j ∈
+{
+1, 2,..., min
+(
+Jo
+t , Jc)}
+˜sn
+nt =
+[
+˜pxnt , ˜pynt , dnt, ant, DL
+nt, Pr
+nt, 1nt
+]
+for n ∈
+{
+1,..., Nc}
+.
+2) Action: In an ideal setting, the agent can travel in any
+direction at any time. However, in practice, kinematic con-
+straints in (11) and (12) restrict the agent’s movement and
+should be taken into account. Given these constraints, per-
+missible velocities [ v
+s,φr] are sampled to built a velocity-set,
+where vs is the permissible speed, and the φr is the permissi-
+ble rotation angle. The action a is the index of each velocity
+in the velocity-set.
+3) Reward: The reward can be designed according to the
+objective function and the constraints, and the design plays an
+important role on the learning speed and quality. The reward
+function of this path-planning problem for data collection in
+the multi-UA V scenario can be expressed as
+R
+t = Rdt + Rct + Rot + Rtt + Rgt + Rst. (23)
+The ﬁrst term Rdt is related to the data collected from the
+nodes during next time duration /Delta1t. This reward term is used
+to encourage the UA V to collect data from the IoT nodes, and
+can be expressed as
+R
+dt = α1 ×
+( N∑
+n=1
+DL
+nt −
+N∑
+n=1
+DL
+nt+1
+)
+. (24)
+Rct is the term introduced to penalize collision with other
+UA Vs and encourage the typical UA V stay further away from
+the other UA Vs. This term can be formulated as
+R
+ct
+=
+⎧
+⎪⎨
+⎪⎩
+−α2, if dtmin ≤ r + rj
+−α2 ×
+(
+1 −
+dtmin −r−rj
+db
+)
+, if r + rj < dtmin ≤ db + r + rj
+0, otherwise
+(25)
+where dtmin is the minimum distance from the typical UA V to
+other UA Vs during next time duration/Delta1t, and db is a constant
+that denotes the distance buffer. Rot is to penalize the collision
+with the ﬁxed obstacles or entering into no-ﬂy zones, and can
+be expressed as
+R
+ot =
+{ −α3, if pt+1 ∈ N
+0, otherwise. (26)
+Rtt is the reward related to mission completion deadline
+constraint, and it encourages the UA Vs to arrive at their des-
+tinations within the allowed duration of time, and can be
+formulated as
+R
+tt =
+{
+α4 ×
+(
+stt+1 − Tmin
+gt+1
+)
+, if stt+1 < Tmin
+gt+1
+0, otherwise
+(27)
+where stt+1 is the available time left for the given mission,
+Tmin
+gt+1 = dgt+1/vmax is the minimum time duration needed to
+reach destination at time step t + 1, and dgt+1 is the distance
+to destination at time step t + 1. Rgt is the reward given for
+arriving the destination, and
+Rgt =
+{
+α5, if pt+1 = pD
+0, otherwise. (28)
+The last term Rst =− α6 is a step penalty for each movement,
+and it is used to encourage fast arrival. Note that α1∼6 are
+positive constants, and can be varied to adjust the weight or
+emphasis of each reward term to adapt to different mission
+priorities.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+16670 IEEE INTERNET OF THINGS JOURNAL, VOL. 9, NO. 17, 1 SEPTEMBER 2022
+Algorithm 1: D3QN Path-Planning Algorithm for Data
+Collection
+Input: Ts, Tt, vmax, Tr
+1 Initialize replay memory D
+2 Initialize evaluation network ξ (including ξV and ξA)
+3 Initialize target network ξ− (including ξV− and ξA− )b y
+copping from ξ
+4 A ← sampleActionSpact(vmax, Tr)
+5 μ,σ ← getMeanStandardDeviation()
+6 for episode = 0: total episode N e do
+7 E ← resetEnvironment()
+8 while not done do
+9 sjn
+t ← observeEnvironment(E)
+10 ˜sjn
+t ← parameterizeState(sjn
+t )
+11 ˜sjn
+t ← normalizeState(˜sjn
+t ,μ,σ)
+12 c ← randomSample(Uniform (0,1))
+13 if c ≤ ϵ then
+14 at ← randomSample(A)
+15 else
+16 at ← argmax
+a′∈A
+Q(˜sjn
+t , a′;ξ)
+17 Rt, st+1 ← executeAction(at)
+18 ˜sjn
+t+1 ← parameterizeState(sjn
+t+1)
+19 ˜sjn
+t+1 ← normalizeState(˜sjn
+t+1,μ,σ)
+20 Uptate D with tuple (˜sjn
+t , at, Rt,˜sjn
+t+1)
+21 Sample a minibatch of Nb tuples
+(s, a, R, s′) ∼ Uniform(D)
+22 for each tuple j do
+23 Calculate target
+yj =⎧
+⎨
+⎩
+R, if s′ is terminal,
+R + γQ(s′, argmax
+a′
+Q(s′, a′;ξ);ξ− ), o.w.
+24
+25 Do a gradient descent step with loss
+E[(yj − Q(s, a;ξ))2]
+26 Update ξ− ← ξ every Nr steps
+27 return ξ
+C. D3QN Path-Planning Algorithm for Data Collection
+The main algorithm is summarized in Algorithm 1, where
+the input consists of the parameters of the constraints and
+the output is the policy, i.e., a well-trained DNN ξ.I nt h e
+training phase, we ﬁrst initialize the replay memory, the eval-
+uation network parameters and the target network parameters
+(lines 1–3). We also build an action space A based on the
+kinematic constraints (line 4). Before training, we randomly
+generated the following: the locations of typical UA V , the IoT
+nodes, and other UA Vs; the amount of data to be collected
+from each node; and the velocities of all UA Vs; for 10
+6 times.
+We then ﬁnd the state vector of each generation, and calculate
+the mean vector μ and standard deviation vector σ of the state
+(line 5). In each training episode, the typical UA V navigates
+around other UA Vs and obstacles to arrive at its destination,
+while collecting data from ground IoT nodes. Particularly, at
+the beginning of each episode, the environment and the UA V’s
+mission are reset (line 7), and the parameters that are reset are
+as follows.
+1) The starting points and destinations of the typical UA V .
+2) The number of IoT nodes.
+3) The locations of IoT nodes.
+4) The amount of data to be collected from each node.
+5) The number of other UA Vs.
+6) The starting points and destinations of other UA Vs.
+Then, at each time step t, the typical UA V observes the envi-
+ronment, obtains the observation vector s
+jn
+t (line 9), parameter-
+izes the vector into ˜sjn
+t following the three steps introduced in
+the previous section, and standardizes the state by (˜sjn
+t − μ)/σ
+(line 11). Using an ϵ-greedy policy, the typical UA V selects
+a random action with probability ϵ from A (line 14), or fol-
+lows the policy greedily otherwise (line 16). The Q-value can
+be obtained using the evaluation network ξ according to (21).
+After executing the chosen action, the typical UA V receives
+reward Rt from the environment according to (23), and it
+observes the new state sjn
+t+1 from the updated environment
+(line 17). Then, the replay memory is updated with transi-
+tion tuple (˜sjn
+t , at, Rt,˜sjn
+t+1) (line 20). To train the evaluation
+network ξ, a minibatch of Nb tuples can be randomly sam-
+pled from replay memory (line 21). Then, ξ is updated by
+stochastic gradient descent (back-propagation) on the sampled
+minibatch (lines 22–25), and the target network parameters ξ−
+are updated from ξ for every Nr steps (line 26). The episode
+ends when the UA V arrives at its destination or exceeds its
+mission deadline. Lines 7–26 can be repeated for N
+e episodes.
+After training, we obtain a policy, i.e., a well-trained DNN ξ,
+with which the UA V can perform real-time navigation.
+IV . NUMERICAL RESULTS
+In this section, we present the numerical and simulation
+results to evaluate the performance of the proposed algorithm.
+The considered performance metrics are the following: 1) SR,
+and a successful trajectory means that the UA V arrives at
+its destination within mission completion deadline without
+collisions; 2) DR, which is the percentage of collected data
+within successful missions; 3) data collection and SR (DSR),
+which is the product of data collection percentage and SR; and
+4) CR, and a collision event occurs when the typical UA V
+collides with any of the other UA Vs in the environment. In
+the illustration of real-time navigation scenarios, the departure
+and landing areas of the typical UA V are displayed by blue
+and green areas, respectively. The no-ﬂy zones (obstacles) are
+presented in gray areas. The IoT nodes are marked by green
+triangles. The trajectories of the typical UA V are presented
+by navy lines with dots, and the trajectories of other UA Vs
+in the environment are depicted in red lines with dots. The
+destination of each mission is marked by a navy cross in the
+landing area. Note that since the UA Vs may arrive at the same
+location at different times, they do not necessarily collide even
+if their trajectories intersect. In the simulations, other UA Vs
+use optimal reciprocal collision avoidance (ORCA) [41] in
+choosing actions and determining their trajectories.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+W ANGet al.: LEARNING-BASED UA V PATH PLANNING FOR DATA COLLECTION 16671
+Fig. 4. Accumulated reward per episode in training with different DNN
+structures.
+A. Environment Setting and Hyperparameters
+Since the agents ﬂy at the same altitude, the area of interest
+becomes 2-D. In the simulations, the UA V ﬂies at heightHV =
+50m. The size of the area of interest is scaled to a 100 ×
+100 region. The IoT nodes have the same transmit power of
+P = 1 dBm. Noise power is Ns = 10−6. SNR threshold is set
+at Ts =− 5 dB (unless stated otherwise). Mission completion
+deadline is Tt = 100 s (unless stated otherwise). Kinematic
+constraints are vmax = 5 in the scaled form and Tr = π/3. The
+radius of the UA V’s sensing region is 10, Nc is 5, and Jc is
+s e tt ob e2 .
+Fig. 4 shows the accumulated reward per episode in train-
+ing with different DNN structures. We can observe from the
+ﬁgure that one-layer and two-layer structures can achieve sim-
+ilar convergence speeds and reward performance, while the
+reward from DNN with a three-layer structure drops after 6500
+episodes and then grows back. Therefore, we choose to use
+two-layer DNN of size (256, 256). ReLU function is used as
+the activation function, Batch-normalization is used for each
+layer, and the Adam optimizer is used to update parameters
+with learning rate 0.0003. The batch size is 256, and the reg-
+ularization parameter is 0.0001. The exploration parameter ϵ
+decays linearly from 0.5 to 0.1. The replay memory capacity
+is 1 000 000.
+B. Training
+The total number of training episodes is 10 000. In each
+episode, the following system parameters are randomly chosen
+from the corresponding regions and sets of values.
+1) The starting points and destinations of the typical UA V
+p
+S ∈ S and pD ∈ D.
+2) The number of IoT nodes N ∈ [5, 10].
+3) The locations of ground IoT nodes pn ∈ C.
+4) The amount of data to be collected from each node DL
+0 ∈
+[1, 3] data units.
+5) The number of other UA Vs J ∈ [2, 10].
+6) The starting points and destinations of other UA Vs
+pj ∈ C.
+Fig. 5(a)–(c) shows the accumulated reward per episode,
+SR per 100 episodes, and DR per episode, respectively, dur-
+ing different training sessions with two-layer DNN. These
+ﬁgures show that in different training sessions, similar perfor-
+mances (in terms of the convergence speed and attained levels
+of performance metrics) are achieved, indicating the stability
+TABLE II
+SR, DR, DSR, AND CR P ERFORMANCE WHEN DIFFERENT NUMBER OF
+NODES (N)N EED TO UPLOAD DATA, AND DL
+0 ∈ [1, 3], J ∈ [2, 10]
+of the proposed algorithm. In addition, the SR eventually con-
+verges to around 92.5%, and the DR reaches 99.5%, even with
+the exploration strategy (i.e., with ϵ
+min = 0.1). The simulation
+is implemented on a Windows 10 with Intel Core i7-8753h
+CPU. In total, the training algorithm converges after approxi-
+mately 6000 episodes for this multi-UA V scenario with highly
+varying parameters.
+C. Testing of Navigation in Different Scenarios
+With the learned policy, the UA V can perform real-time nav-
+igation in different scenarios considering the various param-
+eters described in the previous section. We note that all the
+testing in this section uses the same policy, i.e., the policy
+can adapt to various missions and scenarios without further
+training.
+1) Different Number of IoT Nodes: Fig. 6 displays illustra-
+tions of navigation in different scenarios in which N ∈ [8, 10]
+IoT nodes are randomly located, D
+L
+0 = 1 data unit, and
+J ∈ [2, 10]. Fig. 6 shows that for different numbers and loca-
+tions of IoT nodes, different numbers and locations of other
+UA Vs, and different start points and destinations, the UA V can
+adjust its trajectory to collect data from distributed IoT nodes
+with the trained policy. Table II provides the SR, DR, DSR,
+and CR performances in testing for different number of nodes
+from which data needs to be collected. The performances are
+averaged over 5000 random realizations (in each of which,
+we have D
+L
+0 ∈ [1, 3], J ∈ [2, 10], and all UA Vs have random
+starting points and destinations). Overall, Table II shows that
+the proposed algorithm can achieve above 91% SR (for tight
+mission completion deadline constraint of T
+t) and over 99.8%
+DR when N ∈ [5, 10]. With the increasing number of nodes,
+generally the UA V needs to plan a longer trajectory to get
+close to each node to achieve reliable communication (i.e., to
+satisfy Sn ≥ Tn), leading to relatively longer ﬂight durations
+and higher risk for collision. Therefore, when N increases, SR
+decreases due to the increase in CR and the increase in ﬂight
+duration. In addition, when we compare row 1 (smaller Tt)
+and row 5 (larger Tt), we notice that higher SR is obtained if
+the mission completion deadline is relaxed.
+2) Different Amount of Data at Each Node: Fig. 7 depicts
+illustrations of navigation in different scenarios in which
+DL
+0 ∈ [1, 3] data units need to be collected from each node.
+To display the inﬂuence of the amount of data to be collected,
+we ﬁx the number of nodes as N = 7 and the number of
+other UA Vs as J = 2 in the illustrations. Due to the different
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+16672 IEEE INTERNET OF THINGS JOURNAL, VOL. 9, NO. 17, 1 SEPTEMBER 2022
+Fig. 5. Accumulated reward per episode, average SR per 100 episodes and DR per episode for different training cases. (a) Reward. (b) Success rate. (c) D ata
+collection rate.
+Fig. 6. Illustrations of navigation in different scenarios that N ∈{ 8, 9, 10} nodes are randomly located, and DL
+0 = 1 data unit, J ∈ [2, 10]. (a) Eight nodes.
+(b) Nine nodes. (c) Ten nodes.
+Fig. 7. Illustrations of navigation in different scenarios that DL
+0 ∈{ 1, 2, 3} data units need to be collected at each node, and N = 7, J = 2. (a) 1 data unit.
+(b) 2 data units. (c) 3 data units.
+TABLE III
+SR, DR, AND DSR P ERFORMANCE WHEN DIFFERENT AMOUNT
+OF DATA DL
+0 NEEDS TO BE COLLECTED FROM EACH NODE ,
+AND N ∈ [5, 10], J ∈ [2, 10]
+amount of data to be collected at each node, the UA V needs
+to ﬂy around each node over a different duration of time to
+complete the data collection, leading to different trajectories.
+Table III provides the SR, DR, DSR, and CR performances
+in testing, when the values of D
+L
+0 are different. The rates are
+averaged over 5000 random realizations (in each of which
+N ∈ [5, 10], J ∈ [2, 10], and all UA Vs have random starting
+points and destinations). We observe similar performance lev-
+els as in Table II, i.e., when there is more data to collect, the
+UA V needs a longer trajectory and a longer time period to
+complete the mission, leading to higher CR and lower SR.
+3) Different Number of Other UAVs: Fig. 8 presents illus-
+trations of navigation in scenarios with different number of
+other UA Vs J ∈{ 2, 10, 20}. Again, to display the impact
+of different values of J,w eﬁ x N = 6 and D
+L
+0 = 1i nt h e
+illustrations. From Fig. 8, we can observe that due to the dif-
+ferent locations and numbers of other UA Vs, the typical UA V
+makes decisions to avoid collisions, leading to different trajec-
+tories. Table IV presents the CR, SR, and DR performances as
+J varies, considering three different hyperparameter settings:
+setting 1 (S1) α2 = 10, db = 0.2, and Tt = 100 s; setting 2
+(S2) α2 = 30, db = 1, and Tt = 200 s; and setting 3 (S3)
+α2 = 50, db = 10, and Tt = 200 s. The rates are averaged
+over 5000 random realizations (with N ∈ [5, 10], DL
+0 ∈ [1, 3],
+and all UA Vs having random starting points and destinations).
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+W ANGet al.: LEARNING-BASED UA V PATH PLANNING FOR DATA COLLECTION 16673
+Fig. 8. Illustrations of navigation in different scenarios involving J ∈{ 2, 10, 20} other UA Vs, andN = 6, DL
+0 = 1 data unit. (a) 2 other UA Vs. (b) Ten other
+UA Vs. (c) Twenty other UA Vs.
+Fig. 9. CR comparison in testing between two methods: 1) proposed approach
+with setting 1 and setting 2, in which the collision avoidance in the pres-
+ence of arbitrary number of other UA Vs is taken into account in training and
+2) approach in which collision with other UA Vs is not considered in training.
+TABLE IV
+CR, SR,
+AND DR P ERFORMANCE WHEN DIFFERENT NUMBER OF OTHER
+UAVS J EXIST , AND N ∈ [5, 10], DL
+0 ∈ [1, 3]
+From the table, we note that with increasing number of other
+UA Vs, the CR grows due to higher risk of collision. When
+CR performances in the three settings are compared, we can
+observe that if the mission completion deadline is loosened,
+the distance buffer, d
+b, between two UA Vs is increased and
+the penalty for collision, α2, is increased, CR can be reduced.
+Speciﬁcally, with setting 3, CR level of 0.4% can be achieved
+for a crowded scenario with J = 12. This observation indicates
+that the hyperparameters can be tuned to adapt to different
+mission priorities, and, for instance, substantially reduce CR.
+To show the importance of considering collision avoidance
+in the presence of an arbitrary number of other UA Vs in the
+environment, Fig. 9 compares the CR levels achieved with the
+proposed algorithm (which considers collision avoidance in
+training) and the CR levels attained with the learning algo-
+rithm that does not address collision avoidance with other
+Fig. 10. Illustrations of navigation when SNR threshold Ts is different, and
+N = 5, DL
+0 = 1 data unit, J = 2.
+UA Vs in training. The ﬁgure shows us that if collision avoid-
+ance is not considered, we have signiﬁcantly higher CR than
+those achieved with the proposed algorithm, and also the gap
+between two methods becomes larger with increasing number
+of other UA Vs. For example, when J = 20, if collision avoid-
+ance is not considered, the CR rises up to 29.1%, while it is
+only 0.6% with the proposed algorithm. These observations
+indicate that the algorithms, which do not consider the exis-
+tence of other UA Vs or only consider ﬁxed number of known
+UA Vs, may lead to high collision risk in crowded scenarios,
+and the proposed algorithm greatly reduces that risk.
+D. Impact of the SNR Threshold
+Fig. 10 displays the inﬂuence of the values of the SNR
+threshold T
+s on the UA V trajectories. Note that the UA V is
+able to achieve reliable communication with an IoT node only
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+16674 IEEE INTERNET OF THINGS JOURNAL, VOL. 9, NO. 17, 1 SEPTEMBER 2022
+TABLE V
+CR P ERFORMANCE WHEN THE OBSERV ATIONS ARE NOISY AND J = 20
+if the UA V experiences an SNR that exceed the threshold, i.e.,
+S ≥ Ts for that connection. Since SNR is a function of the
+distance between the UA V and a node, Ts can be converted
+to a distance threshold. Therefore, different values of Ts lead
+to different distance requirements for reliable connection. The
+green dashed circles in Fig. 10 approximately indicate the area
+inside which we have S ≥ T
+s. As shown in Fig. 10, the UA V
+has to reach each circle in order to collect data from the cor-
+responding node. We observe that with higher T
+s [Fig. 10(b)
+compared with Fig. 10(a)], the UA V needs to reach closer to
+each node for data collection, leading to different trajectories
+for the same mission.
+E. Impact of Noisy Observations
+The typical UA V avoids collisions mainly depending on
+the observations on nearby other UA Vs. To investigate the
+robustness of the proposed algorithm, we perform simulations
+with noisy observations, i.e., adding noise to the observable
+information of other UA Vs, s
+o
+j . It is assumed that each noise
+component is uniformly distributed, i.e., n = [nx, ny] and
+n ∼ U(−u, u). The noise is added to the position information,
+i.e., pn
+j = [pjx + nx, pjy + ny], or the velocity information,
+i.e., vn
+j = [vjx + nx, vjy + ny], or both. Table V shows the CR
+performance when the observations are noisy. The results are
+obtained with setting-3 where α2 = 50 and db = 10. The table
+shows that noise has inﬂuence on the CR performance, since
+the typical UA V does not have the accurate information and
+correspondingly can with higher probability choose incorrect
+actions. However, even through noise with u = 5 is added to
+both position and velocity information vectors, CR is at most
+1.6%, which is still small. Therefore, the proposed algorithm
+has high tolerance to noisy observations.
+F . Comparison With Other Algorithms
+Table VI presents the performances of different deep RL
+algorithms, i.e., D3QN, Dueling DQN, DDQN, and DQN,
+for data collection in multi-UA V scenarios. It can be clearly
+observed that D3QN has better performance than the other
+three, in terms of SR, DR, SDR, and CR, although the per-
+formances are not substantially different. It is worth noting
+that we have observed in training sessions that the reward of
+Dueling DQN, DDQN, and DQN may drop after a certain
+number of episode, while D3QN does not have this issue,
+TABLE VI
+SR, AND DR, DSR, AND CR P ERFORMANCE OF DIFFERENT
+ALGORITHMS ,W HEN N ∈ [5, 10], DL
+0 ∈ [1, 3] DATA UNIT,
+J ∈ [2, 10] AND SETTING -1 I S USED (α2 = 10, db = 0.2)
+indicating that D3QN is more stable than the other three
+algorithms when solving the considered problem.
+In addition, we compare the performance of the proposed
+D3QN algorithm with another benchmark, speciﬁcally, the
+nodes-as-waypoints algorithm, in which the positions of the
+IoT nodes are the waypoints of the typical UA V’s trajectory.
+The performance comparisons are as follows: 1) if there is no
+other UA V in the environment, the averaged mission comple-
+tion time using the benchmark is 112.54 s, while it is 70.95 s
+with D3QN, indicating that the proposed D3QN algorithm can
+greatly reduce the time required to change orientation under
+the kinematic constraints; and 2) in scenarios with 20 other
+UA Vs, CR using the benchmark is 26.4%, while it is 0.6%
+with D3QN, again indicating that the proposed algorithm can
+signiﬁcantly reduce the CR.
+V. C
+ONCLUSION
+In this work, we have studied the UA V trajectory
+optimization to maximize the collected data from distributed
+IoT nodes in a multi-UA V scenario under realistic constraints,
+e.g., collision-avoidance, mission completion deadline, and
+kinematic constraints. In establishing the wireless connection,
+we have taken into account the antenna radiation pattern, path
+loss, SNR, and largest received-signal-power-based schedul-
+ing strategy. We have translated the considered problem into
+an MDP with parameterized states, permissible actions, and
+detailed reward functions. D3QN is utilized for learning the
+policy, without any prior knowledge of the environment (e.g.,
+channel propagation model, locations of the obstacles) and
+other UA Vs (e.g., their missions, movements, and policies).
+We have shown that the proposed algorithm has high adap-
+tive capability. More speciﬁcally, without further training, the
+ofﬂine learned policy can be used for real-time navigation for
+various missions with different numbers and locations of IoT
+nodes, different amount of data to be collected, in various
+scenarios with different number and locations of other UA Vs.
+Through numerical results, we have demonstrated that real-
+time navigation can be efﬁciently performed with high SR,
+high DR and low CR. We also showed that the proposed algo-
+rithm can achieve much lower CR in testing compared with the
+learning algorithm that does not consider collision avoidance.
+In addition, the proposed algorithm has high tolerance to noisy
+observations. Furthermore, we have demonstrated that D3QN
+has better performance than Dueling DQN, DDQN, DQN, and
+the nodes-as-waypoints algorithm when solving the considered
+problem.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+W ANGet al.: LEARNING-BASED UA V PATH PLANNING FOR DATA COLLECTION 16675
+REFERENCES
+[1] Y . Zeng, Q. Wu, and R. Zhang, “Accessing from the sky: A tutorial
+on UA V communications for 5G and beyond,” Proc. IEEE , vol. 107,
+no. 12, pp. 2327–2375, Dec. 2019.
+[2] Y . Zeng, J. Lyu, and R. Zhang, “Cellular-connected UA V: Potential, chal-
+lenges, and promising technologies,” IEEE Wireless Commun., vol. 26,
+no. 1, pp. 120–127, Feb. 2019.
+[3] M. Mozaffari, W. Saad, M. Bennis, Y .-H. Nam, and M. Debbah, “A tuto-
+rial on UA Vs for wireless networks: Applications, challenges, and open
+problems,” IEEE Commun. Surveys Tuts., vol. 21, no. 3, pp. 2334–2360,
+3rd Quart., 2019.
+[4] C. Liu, M. Ding, C. Ma, Q. Li, Z. Lin, and Y . Liang, “Performance
+analysis for practical unmanned aerial vehicle networks with LoS/NLoS
+transmissions,” in Proc. IEEE Int. Conf. Commun. Workshops (ICC
+Workshops), May 2018, pp. 1–6.
+[5] H. Bayerlein, M. Theile, M. Caccamo, and D. Gesbert, “Multi-UA V path
+planning for wireless data harvesting with deep reinforcement learning,”
+IEEE Open J. Commun. Soc. , vol. 2, pp. 1171–1187, 2021.
+[6] M. Mozaffari, W. Saad, M. Bennis, and M. Debbah, “Mobile unmanned
+aerial vehicles (UA Vs) for energy-efﬁcient Internet of Things com-
+munications,” IEEE Trans. Wireless Commun. , vol. 16, no. 11,
+pp. 7574–7589, Nov. 2017.
+[7] U. Challita, W. Saad, and C. Bettstetter, “Interference management
+for cellular-connected UA Vs: A deep reinforcement learning approach,”
+IEEE Trans. Wireless Commun. , vol. 18, no. 4, pp. 2125–2140,
+Apr. 2019.
+[8] E. Bulut and I. Guevenc, “Trajectory optimization for cellular-connected
+UA Vs with disconnectivity constraint,” in Proc. IEEE Int. Conf.
+Commun. Workshops (ICC Workshops), 2018, pp. 1–6.
+[9] S. Zhang, Y . Zeng, and R. Zhang, “Cellular-enabled UA V communi-
+cation: A connectivity-constrained trajectory optimization perspective,”
+IEEE Trans. Commun. , vol. 67, no. 3, pp. 2580–2604, Mar. 2019.
+[10] E. Vinogradov, H. Sallouha, S. De Bast, M. M. Azari, and S. Pollin,
+“Tutorial on UA V: A blue sky view on wireless communication,” 2019,
+arXiv:1901.02306.
+[11] C. Zhan and Y . Zeng, “Aerial–ground cost tradeoff for multi-UA V-
+enabled data collection in wireless sensor networks,” IEEE Trans.
+Commun., vol. 68, no. 3, pp. 1937–1950, Mar. 2020.
+[12] Z. Wang, R. Liu, Q. Liu, J. S. Thompson, and M. Kadoch, “Energy-
+efﬁcient data collection and device positioning in UA V-assisted IoT,”
+IEEE Internet Things J. , vol. 7, no. 2, pp. 1122–1139, Feb. 2020.
+[13] J. Li et al., “Joint optimization on trajectory, altitude, velocity, and link
+scheduling for minimum mission time in UA V-aided data collection,”
+IEEE Internet Things J. , vol. 7, no. 2, pp. 1464–1475, Feb. 2020.
+[14] M. Samir, S. Sharafeddine, C. M. Assi, T. M. Nguyen, and A. Ghrayeb,
+“UA V trajectory planning for data collection from time-constrained IoT
+devices,” IEEE Trans. Wireless Commun. , vol. 19, no. 1, pp. 34–46,
+Jan. 2020.
+[15] Q. Wu, Y . Zeng, and R. Zhang, “Joint trajectory and communication
+design for multi-UA V enabled wireless networks,”IEEE Trans. Wireless
+Commun., vol. 17, no. 3, pp. 2109–2121, Mar. 2018.
+[16] C. Zhan, Y . Zeng, and R. Zhang, “Energy-efﬁcient data collection in
+UA V enabled wireless sensor network,” IEEE Wireless Commun. Lett. ,
+vol. 7, no. 3, pp. 328–331, Jun. 2018.
+[17] M. Hua, L. Yang, Q. Wu, and A. L. Swindlehurst, “3D UA V trajec-
+tory and communication design for simultaneous uplink and downlink
+transmission,” IEEE Trans. Commun. , vol. 68, no. 9, pp. 5908–5923,
+Sep. 2020.
+[18] H. Wang, G. Ren, J. Chen, G. Ding, and Y . Yang, “Unmanned
+aerial vehicle-aided communications: Joint transmit power and trajectory
+optimization,” IEEE Wireless Commun. Lett., vol. 7, no. 4, pp. 522–525,
+Aug. 2018.
+[19] J. Baek, S. I. Han, and Y . Han, “Energy-efﬁcient UA V routing for
+wireless sensor networks,” IEEE Trans. Veh. Technol. , vol. 69, no. 2,
+pp. 1741–1750, Feb. 2020.
+[20] P. Henderson, R. Islam, P. Bachman, J. Pineau, D. Precup, and D. Meger,
+“Deep reinforcement learning that matters,” in Proc. AAAI Conf. Artif.
+Intell., vol. 32, 2018, pp. 3207–3214.
+[21] M. Yi, X. Wang, J. Liu, Y . Zhang, and B. Bai, “Deep reinforcement
+learning for fresh data collection in UA V-assisted IoT networks,” in
+Proc. IEEE INFOCOM Conf. Comput. Commun. Workshops (INFOCOM
+WKSHPS), 2020, pp. 716–721.
+[22] B. Zhang, C. H. Liu, J. Tang, Z. Xu, J. Ma, and W. Wang, “Learning-
+based energy-efﬁcient data collection by unmanned vehicles in smart
+cities,” IEEE Trans. Ind. Informat. , vol. 14, no. 4, pp. 1666–1676,
+Apr. 2018.
+[23] K. Li, W. Ni, E. Tovar, and A. Jamalipour, “On-board deep Q-network
+for UA V-assisted online power transfer and data collection,”IEEE Trans.
+Veh. Technol., vol. 68, no. 12, pp. 12215–12226, Dec. 2019.
+[24] O. Bouhamed, H. Ghazzai, H. Besbes, and Y . Massoud, “A UA V-assisted
+data collection for wireless sensor networks: Autonomous navigation and
+scheduling,” IEEE Access, vol. 8, pp. 110446–110460, 2020.
+[25] S. Fu, Y . Tang, Y . Wu, N. Zhang, H. Gu, C. Chen, and M. Liu,
+“Energy-efﬁcient UA V enabled data collection via wireless charging:
+A reinforcement learning approach,” IEEE Internet Things J. ,v o l .8 ,
+no. 12, pp. 10209–10219, Jun. 2021.
+[26] H. Bayerlein, P. De Kerret, and D. Gesbert, “Trajectory optimization
+for autonomous ﬂying base station via reinforcement learning,” in
+Proc. IEEE 19th Int. Workshop Signal Process. Adv. Wireless Commun.
+(SPAWC), 2018, pp. 1–5.
+[27] Y .-H. Hsu and R.-H. Gau, “Reinforcement learning-based collision
+avoidance and optimal trajectory planning in UA V communication
+networks,” IEEE Trans. Mobile Comput. , vol. 21, no. 1, pp. 306–320,
+Jan. 2022.
+[28] X. Liu, Y . Liu, Y . Chen, and L. Hanzo, “Trajectory design and power
+control for multi-UA V assisted wireless networks: A machine learning
+approach,” IEEE Trans. Veh. Technol. , vol. 68, no. 8, pp. 7957–7969,
+Aug. 2019.
+[29] T. Li, W. Liu, Z. Zeng, and N. N. Xiong, “DRLR: A deep reinforcement
+learning based recruitment scheme for massive data collections in 6G-
+based IoT networks,” IEEE Internet Things J. , early access, Mar. 22,
+2021, doi: 10.1109/JIOT.2021.3067904.
+[30] N. Zhao, Z. Liu, and Y . Cheng, “Multi-agent deep reinforcement learning
+for trajectory design and power allocation in multi-UA V networks,”IEEE
+Access, vol. 8, pp. 139670–139679, 2020.
+[31] “Study on enhanced LTE support for aerial vehicles, version 15.0.0,”
+3GPP, Sophia Antipolis, France, Rep. TR 36.777, Dec. 2017.
+[32] J. Chen, D. Raye, W. Khawaja, P. Sinha, and I. Guvenc, “Impact of 3D
+UWB antenna radiation pattern on air-to-ground drone connectivity,” in
+Proc. IEEE 88th Veh. Technol. Conf. (VTC-Fall) , Aug. 2018, pp. 1–5.
+[33] Y . F. Chen, M. Liu, M. Everett, and J. P. How, “Decentralized non-
+communicating multiagent collision avoidance with deep reinforcement
+learning,” in Proc. IEEE Int. Conf. Robot. Autom. (ICRA) , 2017,
+pp. 285–292.
+[34] M. Everett, Y . F. Chen, and J. P. How, “Collision avoidance in pedestrian-
+rich environments with deep reinforcement learning,” IEEE Access ,
+vol. 9, pp. 10357–10377, 2021.
+[35] R. S. Sutton and A. G. Barto, Reinforcement Learning: An Introduction.
+Cambridge, MA, USA: MIT Press, 2018.
+[36] C. J. Watkins and P. Dayan, “ Q-learning,” Machine Learning ,v o l .8 ,
+no. 3-4, pp. 279–292, 1992.
+[37] P. Lv, X. Wang, Y . Cheng, and Z. Duan, “Stochastic double deep Q-
+network,” IEEE Access, vol. 7, pp. 79446–79454, 2019.
+[38] H. Van Hasselt, A. Guez, and D. Silver, “Deep reinforcement learning
+with double Q-learning,” in Proc. 30th AAAI Conf. Artif. Intell. , 2016,
+pp. 2094–2100.
+[39] Z. Wang, T. Schaul, M. Hessel, H. Hasselt, M. Lanctot, and N. Freitas,
+“Dueling network architectures for deep reinforcement learning,” in
+Proc. Int. Conf. Mach. Learn. , 2016, pp. 1995–2003.
+[40] N. Zhao, Y .-C. Liang, D. Niyato, Y . Pei, M. Wu, and Y . Jiang, “Deep
+reinforcement learning for user association and resource allocation
+in heterogeneous cellular networks,” IEEE Trans. Wireless Commun. ,
+vol. 18, no. 11, pp. 5141–5152, Nov. 2019.
+[41] J. Van Den Berg, S. J. Guy, M. Lin, and D. Manocha, “Reciprocal n-
+body collision avoidance,” in Robotics Research
+. Heidelberg, Germany:
+Springer, 2011, pp. 3–19.
+Xueyuan Wang received the B.S. degree in
+electrical and electronics engineering from Beijing
+University of Posts and Telecommunications,
+Beijing, China, in 2013, and the M.S. degree in
+electrical engineering and the Ph.D. degree in
+electrical and computer engineering from Syracuse
+University, Syracuse, NY , USA, in 2016 and 2021,
+respectively.
+She is currently an Instructor with the School
+of Computer Science and Artiﬁcial Intelligence,
+Changzhou University, Changzhou, China. Her
+primary research interests include unmanned aerial vehicles-enabled
+networks, 5G and beyond communications, Internet of Things networks, and
+reinforcement learning.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 
+16676 IEEE INTERNET OF THINGS JOURNAL, VOL. 9, NO. 17, 1 SEPTEMBER 2022
+M. Cenk Gursoy (Senior Member, IEEE) received
+the B.S. degree (High Distinction) in electrical and
+electronics engineering from Bogazici University,
+Istanbul, Turkey, in 1999, and the Ph.D. degree
+in electrical engineering from Princeton University,
+Princeton, NJ, USA, in 2004.
+He is currently a Professor with the Department
+of Electrical Engineering and Computer Science,
+Syracuse University, Syracuse, NY , USA. His
+research interests are in the general areas of wireless
+communications, information theory, communica-
+tion networks, signal processing, and machine learning.
+Dr. Gursoy received an NSF CAREER Award in 2006. More recently,
+he received the EURASIP Journal on Wireless Communications and
+Networking Best Paper Award, the 2020 IEEE Region 1 Technological
+Innovation (Academic) Award, The 38th AIAA/IEEE Digital Avionics
+Systems Conference Best of Session (UTM-4) Award in 2019, the 2017
+IEEE PIMRC Best Paper Award, the 2017 IEEE Green Communications
+& Computing Technical Committee Best Journal Paper Award, the UNL
+College Distinguished Teaching Award, and the Maude Hammond Fling
+Faculty Research Fellowship. He was a recipient of the Gordon Wu
+Graduate Fellowship from Princeton University from 1999 to 2003. He is
+a member of the editorial boards of IEEE T
+RANSACTIONS ON WIRELESS
+COMMUNICATIONS and IEEE T RANSACTIONS ON COMMUNICATIONS ,
+and is an Area Editor for IEEE T RANSACTIONS ON VEHICULAR
+TECHNOLOGY . He also served as an Editor of IEEE T RANSACTIONS
+ON GREEN COMMUNICATIONS AND NETWORKING from 2016 to 2021,
+IEEE T RANSACTIONS ON WIRELESS COMMUNICATIONS from 2010 to
+2015, IEEE C OMMUNICATIONS LETTERS from 2012 to 2014, IEEE
+JOURNAL ON SELECTED AREAS IN COMMUNICATIONS —Series on Green
+Communications and Networking (JSAC-SGCN) from 2015 to 2016, Physical
+Communication (Elsevier) from 2010 to 2017, and IEEE T RANSACTIONS
+ON COMMUNICATIONS from 2013 to 2018. He was the Co-Chair
+of the 2017 International Conference on Computing, Networking and
+Communications—Communication QoS and System Modeling Symposium,
+2019 IEEE Global Communications Conference (Globecom)—Wireless
+Communications Symposium, 2019 IEEE Vehicular Technology Conference
+Fall—Green Communications and Networks Track, and 2021 IEEE
+Globecom, Signal Processing for Communications Symposium. He is the
+Aerospace/Communications/Signal Processing Chapter Co-Chair of IEEE
+Syracuse Section.
+Tugba Erpek received the B.S. degree in elec-
+trical and electronics engineering from Osmangazi
+University, Eskisehir, Turkey, in 2005, the M.S.
+degree in electrical and computer engineering from
+George Mason University, Fairfax, V A, USA, in
+2007, and the Ph.D. degree in electrical and com-
+puter engineering from Virginia Tech, Arlington,
+V A, USA, in 2019.
+She is a Lead Scientist of the Networks
+and Security Division at Intelligent Automation,
+BlueHalo, Huntsville, AL, USA, where she is also
+the Network Communications Technical Area Lead. She was an Adjunct
+Research Professor with the Hume Center, Virginia Tech, Blacksburg, V A,
+USA. She was developing machine/deep learning algorithms to improve
+the performance, situational awareness, and security of wireless commu-
+nications systems. Her research interests are in wireless communications
+and networks, security, resource allocation, 5G and beyond communications,
+machine learning, and adversarial machine learning.
+Yalin E. Sagduyu (Senior Member, IEEE) received
+the B.S. degree in electrical and electronics engi-
+neering from Bogazici University, Istanbul, Turkey,
+in 2000, and the M.S. and Ph.D. degrees in electri-
+cal and computer engineering from the University of
+Maryland at College Park, College Park, MD, USA,
+in 2002 and 2007, respectively.
+He is the Director of Networks and Security with
+Intelligent Automation, BlueHalo, Huntsville, AL,
+USA. He is a Visiting Research Professor with the
+Electrical and Computer Engineering Department,
+University of Maryland. His research interests include wireless communi-
+cations, networks, security, and machine learning.
+Dr. Sagduyu was the recipient of the IEEE HST 2018 Best Paper Award.
+He chaired workshops at ACM MobiCom, ACM WiSec, IEEE CNS, and
+IEEE ICNP, was a Track Chair at IEEE PIMRC, IEEE GlobalSIP, and IEEE
+MILCOM, and was in the organizing committee of IEEE GLOBECOM.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on February 20,2026 at 08:27:40 UTC from IEEE Xplore.  Restrictions apply. 

@@ -1,0 +1,1126 @@
+1450 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+Optimizing UA V-Based Data Collection in IoT
+Networks With Dynamic Service Time and
+Buffer-Aware Trajectory Planning
+Madhu Donipati , Ankur Jaiswal , Student Member, IEEE, Abhishek Hazra , Member, IEEE,
+Nabajyoti Mazumdar , Senior Member, IEEE, and Jagpreet Singh, Member, IEEE
+Abstract—Unmanned Aerial Vehicles (UA Vs) have become vital
+tools for data collection in Internet of Things (IoT) networks,
+enabling efﬁcient monitoring and information acquisition across
+various domains. However, UA V-assisted IoT networks often face
+signiﬁcant challenges such as high data loss, latency, and resource
+inefﬁciency due to inadequate buffer management and dynamic
+service time (DST) allocation for IoT nodes. Existing approaches
+frequently overlook critical factors such as IoT nodes’ energy
+levels, UA Vs’ energy constraints, and the dynamic data generation
+rates of IoT devices. To address these challenges, this article
+introduces a novel strategy for dynamically optimizing UA V
+trajectories by integrating real-time data from ground nodes and
+UA V energy levels. Given the DST and buffer constraints (BC)
+of IoT devices, optimizing UA V trajectories for data collection
+is a complex problem. We propose an optimization framework
+that strategically plans UA V trajectories to minimize service
+time at designated Rendezvous Points (RPs) and bypasses RPs
+when necessary to reduce the overall trajectory path, taking
+into account buffer status and dynamic service time adjustments.
+To efﬁciently solve this optimization problem, we employ a
+meta-heuristic technique known as Path Cheapest Arc with
+Guided Local Search (PCA-GLS) for UA V route planning within
+predeﬁned time windows. Extensive simulations demonstrate
+the effectiveness of our proposed solution in optimizing UA V
+trajectories and improving data collection performance compared
+to existing algorithms such as BA-UA V , ACO-MS, and NSGA-II.
+Index Terms —IoT, buffer-awareness, unmanned aerial vehi-
+cles, data gathering, time-windows.
+I. I NTRODUCTION
+O
+VER the past decade, the Internet of Things (IoT)
+has seen a growth in its adoption for various applica-
+tions, such as environmental monitoring, precision agriculture,
+Received 22 December 2023; revised 8 June 2024; accepted 12 November
+2024. Date of publication 18 November 2024; date of current version
+22 April 2025. This work was supported in part by the SERB-DST, India,
+under Empowerment and Equity Opportunities for Excellence in Science,
+Sanction Order No.: EEQ/2022/000400. The associate editor coordinating
+the review of this article and approving it for publication was J. J. Yang.
+(Corresponding author: Abhishek Hazra.)
+Madhu Donipati, Ankur Jaiswal, and Nabajyoti Mazumdar are
+with the Department of Information Technology, Indian Institute
+of Information Technology Allahabad, Allahabad 211012, India
+(e-mail: donipatimadhu39@gmail.com; rsi2017504@iiita.ac.in;
+nabajyoti@iiita.ac.in).
+Abhishek Hazra is with the Department of Computer Science and
+Engineering, Indian Institute of Information Technology Sri City, Sri City
+517646, India (e-mail: abhishek.hazra1@gmail.com).
+Jagpreet Singh is with the Department of Computer Science and
+Engineering, Indian Institute of Technology Ropar, Rupnagar 140001, India
+(e-mail: jagpreets@iitrpr.ac.in).
+Digital Object Identiﬁer 10.1109/TNSM.2024.3500778
+disaster management, health care, military surveillance, and
+other industrial automation [1], [2]. These applications and
+corresponding IoT Devices (IoTDs), such as smart cameras,
+smart watches, etc., disseminated across vast areas, gather
+valuable data often critical for decision-making processes.
+Speciﬁcally, data collection is a crucial operation in the IoT,
+impacting the performance, functionality, and utility of such
+systems [3], [4]. However, efﬁcient data collection from IoT
+nodes presents signiﬁcant challenges due to individual nodes’
+limited power, computational capacity, and communication
+range [5]. Yet, the traditional multi-hop data transmission
+through these links, especially in geographically scattered IoT,
+can lead to high energy consumption and network latency.
+An emerging solution to this challenge is to deploy UA Vs
+as mobile data collectors or gateways in these networks [6].
+UA V-assisted IoT systems leverage UA Vs equipped with smart
+sensors, wireless transceivers, and antennas to enhance data
+collection [7], [8]. The mobility of UA Vs enables direct data
+collection from IoT nodes, effectively overcoming the short
+communication range problem and reducing the energy con-
+sumption associated with multi-hop transmissions [9].U A V s
+offer rapid deployment, mobility, and data relay capabili-
+ties, optimizing trajectory and energy consumption as data
+collectors [10]. This approach is particularly beneﬁcial in
+scenarios with ground sensor obstructions, enabling Line-of-
+Sight communications during data collection. By employing
+UA Vs as data collectors, closer proximity to ground sensors
+is achieved, facilitating efﬁcient data retrieval and conserving
+transmission energy, thereby enhancing energy savings and
+system efﬁciency [11], [12].
+A. Challenges and Motivations
+In UA V-assisted IoT networks, optimizing UA V trajectories
+is essential to minimize data loss and ensure efﬁcient data
+collection. However, it presents unique challenges, such as
+optimizing the UA V’s ﬂight path while considering UA Vs’
+energy limit, buffer constraints of IoT nodes, and adher-
+ing to time windows for serving IoT nodes [13]. Existing
+approaches often overlook such factors which leads to subopti-
+mal UA V trajectories and inefﬁcient data collection processes.
+To address these challenges, some researchers focus on opti-
+mizing the UA V’s ﬂight path for improved coverage [6],
+while other researchers consider time-window constraints in
+trajectory planning. Certain research works also account for
+the buffer status of sensors in the UA V’s data collection
+1932-4537 c⃝ 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+DONIPATI et al.: OPTIMIZING UA V-BASED DATA COLLECTION IN IoT NETWORKS WITH DST-BA 1451
+Fig. 1. UA V assisted data collection with RP.
+strategy [14]. However, comprehensive strategies that simulta-
+neously address UA V’s ﬂight path optimization, time-window
+constraints, and buffer-aware data collection are still lacking.
+Another crucial aspect is the selection of RP from IoT nodes,
+which the UA V visits to collect data, as illustrated in Fig. 1.
+Our research aims to address these challenges by resolving the
+buffer-aware data collection problem. It speciﬁcally focuses on
+confronting a pivotal issue in UA V coverage, which involves
+determining the optimal path for a single UA V to serve
+multiple RPs within speciﬁed time windows.
+B. Contributions
+The Path Cheapest Arc with Guided Local Search (PCA-
+GLS) algorithm is leveraged to plan the UA V’s trajectory with
+time windows, enabling IoT nodes to be visited within their
+respective time windows. Additionally, a buffer-aware strategy
+is introduced, where the service time of the UA V is adjusted
+at each RP based on the buffer status of the IoT node. The
+major contributions to the proposed work are listed as follows:
+• Optimal RP Set Selection: The RP selection strategy
+nominates a minimal set of RPs to cover all the IoT nodes
+present in the network. The key goal is to optimize the
+covered path and service time at designated RPs.
+• Adaptation of the PCA-GLS: The meta-heuristic method
+Path Cheapest Arc with Guided Local Search (PCA-GLS)
+has been employed to efﬁciently plan the UA V’s path
+considering the time-constrained service at each RP. It
+will eventually reduce data loss and improve UA V data
+collection rates.
+• Dynamic Service Time Adjustment: The proposed
+scheme dynamically adjusts the service times of the UA V ,
+further enhancing the efﬁciency and adaptability of data
+collection in dispersed IoT networks.
+The remaining sections are organized as follows. Section II
+highlights the state-of-the-art techniques for buffer-aware
+UA V data collection strategies. Section III deﬁnes several
+parameters and formulates our objective function. Section IV
+brieﬂy discusses the PCA-GLS method and dynamic ser-
+vice optimization mechanism. The performance analysis of
+our proposed strategy is illustrated in Section V. Finally,
+Section VI concludes the paper with a brief discussion on
+future work.
+II. R
+ELATED WORK
+Over time, various research efforts on UA V-assisted data
+gathering in IoT have been conducted, with most studies
+primarily addressing UA V path-ﬁnding challenges, data col-
+lection issues, or buffer management problems [15].T os t a y
+within the scope of this paper, two speciﬁc categories related
+to IoT data collection are focused on: (i) UA V-based data
+collection (ii) Buffer aware data collection.
+A. UAV-Based Data Collection
+In recent years, many studies have utilized UA Vs as mobile
+data collectors for sensor nodes (SNs), extending network
+lifetime [16]. Optimization of the wake-up schedule for SNs
+and the UA V’s trajectory aims to minimize the maximum
+energy consumption of all SNs while ensuring reliable data
+collection [17]. Despite being cost-effective and ﬂexible, UA Vs
+face challenges with their limited load capacity, particularly
+for long-term or distant tasks. To overcome this limitation,
+assembly UA Vs are proposed, focusing on optimizing energy
+resources through system modeling, energy cyclic cooperation,
+and an in-air energy replenishing strategy [18]. UA V trajectory
+planning in [6] emphasizes minimizing mission time by
+optimizing UA V speed, position, and visiting sequence, con-
+sidering factors like Age of Information (AoI) and on-board
+energy. Methods such as successive convex approximation
+(SCA) and genetic algorithms (GA) are used for speed
+and path optimization, supplemented by an AoI-and-energy-
+aware trajectory optimization algorithm [13]. Exploration of
+energy minimization in UA V-assisted sensor networks in [13]
+involves optimizing trajectory and sensor power while con-
+sidering constraints using SCA and block coordinate descent
+(BCD). This includes determining sensor serving orders and
+UA V hovering positions, with the latter affecting sensor
+power. Optimal sensor serving orders are determined using
+the efﬁcient Cutting-Plane method for the standard traveling
+salesman problem (TSP), while UA V position and sensor
+power optimization employ the pattern search method for
+transmit power and SCA for UA V hovering positions. In [19],
+a very interesting solution for UA V energy constraints was
+introduced, suggesting a UA V data collector supported by a
+mobile charging station (UGV) to minimize IoT device AoI
+using multi-agent deep Q-network (MADQN) to optimizes
+UA V charging, IoT servicing, and UGV trajectory, considering
+obstacles and IoT movements. Strategically placing refueling
+vehicles on the ground provides a promising means to extend
+UA V operational range, enabling quick recharging without
+r e t u r n i n gt oaﬁ x e db a s e .
+B. Buffer Aware Data Collection
+Buffer management in UA V-assisted IoT networks is crucial
+for handling transmission variability, preventing data loss, and
+optimizing data transmission efﬁciency. It involves temporarily
+storing data packets during poor transmission conditions to
+ensure reliable data collection and minimize delays and packet
+loss. The study in[20] introduces a UA V path planning algorithm
+for reliable data collection, adjusting trajectories based on the
+buffer sizes of nodes connected to Access Points (AP) while
+conserving energy of the nodes, selecting optimal APs, and
+preventing data loss. It proposes a modiﬁed ACO for trajectory
+design and machine learning for data loss prevention. In the
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+1452 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+context of UA V-assisted edge caching in IoTs, it is emphasized
+that the simultaneous design of UA V trajectories and caching
+strategies is essential for improving quality of experience
+and minimizing content update expenses. A collaborative
+approach is suggested for this in [21], considering both user
+experience and content update costs which enables UA Vs to
+efﬁciently serve areas with high demand for popular content. A
+queue-aware cooperatively caching mechanism in a multi-UA V-
+assisted system, addressing random user requests through a
+well-designed connected dominating set (CDS) for collaborative
+caching scheduling is introduced in [22]. The proposed work
+in [23] introduces a trajectory planning algorithm for an energy-
+efﬁcient Mobile Sink (MS) tour. It considers limited buffer
+size of the nodes and uniform sensing rates, utilizing virtual
+grid cell construction to adjust communication ranges based on
+data buffering. The aim is to minimize the MS traveling path
+length and solve the nominal MS sojourn scheduling problem
+within a speciﬁed computation time. In [24], sensor nodes
+(SNs) are managed by cluster heads (CHs) for data collection
+with UA V support, focusing on minimizing deployment
+costs and energy usage while meeting communication, UA V
+mission time, and battery constraints through ofﬂine and
+online UA V-based data collection methods. The study in [14]
+investigates a mobile relaying system assisted by a UA V with
+a ﬁnite buffer, optimizing the UA V relay node’s trajectory
+to maximize data throughput while accommodating delay-
+limited and delay-tolerant transmission requirements using SCA
+and Quadratically constrained programming (QCP). In [9],
+UA Vs with virtual queues address transmission challenges in
+UA V-assisted IoT networks. A Deep Reinforcement Learning
+(DRL) model minimizes the Expected Weighted Sum Age of
+Information for IoT devices by adjusting UA V altitude based
+on real-time channel conditions.
+Existing research primarily addresses individual aspects of
+data collection, path selection, delay optimization, buffer man-
+agement and dynamic service time adjustment. Although some
+studies acknowledge the signiﬁcance of buffer-aware UA V
+data gathering in IoT, there is a need for further investigation
+into challenges such as buffer management with dynamic
+service time within UA V-based data collection in IoT. These
+gaps are the focus of our proposed work that integrates an efﬁ-
+cient UA V path planning strategy, a buffer-aware scheduling
+mechanism, and time window considerations. Table I presents
+a summary of the existing literature regarding UA V-assisted
+networks, delineating the aims of previous research alongside
+our proposed approach.
+III. S
+YSTEM MODEL AND PROBLEM FORMULATION
+In the proposed scenario, we consider an environment where
+a total of N stationary IoT nodes are strategically dispersed
+across the designated area for monitoring. This conﬁguration
+includes the deployment of one UA V and a centralized depot.
+This optimized setup ensures comprehensive coverage of
+the monitoring zone, guaranteeing robust and reliable data
+collection. In the proposed work, we have considered a hybrid
+mode for UA V data collection, which includes ﬂying mode
+and hovering mode [3].
+TABLE I
+SUMMARY OF THE RELATED WORK AND PROPOSED WORK
+TABLE II
+DEFINITIONS OF COMMON NOTATIONS
+A. Symbols and Deﬁnitions
+The subset of IoT nodes that are selected as RPs as a graph
+is denoted as G = (V, E), where V = {v1, v2,..., vn} is
+the set of vertices (RPs), and E = {e1, e2,..., em} is the
+set of edges representing the travel time between RPs. Each
+vertex vi has a corresponding time window[ei, li] (earliest and
+latest arrival times), a buffer capacity Bi , and a buffer status
+bi . The UA V starts and ends its route at a designated depot
+node, denoted as v0. The aim is to ﬁnd a route sequence R =
+{v0, v1,..., vn, v0} that minimizes the total travel distance,
+respects the time window constraints, and optimizes service
+time based on buffer status. Table II illustrates a short list of
+related notations and their meanings.
+B. Energy Consumption Model
+In the IoT network, overall energy efﬁciency is a critical
+performance metric due to the limited energy resources of
+the nodes and potentially the data-collecting entities like
+UA Vs. In the proposed system, the IoT nodes and the UA V
+incur signiﬁcant energy costs, which impact the system’s
+operational performance and lifespan. Therefore, it is essential
+to accurately model the energy consumption of these key
+components and devise strategies to optimize them. For the
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+DONIPATI et al.: OPTIMIZING UA V-BASED DATA COLLECTION IN IoT NETWORKS WITH DST-BA 1453
+IoT nodes, we adopt the ﬁrst-order radio model, a widely used
+energy consumption model in IoT proposed in [20].
+The energy usage of UA V is affected by traveling to
+Rendezvous Points (RPs) and transferring data to IoTDs.
+The primary energy depletion in UA Vs results from ﬂight
+mechanics and data transmission. In our model, we adopt a
+mechanical energy consumption model based on propulsion
+as in [25] which considers the energy consumption dependent
+on acceleration for rotary-wing UA V . The mechanical energy
+consumed by the UA V over N time slots is represented as
+E
+ME .
+EME =Δ
+N∑
+i=1
+wc∥a[i]−ag∥2 (1)
+where a represents the acceleration vector and ag denotes
+the vector due to gravity acceleration and Δ is the length of
+the time slot. w denotes the energy consumption coefﬁcient
+attributed to resistance induced by factors like wind, rain
+or other weather conditions. w = 1 signiﬁes ideal weather
+conditions; otherwise, w > 1. c is the energy consumption
+coefﬁcient associated with UA V properties such as mass,
+moment of inertia, etc. Thus the total energy consumed by the
+UAV in N time slot is given by following equation.
+UA V
+E =Δ
+N∑
+i=1
+wc∥a[i]−ag∥2 + Ptx NΔ (2)
+where Ptx represents the energy consumption due to the data
+transmission.
+C. Communication Model
+In the context of UA V-based data collection from selected
+RPs, we need to establish a communication model between
+the UA V and the IoT Nodes present in the network [26].T h e
+signal transmission channel is inﬂuenced by factors such as
+line-of-sight (LoS) and non-line-of-sight (NLoS) links, and the
+path loss is deduced as follows.
+Lγ
+(
+du,n(t)
+)
+=
+⎧
+⎪⎨
+⎪⎩
+( 4πfdu,n (t)
+c
+)2
+δ0,γ=0
+( 4πfdu,n (t)
+c
+)2
+δ1,γ=1
+(3)
+Here, f represents the carrier frequency, c denotes the speed
+of light, and δ0 and δ1 represent the NLoS and LoS links’
+excessive path losses. The coordinates can be used to deter-
+mine the distance du, n(t) between the UA V hovering over
+RP cn and the scheduled IoT node Iu :
+du,n(t)=
+√
+(xu(t)−xn(t))2 +( yu(t)−yn(t))2 + h2 (4)
+The data uploading process begins once the UA V reaches the
+RP cn and establishes a communication connection with IoT
+node Iu . Pt denotes the transmission power of IoT node Iu .
+The data uploading rate for su is expressed as following.
+Ru,n(t)= B log2
+(
+1+ αPt
+Lγ
+(
+du,n(t)
+)
+σ2
+)
+(5)
+Here, αrepresents the channel power gain at the reference
+distance of 1 meter, and B and σ2 are the system bandwidth
+and the noise power at the UA V receiver, respectively. To
+further analyze the efﬁciency of data uploading time, we
+introduce an equation as the ratio of the data buffered data
+size to the data uploading rate, denoted as D
+u,n(t).
+Du,n(t)= Bi
+Ru,n(t) (6)
+Here, Bi represents the amount of buffered data that is
+uploaded from IoT node Iu to the UA V . By considering this
+ratio, we can evaluate the effectiveness of the data uploading
+process in terms of the allocated transmission time.
+D. Channel Model
+In our model we have used Rician channel fading model
+(RCF) which is crucial in UA V scenarios, capturing both LoS
+and scattered signal components. While UA V communication
+resembles terrestrial channels, factors like mobility and alti-
+tude inﬂuence its characteristics. At higher altitudes, clear
+LOS communication prevails, resulting in a higher Rician K-
+factor. Nevertheless, multipath propagation persists, causing
+fading effects. Altitude changes can intensify these effects.
+As UA Vs maneuver, channel conditions ﬂuctuate rapidly,
+demanding adaptable communication systems. The channel
+fading experienced by IoT devices and UA Vs comprises both
+large-scale and small-scale fading components deﬁned as
+following equation [27].
+F =
+√
+(PL × SF).h (7)
+where PL refers to signal strength attenuation, considering
+factors such as observation height, angle, propagation distance
+and fuselage structure, while variable S
+F accounts for shad-
+owing caused by obstacles along the propagation path and h
+represents the channel impulse response between the transmit-
+ter and receiving antennas, expressed as the combination of
+both LoS and NLoS components in the following equation as
+in Rician channel fading model.
+h =
+√
+K
+K +1 · hL +
+√
+1
+K +1 · hNL (8)
+where, hL denotes the complex channel gain for the LoS
+component, hNL represents that for the NLoS or scattered
+components and K is the Rician K-factor which determines
+the severity of fading, with higher values indicating stronger
+line-of-sight dominance and lower values suggesting increased
+scattering.
+E. Problem Formulation
+The key objective of this work is to optimize the travel
+distance while minimizing service delay and buffer data for
+UA Vs. The objective function is formulated as follows:
+1) Input:
+• A set of locations N = {0,1,..., n +1 }, where
+location 0 and location n + 1 are the depot, and the
+other locations represent the visiting nodes.
+• A distance matrix Dmat =[ dij]n+1×n+1 represent-
+ing the travel time or cost between locations i and
+j. It is typically assumed that dij = dji for all i, j ∈
+N , and dii =0 for all i ∈N .
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+1454 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+• A set of time windows W = {[ei, li]}n
+i=1, where
+ei and li represent the earliest and latest time that
+service can begin at location i respectively.
+• A set of service times S = {si}n
+i=1, where si is the
+time required to serve node i.
+2) Decision Variables:
+• xij =1 if the UA V travels from locationi to location
+j, and 0 otherwise.
+3) Objective:
+Minimize ∑
+i,j∈N dij xij , which is the total travel time
+or cost for UA V networks.
+4) Constraints:
+• Each node is visited exactly once: ∑
+i∈N xij =1
+for all j ∈N \{0, n +1}.
+• The UA V starts and ends its route at the depot:∑
+j∈N x0j = ∑
+i∈N xi(n+1) =1 .
+• Time window constraints are: ej ≤tj ≤lj −sj for
+all j ∈N \{0, n +1}.
+• The data uploading time Du,n(t) must be bounded
+by maximum tolerable delay.
+5) Buffer Management The service time (Si) at each node
+i depends on the buffer status (bi) and is deﬁned as:
+Si =
+⎧
+⎨
+⎩
+Tf , if bi = Bi
+Tp, if bi < Bi
+Tn, if bi < Bi
+(9)
+IV . PROPOSED METHODOLOGY
+From the objective function, we can easily observe that
+ﬁnding the shortest possible path among the RPs is complex
+and mostly NP-hard. Due to their computational difﬁculty, no
+effective algorithms can solve NP-hard problems in polyno-
+mial time. Finding optimal solutions for large instances of
+NP-hard problems is computationally impossible, but several
+algorithmic techniques exist to get close to the optimal
+solution. Therefore, we propose a UA V-Based Data collec-
+tion scheme with Dynamic Service Time and Buffer-Aware
+trajectory planning (DST-BA). In the proposed solution, we
+have introduced heuristic algorithms: (A) Selecting RPs from
+a given set of nodes, (B) Planning the UA V’s Path considering
+Time Windows, and (C) Dynamic Service Time Adjustment
+Algorithm. The key objective is to obtain a near-optimal
+solution in complex UA V communication networks.
+A. Selection of RPs
+In the proposed approach to route planning, a key consid-
+eration is the selection of RPs, as illustrated in Fig. 2. These
+points are predeﬁned locations in the network of nodes that
+serve as gathering or checkpoint locations for the UA V during
+its mission. The key objective here is to select a minimal set of
+RPs that covers all IoT nodes in the network. The Algorithm 1
+represents the procedure for the proposed RP selection in this
+work. The Euclidean distance d
+ij between nodes i and j is
+calculated as follows.
+dij =
+√(
+xi −xj
+)2 +
+(
+yi −yj
+)2 (10)
+where (xi, yi) and (xj, yj) represent the coordinates.
+Algorithm 1 calculates the neighborhood for each node based
+Fig. 2. Illustration of RP selection over the network.
+Algorithm 1 Rendezvous Point Selection
+Require: Nodes N , Location (x, y), Maximum radius Rmax
+Ensure: A set of Rendezvous Points RP
+1: Initialize an empty set RP.
+2: for each node ni in N do
+3: Calculate its set of neighbors Nni ,
+4: end for
+5: while N is not empty do
+6: Select the node n∗in N with the largest Nn∗.
+7: Add n∗to RP.
+8: Remove n∗and all nodes in Nn∗ from N .
+9: for each remaining node ni in N do
+10: Update Nni to remove nodes that are not in N .
+11: end for
+12: end while
+13: return RP
+on the communication radius. It then iteratively selects the
+node with the highest number of neighbors as an RP and
+removes this node and its neighbors from consideration as
+RPs. This process continues until all nodes are covered by the
+selected set of RPs, forming the set of all RPs. The selection
+of suitable RPs for the UA V is a crucial step in effective data
+collection from the IoT nodes.
+•Reduction of Redundant Data: By collecting data only
+from IoT nodes within R
+max , the UA V avoids redundant data
+collection from distant nodes. This helps to reduce noisy data.
+B. UAV Path Planning With Time-Windows
+The UA V path planning problem with time windows
+involves ﬁnding the optimal route for a single UA V to serve
+a number of nodes within speciﬁed time windows while
+minimizing the total travel cost. This can be achieved using a
+method called Path Cheapest Arc with Guided Local Search.
+•Route Construction with Path Cheapest Arc:
+Starting from the current node i (initially the depot), the
+algorithm identiﬁes the node j that is not yet included in the
+route (R) and has the lowest travel cost (referred as “cheapest
+arc”). It ensures that visiting this node does not violate the
+time window constraints. The algorithm then adds node j to
+the route and proceeds to the next iteration from the newly
+added node. This process continues until all nodes have been
+visited. This strategy forms the essence of the Path Cheapest
+Arc algorithm.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+DONIPATI et al.: OPTIMIZING UA V-BASED DATA COLLECTION IN IoT NETWORKS WITH DST-BA 1455
+Path Cheapest Arc
+• Construct a route R.
+• Start at the depot (node 0).
+• While there are unvisited nodes that can be
+serviced without violating the time window
+constraints:
+– Find the node j not in R that minimizes
+D[i][j] (the cost of travel from the current
+node i), subject to the constraints
+arrival_time + D[i][j]+ sj ≤lj .
+– Add node j to R, update the UA V’s arrival
+time at the next node, and mark node j as
+visited.
+• When no more nodes can be added, return to
+the depot.
+• Solution Improvement with Guided Local Search: In the
+GLS algorithm, penalties are added to certain features of the
+solution in order to guide the search towards unexplored areas
+of the solution space and help it escape from local minima. The
+use of high penalties can discourage the selection of certain
+routes or nodes in the solution. When dealing with the UA V
+routing problem with time windows, one important aspect to
+consider is the tardiness at each node, which refers to the
+amount of arrival time exceeding the node’s deadline. If a
+solution involves arriving late at a node, it can incur a penalty.
+Initially, the algorithm may prioritize routes that result in some
+late arrivals, as it allows for servicing more nodes and reducing
+the total travel distance. However, when a high penalty is
+applied to tardiness, the cost of such solutions increases. This
+prompts the algorithm to reject these solutions during the
+local search process and instead select alternatives that meet
+all deadlines, even if they require longer travel distances.
+This approach strikes a balance between minimizing travel
+distance and meeting deadlines, leading to more practical and
+reliable solutions for real-world applications. In our proposed
+approach, we have incorporated a penalty for violating time
+window constraints at each location.
+Guided Local Search
+• Given the initial solution R, apply the Guided
+Local Search (GLS) metaheuristic.
+• Perform a local search operation on R to ﬁnd a
+neighboring solution R′ that improves the total
+cost.
+• If no improving neighbor is found, assign
+penalties to certain features of the current
+solution.
+• Continue the local search with the penalized
+objective function f +λp, where λis a penalty
+factor. Repeat this process until a stopping
+criterion is met, such as a maximum number of
+iterations or a time limit.
+The ﬁnal output of GLS is the best solution found
+during the search, R
+∗, which is a route for the UA V
+that minimizes the total cost, including penalties.
+Algorithm 2 PCA-GLS
+Require: N: nodes, D: distance matrix
+Ensure: R∗: optimal route
+1: R ← empty route
+2: i ← 0 {start at depot}
+3: while there are unvisited nodes do
+4: Path Cheapest Arc()
+5: end while
+6: Return to depot
+7: Apply GUIDED_LOCAL_SEARCH to R, obtain R′
+8: while improving neighbor exists in R′ do
+9: Find improving neighbor, update R′
+10: end while
+11: Penalize features if no improving neighbor
+12: Repeat search with penalized objective function until
+stopping criterion met
+13: R∗← best solution found during search
+14: return R∗
+It is important to note that this penalty does not directly
+modify the ﬁtness function of the GLS algorithm. The detailed
+steps of the UA V path planning while considering time
+windows are presented in Algorithm 2.
+C. Dynamic Service Time Adjustment
+The proposed research builds upon and enhances this
+concept by introducing dynamic service time adjustment.
+Traditional approaches often assume a ﬁxed service time for
+data gathering, irrespective of the data volume or buffer status
+of the node. In contrast, the proposed strategy dynamically
+adjusts the service time based on the buffer status and the
+distance from the depot to the next point. By choosing to
+navigate to the center of the node’s communication range when
+the buffer is full and to the nearest point on the communication
+range when the buffer is not full, the proposed strategy has
+the potential to save more time and power.
+The nearest point on the edge of a circle to a given point is
+calculated using vector normalization. Given the center of the
+circle (c
+x, cy), the radius Rc, and the given point (px, py),t h e
+vector from the center to the point is ⃗v =( px −cx, py −cy).
+The distance d between the center and the point is then
+calculated using the Pythagorean theorem.
+d =
+√
+(px −cx)2 +
+(
+py −cy
+)2. (11)
+The normalized vector is then ˆv = 1
+d⃗v =( px−cx
+d , py−cy
+d ).
+The nearest point (nx, ny) on the edge of the circle to the
+given point is then R times the normalized vector away from
+the center.
+nx = cx + Rc · px −cx
+d , (12)
+ny = cy + Rc · py −cy
+d . (13)
+This strategy aims to dynamically adjust the service times
+at RPs based on their buffer status and relative positions, as
+illustrated in Fig. 3. Algorithm 3 presents the internal steps
+of the dynamic service time adjustment strategy. The inputs
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+1456 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+Fig. 3. Buffer-aware path and adjusted service time.
+Algorithm 3 Dynamic Service Time Adjustment
+Require: Sets: Coordinates of RPs C, Visiting sequence S,
+Buffer status list B, Initial service times T
+Require: Starting point D, Radius Rc, UA V velocityV
+1: Initialize service times list ST = T
+2: for i = 1t o n do
+3: Ccurrent = Si
+4: if Bi == 1 then
+5: Cnext = Ccurrent
+6: Lextra = 2×Rc
+V {Time for extra travel}
+7: if Ti ≤Lextra then
+8: STi =0 {Adjust service time}
+9: else
+10: STi = Ti −Lextra {Adjust service time}
+11: end if
+12: else
+13: Cnext = ﬁnd_nearest_point(Ccurrent, Rc, D)
+14: if path from D to Cnext forms a chord in the circle
+with center at Ccurrent then
+15: Lchord =g e t_distance(D, Cnext)
+16: if Ti ≤ Lchord
+V then
+17: STi =0 {Adjust service time}
+18: else
+19: STi = Ti − Lchord
+V {Adjust service time}
+20: end if
+21: end if
+22: end if
+23: D = Cnext
+24: end for
+25: return ST {Return adjusted service times}
+to the algorithm include the coordinates of RPs, the visiting
+sequence, the buffer status list, the depot as the starting
+point, initial service times, the radius of circles, and the UA V
+velocity.
+Set C = C1, C2,..., Cn denote the coordinates of
+RPs, S = S1, S2,..., Sn as the visiting sequence, B =
+B1, B2,..., Bn as the buffer status list, where Bi =1 if the
+buffer at Ci is full and Bi =0 otherwise, D as the depot,
+T = T1, T2,..., Tn as the initial service times, Rc as the
+radius of the circles, and V as the UA V velocity. The algorithm
+initially sets the service times list as ST = T. For each Ci in
+the visiting sequence, the algorithm considers two main cases:
+1) If the buffer at Ci is full (Bi =1 ), the UA V has to
+go to the center of the circle, ofﬂoad the data, and then
+continue to its next destination. This deviation to the
+center and forward again adds an extra distance of 2Rc,
+resulting in an extra travel time of 2Rc
+V . If the initial
+service time Ti is less than or equal to this extra time,
+the service time at Ci is adjusted to 0 (STi =0 ).
+Otherwise, it is decreased by the extra time (STi =
+Ti − 2Rc
+V ).
+2) If the buffer at Ci is not full (Bi =0 ), the UA V can
+ﬂy directly to the edge of the next rendezvous point
+without going to the center. If this ﬂight forms a chord
+in the circle with the center at C
+i , the length of the
+chord Lchord is calculated. If the initial service time Ti
+is less than or equal to the time required to travel along
+the chord Lchord
+V , the service time at Ci is adjusted to 0
+(STi =0 ). Otherwise, it is decreased by the chord travel
+time (STi = Ti − Lchord
+V ). If a chord is not formed,
+the UA V serves the service time at the entry point of
+the circle. After visiting all RPs in the sequence, the
+algorithm returns the adjusted service times ST.
+We must determine the exit point to calculate the chord
+length within the current circle by ﬁnding the point on the
+circle’s boundary closest to the next destination. Pcurrent =
+(xc, yc), Cnext =( xn, yn), and the exit point from the current
+circle is Pexit =( xe, ye). Further, xe and ye is deﬁned as.
+xe = xc + Rc × xn −xc
+d , (14)
+ye = yc + Rc × yn −yc
+d , (15)
+where d =
+√
+(xn −xc)2 +( yn −yc)2 and Rc is the circle’s
+radius. The chord length Lchord is calculated as follows.
+Lchord =
+√
+(xe −xc)2 +( ye −yc)2. (16)
+If the UA V is currently at an RP with an empty buffer, and
+the next RP is located in a way that a chord cannot be formed
+within the current RP circle, then the UA V should head directly
+to the next RP.
+Lemma 1 (Constrained UAV Path): R = r
+1, r2,..., rn
+represent a set of RPs, and W = w1, w2,..., wn represent a
+set of time windows corresponding to each point, where each
+wi =[ si, ei] represents the start and end times of the window.
+For any path P of the UA V , if the travel time to RPri (ttraveli)
+plus the time spent at the previous RP (Tprev) exceeds the
+end time of the time window (ei), then ri can be skipped for
+that round, i.e., not included in path P.
+Proof: Assume a path P for the UA V such that for each RP
+ri ∈P, the UA V arrives at ri within its corresponding time
+window wi . The arrival time at ri is given by:
+tarrivali = Tprev + ttraveli (17)
+We assume that for all ri ∈P, tarrivali ≤ ei . Now consider
+an RP rj for which
+Tprev + ttravelj > ej (18)
+According to the assumption, rj is expected to be included in
+the path P. However, if the UA V cannot reach rj within the
+time window wj , it contradicts the requirements of path P.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+DONIPATI et al.: OPTIMIZING UA V-BASED DATA COLLECTION IN IoT NETWORKS WITH DST-BA 1457
+Therefore, for such rj , it can be excluded from path P for that
+round. This leads to the conclusion that under time window
+constraints, the UA V path may involve skipping certain RPs
+that cannot be feasibly visited within their time windows.
+Lemma 2 (Optimal RP Selection): Given a set of RPs R =
+r1, r2,..., rn , and a cost function C(ri, rj) that represents the
+cost of traveling from point ri to point rj , the optimal choice
+for the next RP rk from the current position ri is determined
+using the following formula:
+rk =a r g m i n
+rj∈R,rj̸=ri
+C
+(
+ri, rj
+)
+(19)
+subject to time window constraints. This means that the UA V
+aims to minimize the travel cost while ensuring compliance
+with the speciﬁed time constraints.
+Proof: We will prove this lemma through contradiction.
+Let’s assume the existence of a RP r
+m such that C(ri, rm) <
+C(ri, rk), but the UA V does not select rm .I f rm satisﬁes the
+time window constraints, choosing rm instead of rk would
+result in a lower overall cost, which contradicts our assumption
+that the UA V minimizes travel cost. Hence, if there is a
+point r
+m with a lower cost, it must not satisfy the time
+window constraints. Therefore, the UA V always selects the
+point with the lowest cost while adhering to the time window
+constraints.
+Theorem 1 (Feasible Path Under Time Window
+Constraints): Given a set of RPs R = r1, r2,..., rn and a
+cost function C(ri, rj), a feasible path exists for the UA V that
+satisﬁes time window constraints if the following condition
+holds:
+n−1∑
+i=1
+C(ri, ri+1)+ C(rn, r1) ≤T (20)
+where T represents the total allowable travel time for the UA V ,
+the existence of such a path is guaranteed by the Optimal RP
+Selection lemma, provided that the time window constraints
+are met at each RP.
+Proof: For a path to be feasible, the total time taken to travel
+the path must be less than or equal to T. We can write this
+condition as:
+For each pair of points (r
+i, ri+1), according to the lemma,
+we choose ri+1 such that C(ri, ri+1) is minimized while
+satisfying the time window constraints. Let us denote this min-
+imum cost as Cmin(ri). Therefore, if the following condition
+holds:
+n−1∑
+i=1
+Cmin(ri)+ Cmin(rn) ≤T (21)
+From Eqn. (21), it can be observed that there exists a feasible
+path, which concludes our proof.
+V. D ISCUSSION OF COMPLEXITY
+In this section, we discuss the computational complexity
+of the proposed strategy in terms of path planning and time
+adjustment in UA V-enabled data collection.
+1) Path Planning Complexity: The path planning phase
+involves the selection of RPs and ﬁnding the optimal route for
+the UA V to serve the nodes within speciﬁed time windows.
+The selection of RPs is based on calculating neighborhoods
+and choosing nodes with the highest number of neighbors as
+RPs. This step has a complexity of O(|N|), where |N| is
+the number of nodes in the network. The subsequent route
+construction using the Path Cheapest Arc algorithm has a
+complexity of O(|N|
+2), taking into account the calculation
+of distances between all pairs of nodes. The complexity of
+the GLS algorithm for solution improvement depends on
+the speciﬁc implementation, typically ranging from O(|N|
+2)
+to O(|N| 3). Therefore, the overall complexity of the path
+planning phase can be expressed as O(|N| 3).
+2) Time Adjustment Complexity: The dynamic service time
+adjustment algorithm considers the buffer status and dis-
+tance from the depot to determine the service times at RPs.
+This algorithm involves iterating through all RPs, calculat-
+ing distances, and adjusting service times accordingly. The
+complexity of this algorithm is O(|RP|), where |RP| is the
+number of RPs.
+3) Overall Complexity: The proposed methodology com-
+prises the path planning and time adjustment phases. The
+complexity of the path planning phase dominates the overall
+complexity. Therefore, the overall complexity of the proposed
+algorithm can be approximated as O(|N|
+3).
+VI. P ERFORMANCE EVA L UAT I O N
+This section presents the simulation results of our proposed
+UA V-Based Data collection method with Dynamic Service
+Time and Buffer-Aware trajectory planning (DST-BA). To
+analyze the performance of the DST-BA, we have consid-
+ered several performance matrices, such as network lifetime,
+data collection rate, and path length. Further, to present
+the effectiveness, we have compared DST-BA with current
+research works such as BA-UA V [28],A C O - M S[5] and
+NSGA-II [20]. This comparative review allowed us to position
+the proposed research within the existing academic land-
+scape and evaluate the relative strengths of the proposed
+scheme.
+A. Experimental Setup
+The proposed work used extensive simulation exercises
+powered by Python 3.9.13. The computational environment in
+which these simulations were carried out included an operating
+system of Windows 10 Enterprise 64-bit, a memory capacity of
+8 GB RAM, and an Intel Core i5 processor. In the experiment,
+N stationary IoT nodes were randomly distributed in a region
+of 100 × 100 m
+2. The base station was strategically ﬁxed
+at the coordinates (50,50) m, serving as a constant reference
+point. The principal methodology of this study entailed the
+application of a meta-heuristic approach to determine an initial
+UA V ﬂight path. Subsequently, this path was optimized by
+implementing a Dynamic Service Time Adjustment algorithm,
+further reﬁning our outcomes. Simulation parameters that are
+used in our experiment are shown in Table III [20].
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+1458 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+TABLE III
+SIMULATION PARAMETERS
+Fig. 4. Analysis of network lifetime for different nodes.
+B. Network Life Time
+Since IoT devices have limited energy and transmission
+range, UA Vs are used to collect data by hovering at IoT nodes.
+This helps to conserve transmission energy across all IoT
+nodes. In the event of a buffer overﬂow, all neighboring nodes
+associated with the RP will be required to re-transmit their
+data to their respective RP. This process signiﬁcantly increases
+energy consumption, thus reducing the lifetime of the network.
+Fig. 4 graphically represents how network lifetime is impacted
+by an increase in the number of nodes. As the number of nodes
+grows, there is a subsequent increase in neighboring nodes for
+several RPs, which consequently leads to a higher incidence
+of buffer overﬂows, adversely affecting the network lifetime.
+The DST-BA integrates time windows and buffer awareness
+for data gathering, a strategy that signiﬁcantly mitigates the
+prevalence of buffer overﬂows. Compared to methodologies
+presented in [28] and [5], the DST-BA demonstrates lower
+buffer overﬂow rates, which contributes to better energy
+preservation, resulting an extension of the network lifetime.
+C. Data Collection Rate
+The proposed methodology handles buffer overﬂows efﬁ-
+ciently by integrating time windows and buffer awareness,
+resulting in a better data collection rate. When the buffer size
+is increased, it prevents data loss due to buffer overﬂow, which
+helps in improving the data collection rate. If data generation
+rates at the nodes exceed the UA V’s collection rate, increasing
+the buffer size can prevent data loss due to buffer overﬂow.
+When the buffer is full, incoming data can be lost until there
+is enough room again in the buffer. Fig. 5(a) represents the
+data collection rate for different buffer sizes when the number
+of nodes is 200. The DST-BA gave better results for the Data
+(a) (b)
+(c) (d)
+Fig. 5. Performance analysis of data collection rate when (a) Number of
+nodes is 200. (b) Number of nodes is 400. (c) Number of nodes is 600, and
+(d) Path length by varying number of UA Vs.
+collection rate. Moreover, the potential data loss is reduced as
+the buffer size increases. If UA V is interrupted or unable to
+provide service at a particular RP, large buffers continue to
+store the data avoiding buffer overﬂows resulting in a better
+data collection rate. Fig. 5(b) and Fig. 5(c) represent the data
+collection rate for different buffer sizes when the number of
+nodes is 400 and 600, respectively. With larger buffers, nodes
+can store more data between UA V visits. As a result, during
+each visit, the UA V can collect more data, increasing the
+effective data collection rate.
+D. Effect of Path Length
+Fig. 5(d) represents the trajectory length for varying UA Vs
+used 1, 2, 3, and 4 respectively for different buffer capacity.
+It should be noted that the overall travel length grows when
+more UA Vs are employed. It is now owing to an increase of
+overlapping ﬂying regions closer to the depot. As a result,
+adding unneeded UA Vs for data gathering will not only add
+to the cost of deployment but will also increase the overall
+energy consumption of the UA V system. When the buffer size
+is increased, there is a high chance of optimizing the path
+length. With more data stored at each node, there is more
+ﬂexibility in scheduling the UA V’s path. This means that the
+UA V can be scheduled to visit nodes in a way that minimizes
+the total path length, rather than needing to visit certain nodes
+urgently to prevent buffer overﬂow.
+E. Data Generation & Buffer-Aware Path
+In Fig. 6(a), Fig. 6(e), and Fig. 6(i), the red color represents
+a higher data generation rate. These three are taken from a
+random UA V round number to visualize how the data gener-
+ation rate changes. Fig. 6(b), Fig. 6(f) and Fig. 6(j) represent
+RP generation, Fig. 6(c), Fig. 6(g) and Fig. 6(k) represent the
+corresponding path formed while considering time-windows,
+Fig. 6(d), Fig. 6(h) and Fig. 6(l) represents how the obtained
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+DONIPATI et al.: OPTIMIZING UA V-BASED DATA COLLECTION IN IoT NETWORKS WITH DST-BA 1459
+Fig. 6. Performance analysis (a) Heat-map for data generation rate. (b) RP generation. (c) Path formation. (d) Adjusted buffer-aware path. (e) Heat- map for
+data generation rate. (f) RP generation. (g) Path formation. (h) Adjusted buffer-aware path. (i) Heat-map for data generation rate. (j) RP generatio n. (k) Path
+formation. (l) Adjusted buffer-aware path.
+path is further Adjusted Using the proposed Algorithm. These
+visual representations provide valuable insights into the vari-
+ations in data generation, RP generation, path formation, and
+the adjusted paths based on buffer considerations. In fact, to
+conserve UA V’s energy, we optimize its route by minimizing
+time spent at RPs and avoiding RPs that reduce the overall
+trajectory length. Both the reduced number of RPs and the
+optimized ﬂight trajectory lead to signiﬁcant preservation of
+UA V energy.
+VII. C
+ONCLUSION
+The proposed approach tackles the central challenge of
+optimizing the UA V’s path and service time at carefully
+selected RPs, leveraging buffer status and speciﬁc time win-
+dows as critical factors. By implementing the PCA-GLS
+method and employing the proposed innovative algorithm
+for dynamic service time adjustment based on buffer status,
+remarkable enhancements in the system’s overall efﬁciency
+have been witnessed. Efﬁcient planning the UA V’s route and
+ensuring timely servicing of each RP within its designated
+time window have maximized data collection efﬁciency within
+the IoT network. The simulation results validates that our
+proposed strategy successfully optimized the UA V’s trajectory,
+considerably reduced service time, and improved the efﬁciency
+of data collection. The proposed solution is suitable for several
+applications like, monitoring activities (forest, smart grids,
+border surveillance), disaster management etc.
+However, in this work, the limited and short-lived energy
+sources of UA Vs signiﬁcantly constrain their operational dura-
+tion. As a result, UA Vs must frequently return to the base
+station (BS) to recharge their batteries, leading to substantial
+penalties in terms of mission delays and disruptions. Future
+work can address this issue by integrating wireless energy
+harvesting to recharge the onboard batteries through charging
+stations or vehicles.
+R
+EFERENCES
+[1] Y . Yang, W. Wang, L. Liu, K. Dev, and N. M. F. Qureshi, “AoI
+optimization in the UA V-aided trafﬁc monitoring network under attack:
+A Stackelberg game viewpoint,” IEEE Trans. Intell. Transp. Syst. ,
+vol. 24, no. 1, pp. 932–941, Jan. 2023.
+[2] T. Bouzid, N. Chaib, M. L. Bensaad, and O. S. Oubbati, “5G network
+slicing with unmanned aerial vehicles: Taxonomy, survey, and future
+directions,” Trans. Emerg. Telecommun. Technol., vol. 34, no. 3, 2023,
+Art. no. e4721.
+[3] Z. Wei et al., “UA V-assisted data collection for Internet of Things:
+As u r v e y , ”IEEE Internet Things J. , vol. 9, no. 17, pp. 15460–15483,
+Sep. 2022.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
+1460 IEEE TRANSACTIONS ON NETWORK AND SERVICE MANAGEMENT, VOL. 22, NO. 2, APRIL 2025
+[4] A. Hazra, “Promising role of visual IoT: Challenges and future research
+directions,” IEEE Eng. Manag. Rev. , vol. 51, no. 4, pp. 169–178,
+Dec. 2023.
+[5] P. K. Donta, T. Amgoth, and C. S. R. Annavarapu, “An extended ACO-
+based mobile sink path determination in wireless sensor networks,” J.
+Ambient Intell. Humaniz. Comput., vol. 12, no. 10, pp. 8991–9006, 2021.
+[6] K. Liu and J. Zheng, “UA V trajectory optimization for time-
+constrained data collection in UA V-enabled environmental monitoring
+systems,” IEEE Internet Things J. , vol. 9, no. 23, pp. 24300–24314,
+Dec. 2022.
+[7] K. Messaoudi, O. S. Oubbati, A. Rachedi, A. Lakas, T. Bendouma, and
+N. Chaib, “A survey of UA V-based data collection: Challenges, solutions
+and future perspectives,” J. Netw. Comput. Appl. , vol. 216, Jul. 2023,
+Art. no. 103670.
+[8] A. Mukherjee, S. Misra, V . S. P. Chandra, and M. S. Obaidat, “Resource-
+optimized multiarmed bandit-based ofﬂoad path selection in edge UA V
+swarms,” IEEE Internet Things J. , vol. 6, no. 3, pp. 4889–4896,
+Jun. 2019.
+[9] M. Samir, C. Assi, S. Sharafeddine, and A. Ghrayeb, “Online altitude
+control and scheduling policy for minimizing AoI in UA V-assisted
+IoT wireless networks,” IEEE Trans. Mobile Comput. , vol. 21, no. 7,
+pp. 2493–2505, Jul. 2022.
+[10] B. Alzahrani, O. S. Oubbati, A. Barnawi, M. Atiquzzaman, and
+D. Alghazzawi, “UA V assistance paradigm: State-of-the-art in applica-
+tions and challenges,” J. Netw. Comput. Appl. , vol. 166, Sep. 2020,
+Art. no. 102706.
+[11] Q. Wu, Q. Liu, W. Zhu, and Z. Wu, “Energy efﬁcient UA V-
+Aassisted IoT data collection: A graph-based deep reinforcement
+learning approach,” IEEE Trans. Netw. Service Manag. , early access,
+Aug. 28, 2024, doi: 10.1109/TNSM.2024.3450964.
+[12] C. Grasso, R. Raftopoulos, and G. Schembra, “Smart zero-touch
+management of UA V-based edge network,” IEEE Trans. Netw. Service
+Manag., vol. 19, no. 4, pp. 4350–4368, Dec. 2022.
+[13] Y . Wang, M. Chen, C. Pan, K. Wang, and Y . Pan, “Joint optimization
+of UA V trajectory and sensor uploading powers for UA V-assisted data
+collection in wireless sensor networks,” IEEE Internet Things J. ,v o l .9 ,
+no. 13, pp. 11214–11226, Jul. 2022.
+[14] J.-H. Lee, K.-H. Park, Y .-C. Ko, and M.-S. Alouini, “Throughput
+maximization of mixed FSO/RF UA V-aided mobile relaying with a
+buffer,” IEEE Trans. Wireless Commun. , vol. 20, no. 1, pp. 683–694,
+Jan. 2021.
+[15] A. Jaiswal, S. Shivateja, A. Hazra, N. Mazumdar, J. Singh, and
+V . G. Menon, “UA V-enabled mobile RAN and RF-energy transfer proto-
+col for enabling sustainable IoT in energy-constrained networks,” IEEE
+Trans. Green Commun. Netw., vol. 8, no. 3, pp. 1118–1127, Sep. 2024.
+[16] P. Maurya, V . M. R. Tummala, A. Hazra, and S. P. Mohanty,
+“Advancing industry 5.0 with UA V-driven transformations: Future
+prospectives,” IEEE Consum. Electron. Mag. , vol. 13, no. 5, pp. 30–35,
+Sep. 2024.
+[17] C. Zhan, Y . Zeng, and R. Zhang, “Energy-efﬁcient data collection in
+UA V enabled wireless sensor network,” IEEE Wireless Commun. Lett. ,
+vol. 7, no. 3, pp. 328–331, Jun. 2018.
+[18] J. Xiong, L. Guo, M. Shan, B. Liu, P. Yu, and L. Guo, “Wireless
+resources cooperation of assembled small UA Vs for data collections of
+IoT,”IEEE Internet Things J., vol. 10, no. 11, pp. 9411–9422, Jun. 2023.
+[19] K. Messaoudi, O. S. Oubbati, A. Rachedi, and T. Bendouma, “UA V-
+UGV-based system for AoI minimization in IoT networks,” in Proc.
+IEEE Int. Conf. Commun. , 2023, pp. 4743–4748.
+[20] N. Mazumdar, S. Roy, A. Nag, and J. P. Singh, “A buffer-aware dynamic
+UA V trajectory design for data collection in resource-constrained IoT
+frameworks,” Comput. Elect. Eng., vol. 100, May 2022, Art. no. 107934.
+[21] X. Li, J. Liu, X. Chen, J. Wang, and M. Pan, “Caching on the sky:
+A multi-agent federated reinforcement learning approach for UA V-
+assisted edge caching,” IEEE Internet Things J. , vol. 11, no. 17,
+pp. 28213–28226, Sep. 2024.
+[22] X. Qi, J. Chong, Q. Zhang, and Z. Yang, “Towards cooperatively caching
+in multi-UA V assisted network: A queue-aware CDS-based reinforce-
+ment learning mechanism with energy efﬁciency maximization,” IEEE
+Internet Things J. , vol. 11, no. 9, pp. 16461–16477, May 2024.
+[23] M. Biabani, N. Yazdani, and H. Fotouhi, “RBDMS: Rate-adaptation
+and buffer-awareness data gathering for mobile sink scheduling in
+WSNs,” IEEE Sensors J., vol. 22, no. 21, pp. 21326–21341, Nov. 2022.
+[24] O. Ghdiri, W. Jaafar, S. Alfattani, J. B. Abderrazak, and
+H. Yanikomeroglu, “Ofﬂine and online UA V-enabled data collection in
+time-constrained IoT networks,” IEEE Trans. Green Commun. Netw. ,
+vol. 5, no. 4, pp. 1918–1933, Dec. 2021.
+[25] C. Hao, Y . Chen, Z. Mai, G. Chen, and M. Yang, “Joint optimization on
+trajectory, transmission and time for effective data acquisition in UA V-
+enabled IoT,” IEEE Trans. Veh. Technol., vol. 71, no. 7, pp. 7371–7384,
+Jul. 2022.
+[26] C. H. Liu, Z. Chen, J. Tang, J. Xu, and C. Piao, “Energy-efﬁcient
+UA V control for effective and fair communication coverage: A deep
+reinforcement learning approach,” IEEE J. Sel. Areas Commun., vol. 36,
+no. 9, pp. 2059–2070, Sep. 2018.
+[27] B. Hua et al., “Channel modeling for UA V-to-ground communications
+with posture variation and fuselage scattering effect,” IEEE Trans.
+Commun., vol. 71, no. 5, pp. 3103–3116, May 2023.
+[28] M. K. Singh, A. Choudhary, S. Gulia, and A. Verma, “Multi-objective
+NSGA-II optimization framework for UA V path planning in an UA V-
+assisted WSN,” J. Supercomput., vol. 79, no. 1, pp. 832–866, 2023.
+Authorized licensed use limited to: INDIAN INST OF INFO TECH AND MANAGEMENT. Downloaded on January 30,2026 at 17:23:50 UTC from IEEE Xplore.  Restrictions apply. 
