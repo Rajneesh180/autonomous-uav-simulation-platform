@@ -75,7 +75,8 @@ class SemanticClusterer:
 
         # 3. Pipeline: Clustering Assignment
         if self.cluster_algo == "dbscan":
-            model = DBSCAN(eps=0.5, min_samples=3)
+            from config.config import Config
+            model = DBSCAN(eps=Config.DBSCAN_EPS, min_samples=Config.DBSCAN_MIN_SAMPLES)
             labels = model.fit_predict(latent_space)
             
             # DBSCAN does not provide standard centroids perfectly. 

@@ -17,6 +17,8 @@ class Config:
     SCALING_METHOD = "minmax"          # minmax | zscore
     REDUCTION_DIMS = 3                 # Target components for PCA
     CLUSTER_ALGO_MODE = "dbscan"       # kmeans | dbscan
+    DBSCAN_EPS = 0.2                   # Calibrated for normalized 800x600 latent space
+    DBSCAN_MIN_SAMPLES = 4             # Minimum dense neighbors to form a Routing Centroid
 
     # =========================================================
     # Randomness / Reproducibility

@@ -17,7 +17,7 @@ class InteractiveDashboard:
         # Turn on interactive mode
         plt.ion()
         self.fig = plt.figure(figsize=(12, 8))
-        self.fig.canvas.manager.set_window_title("Autonomous UAV Simulation - Phase 3.6")
+        self.fig.canvas.manager.set_window_title("Latent C-Space Trajectory & Data Acquisition - Phase 3.7")
         
         # Setup Axes
         self.ax = self.fig.add_subplot(111)
@@ -26,14 +26,16 @@ class InteractiveDashboard:
         
         self.current_ax = self.ax
         
-        # Setup UI Button
-        self.ax_toggle = plt.axes([0.8, 0.05, 0.1, 0.05])
-        self.btn_toggle = widgets.Button(self.ax_toggle, 'Toggle 2D/3D')
-        self.btn_toggle.on_clicked(self._toggle_view)
+        # Setup UI Keyboard Toggle (Prevents UI threading freezes)
+        self.fig.canvas.mpl_connect('key_press_event', self._on_keypress)
         
         self.cluster_centers = []
+        
+    def _on_keypress(self, event):
+        if event.key == 't' or event.key == 'T':
+            self._toggle_view()
             
-    def _toggle_view(self, event):
+    def _toggle_view(self):
         self.is_3d = not self.is_3d
         self.ax.set_visible(not self.is_3d)
         self.ax_3d.set_visible(self.is_3d)
@@ -54,22 +56,22 @@ class InteractiveDashboard:
                 if not np.all(centroid == 0):
                     self.cluster_centers.append((centroid[0], centroid[1], f"Cluster {i+1}"))
         
-        # Setup Grid
+        # Setup C-Space Grid
         ax.set_xlim(0, self.env.width)
         ax.set_ylim(0, self.env.height)
         if is_3d:
             ax.set_zlim(0, 50)
-            ax.set_zlabel("Altitude (m)")
-        ax.set_xlabel("X (m)")
-        ax.set_ylabel("Y (m)")
-        ax.set_title(f"IEEE-Style UAV Trajectory - Step {step} | Battery: {uav.current_battery/1000:.1f}kJ")
-        ax.grid(True, linestyle="--", alpha=0.6)
+            ax.set_zlabel("Z-Axis Elevation (m)")
+        ax.set_xlabel("X-Axis Spatial Coordinate (m)")
+        ax.set_ylabel("Y-Axis Spatial Coordinate (m)")
+        ax.set_title(f"Dynamic Service Time (DST-BA) Trajectory - Iteration {step} | Energy Reserve: {uav.current_battery/1000:,.1f} kJ\n[Press 'T' to Toggle 2D/3D View]")
+        ax.grid(True, linestyle=":", alpha=0.5)
         
-        # 1. Base Station
+        # 1. Primary Sink Node (Base Station)
         if is_3d:
-            ax.scatter(base_pos[0], base_pos[1], 0, c='black', marker='^', s=200, label="Base Station")
+            ax.scatter(base_pos[0], base_pos[1], 0, c='black', marker='s', s=150, label="Primary Sink Node")
         else:
-            ax.scatter(base_pos[0], base_pos[1], c='black', marker='^', s=200, label="Base Station")
+            ax.scatter(base_pos[0], base_pos[1], c='black', marker='s', s=150, label="Primary Sink Node")
             
         # 2. Cluster Communication Zones
         comm_radius = 120
@@ -111,21 +113,45 @@ class InteractiveDashboard:
                 if node.current_buffer > 0.01:
                     ax.text(node.x + 5, node.y + 5, f"{node.current_buffer:.1f}", fontsize=8)
 
-        # 4. Render UAV & Trail
+        # 4. Environment Obstacles (Collision Avoidance Prisms)
+        import matplotlib.patches as patches
+        for obs in self.env.obstacles:
+            dx = obs.x2 - obs.x1
+            dy = obs.y2 - obs.y1
+            if is_3d:
+                # Plot physical 3D block
+                ax.bar3d(obs.x1, obs.y1, 0, dx, dy, 50, color='darkred', alpha=0.15, edgecolor='maroon')
+            else:
+                rect = patches.Rectangle((obs.x1, obs.y1), dx, dy, linewidth=1, edgecolor='maroon', facecolor='darkred', alpha=0.15)
+                ax.add_patch(rect)
+
+        # 5. Render UAV & Spatial Trajectory
         trail_x = [p[0] for p in self.env.uav_trail]
         trail_y = [p[1] for p in self.env.uav_trail]
         
+        # Flight State Inference
+        uav_state = "Transit Maneuver"
+        if current_target and current_target.current_buffer > 0.01:
+            uav_state = f"Active Acquisition [Target ID: {current_target.id}]"
+            
         if is_3d:
             trail_z = [p[2] for p in self.env.uav_trail] if len(self.env.uav_trail) > 0 and len(self.env.uav_trail[0]) > 2 else [getattr(uav, 'z', 0.0)] * len(trail_x)
-            ax.plot(trail_x, trail_y, trail_z, c='blue', alpha=0.6, linewidth=2, label="Trajectory")
-            ax.scatter(uav.x, uav.y, getattr(uav, 'z', 0.0), c='cyan', marker='o', s=150, edgecolors='blue')
-            if current_target:
-                ax.plot([uav.x, current_target.x], [uav.y, current_target.y], [getattr(uav, 'z', 0.0), getattr(current_target, 'z', 0.0)], c='red', linestyle=':')
+            ax.plot(trail_x, trail_y, trail_z, c='#1f77b4', alpha=0.8, linewidth=1.5, label="UAV Trajectory")
+            ax.scatter(uav.x, uav.y, getattr(uav, 'z', 0.0), c='cyan', marker='^', s=120, edgecolors='blue')
+            ax.text(uav.x, uav.y, getattr(uav, 'z', 0.0) + 5, f"State: {uav_state}", color='teal', fontsize=8, fontweight='bold')
+            
+            # Active LOS Data Link
+            if current_target and current_target.current_buffer > 0.01:
+                ax.plot([uav.x, current_target.x], [uav.y, current_target.y], [getattr(uav, 'z', 0.0), getattr(current_target, 'z', 0.0)], c='red', linestyle='--', linewidth=2, alpha=0.7)
+                
         else:
-            ax.plot(trail_x, trail_y, c='blue', alpha=0.6, linewidth=2, label="Trajectory")
-            ax.scatter(uav.x, uav.y, c='cyan', marker='o', s=150, edgecolors='blue')
-            if current_target:
-                ax.plot([uav.x, current_target.x], [uav.y, current_target.y], c='red', linestyle=':')
+            ax.plot(trail_x, trail_y, c='#1f77b4', alpha=0.8, linewidth=1.5, label="UAV Trajectory")
+            ax.scatter(uav.x, uav.y, c='cyan', marker='^', s=120, edgecolors='blue')
+            ax.text(uav.x + 5, uav.y + 10, f"State: {uav_state}", color='teal', fontsize=8, fontweight='bold')
+            
+            # Active LOS Data Link
+            if current_target and current_target.current_buffer > 0.01:
+                ax.plot([uav.x, current_target.x], [uav.y, current_target.y], c='red', linestyle='--', linewidth=2, alpha=0.7)
 
         # Only standard axes need a legend in top right (avoid button collision)
         if step == 1 or step % 50 == 0:

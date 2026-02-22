@@ -450,7 +450,13 @@ class MissionController:
         # If no valid motion primitive found
         if best_move is None:
             self.collision_count += 1
-            self._trigger_replan("collision")
+            print(f"[Warning] UAV trapped near ({current_pos[0]:.1f}, {current_pos[1]:.1f}). Forcing escape bounce.")
+            # Bouncing logic: reverse direction slightly to break out of local minima
+            self.uav.x = max(0.0, min(float(self.env.width), self.uav.x - 2.0 * math.cos(self.uav.yaw)))
+            self.uav.y = max(0.0, min(float(self.env.height), self.uav.y - 2.0 * math.sin(self.uav.yaw)))
+            self.uav.yaw += math.pi  # Turn around 180 deg
+            
+            self._trigger_replan("collision_escape")
             self.current_target = None
             return
 
