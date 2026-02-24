@@ -99,6 +99,13 @@ class Config:
     DEFAULT_DATA_RATE_MBPS = 0.5    
 
     # =========================================================
+    # Rendezvous Point (RP) Selection (Gap 1 — Donipati et al.)
+    # Greedy neighbourhood algorithm: compresses N nodes → |R| << N RPs.
+    # =========================================================
+    ENABLE_RENDEZVOUS_SELECTION = True
+    RP_COVERAGE_RADIUS = 120.0          # R_max: ground node TX range (metres)
+
+    # =========================================================
     # IoT Node First-Order Radio Energy Model (Gap 2 — DST-BA)
     # Based on Heinzelman et al. first-order model:
     #   E_tx(b, d) = E_elec * b + E_amp * b * d^2  (Joules)

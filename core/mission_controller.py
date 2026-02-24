@@ -15,6 +15,7 @@ from core.buffer_aware_manager import BufferAwareManager
 from core.clustering.cluster_manager import ClusterManager
 from path.pca_gls_router import PCAGLSRouter
 from core.digital_twin_map import DigitalTwinMap
+from core.rendezvous_selector import RendezvousSelector
 
 
 class MissionController:
@@ -47,6 +48,9 @@ class MissionController:
         self.cluster_manager = ClusterManager()
         self.active_centroids = []
         self.active_labels = []
+
+        # Rendezvous Point analytics (Gap 1)
+        self.rp_member_map: dict = {}  # {rp_id: [member_node_ids]}
 
         # Metrics
         self.energy_consumed_total = 0.0
@@ -235,6 +239,15 @@ class MissionController:
             self.target_queue = []
             self.current_target = None
             return
+
+        # ---- Gap 1: Rendezvous Point Selection (Donipati et al., Algorithm 1) ----
+        # Compress the full node set to a minimal RP subset so the UAV visits
+        # far fewer waypoints, dramatically reducing path length and energy.
+        if Config.ENABLE_RENDEZVOUS_SELECTION and len(remaining) > 3:
+            rp_nodes, rp_member_map = RendezvousSelector.apply(remaining)
+            if rp_nodes:
+                self.rp_member_map = rp_member_map   # store for analytics
+                remaining = rp_nodes                 # route through RPs only
 
         ux, uy, uz = self.uav.position()
 
