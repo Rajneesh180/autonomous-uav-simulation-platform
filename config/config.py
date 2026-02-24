@@ -125,6 +125,8 @@ class Config:
     MIN_SENSING_PROB_THRESH = 0.7  # Threshold below which sensing is invalid
     MAX_AOI_LIMIT = 200            # Time-steps until data expires
     ENABLE_AOI_EXPIRATION = True
+    SENSING_OMEGA = 0.95           # Target cumulative sensing success probability (Gap 3)
+    SENSING_SLOT_DURATION = 1.0    # Duration of each sensing trial slot T_s (seconds)
 
     # =========================================================
     # Temporal Engine

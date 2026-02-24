@@ -147,16 +147,70 @@ class CommunicationEngine:
         return rate_bps / 1e6
 
     @staticmethod
+    def required_sensing_trials(distance: float,
+                                tau: float = None,
+                                omega: float = None) -> int:
+        """
+        Minimum number of sensing trials n̂_s needed to achieve cumulative
+        success probability ≥ ω at the given UAV-node distance.
+
+        Multi-trial model (Zheng & Liu, IEEE TVT 2025, Eq. 4–6):
+            P_suc^(n_s) = 1 - (1 - e^{-τ*d})^{n_s}   ≥   ω
+            ⟹  n̂_s = ⌈ log(1-ω) / log(1 - e^{-τ*d}) ⌉
+
+        Returns 1 if a single trial already exceeds ω, or a large sentinel
+        (Config.MAX_TIME_STEPS) if the channel is unreachable.
+        """
+        import math
+        if tau is None:
+            tau = Config.SENSING_TAU
+        if omega is None:
+            omega = Config.SENSING_OMEGA
+
+        p_single = math.exp(-tau * distance)
+
+        if p_single <= 0.0:
+            return Config.MAX_TIME_STEPS          # unreachable
+
+        if p_single >= omega:
+            return 1                              # single trial sufficient
+
+        # n̂_s = ceil( log(1-ω) / log(1 - p_single) )
+        log_num = math.log(1.0 - omega)
+        log_den = math.log(1.0 - p_single)
+        if log_den >= 0.0:
+            return Config.MAX_TIME_STEPS          # degenerate case
+        n_s = math.ceil(log_num / log_den)
+        return max(1, int(n_s))
+
+    @staticmethod
+    def minimum_hover_time(distance: float,
+                           tau: float = None,
+                           omega: float = None,
+                           slot_duration: float = None) -> float:
+        """
+        Minimum hover time T_hover_min = n̂_s × T_s (seconds).
+
+        Aligned with: Zheng & Liu (IEEE TVT 2025) — Eq. 6.
+        Used by BufferAwareManager to enforce mandatory hover budget at each RP.
+        """
+        if slot_duration is None:
+            slot_duration = Config.SENSING_SLOT_DURATION
+        n_s = CommunicationEngine.required_sensing_trials(distance, tau, omega)
+        return float(n_s) * slot_duration
+
+    @staticmethod
     def probabilistic_sensing_success(distance: float) -> bool:
+        """
+        Legacy single-trial Bernoulli draw — retained for backward compatibility.
+        New code should use required_sensing_trials() for multi-trial budgeting.
+        """
         if not Config.ENABLE_PROBABILISTIC_SENSING:
             return True
-            
-        import random
         prob = math.exp(-Config.SENSING_TAU * distance)
-        
         if prob < Config.MIN_SENSING_PROB_THRESH:
             prob = 0.0
-            
+        import random
         return random.random() <= prob
 
     @staticmethod

@@ -31,20 +31,26 @@ class BufferAwareManager:
     @staticmethod
     def get_optimal_hover_strategy(uav_pos, node, env=None) -> dict:
         """
-        Returns the optimal strategy (Center-Hover vs Chord-Fly).
-        If buffer is full (current >= capacity * 0.95), UAV must center-hover.
-        Otherwise, it can chord-fly.
+        Returns the optimal strategy (Center-Hover vs Chord-Fly) and the
+        minimum mandatory hover time derived from the multi-trial sensing model.
+
+        Gap 3 (Zheng & Liu, IEEE TVT 2025): the UAV must hover for at least
+        n̂_s = ceil(log(1-ω)/log(1-e^{-τd})) sensing slots before the cumulative
+        success probability exceeds the target threshold ω.
         """
-        # Using 95% threshold to define 'Full' to prevent floating point edge cases
+        from metrics.metric_engine import MetricEngine
         is_full = node.current_buffer >= (node.buffer_capacity * 0.95)
-        
         required_time = BufferAwareManager.calculate_service_time(uav_pos, node, is_full, env)
-        
+
+        # Multi-trial sensing: minimum hover time budget
+        dist = MetricEngine.euclidean_distance(node.position(), uav_pos)
+        min_hover_s = CommunicationEngine.minimum_hover_time(dist)
+
         strategy = "Center-Hover" if is_full else "Chord-Fly"
-        
         return {
             "strategy": strategy,
             "required_service_time": required_time,
+            "min_hover_time_s": min_hover_s,
             "buffer_drained": node.current_buffer
         }
 
