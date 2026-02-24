@@ -129,11 +129,16 @@ class BaseStationUplinkModel:
         t_fly_steps = dist_to_bs / max(uav_speed, 1e-3)
 
         # Estimate uplink time in simulation steps
+        # Cap at BS_DATA_AGE_LIMIT when uplink rate is near zero to avoid inf propagation
         t_uplink_s = BaseStationUplinkModel.uplink_time(payload_mbits, uav_pos, base_pos)
+        if t_uplink_s == float("inf") or t_uplink_s > Config.BS_DATA_AGE_LIMIT * Config.TIME_STEP:
+            # Channel too weak to compute meaningful urgency — don't force early return
+            return False
         t_uplink_steps = t_uplink_s / float(Config.TIME_STEP)
 
         total_needed = t_fly_steps + t_uplink_steps
         return total_needed >= remaining_budget
+
 
     # ------------------------------------------------------------------
     # Payload Offload
