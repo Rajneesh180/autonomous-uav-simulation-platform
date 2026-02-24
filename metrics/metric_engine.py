@@ -67,8 +67,10 @@ class MetricEngine:
         total_steps = results["steps"] if results["steps"] > 0 else 1
 
         # --- Primary rates ---
-        replan_frequency = results["replans"] / total_steps
-        collision_rate = results["collisions"] / total_steps
+        replan_frequency = results.get("replans", 0) / total_steps
+        # Support both legacy 'collisions' (int) and new 'collision_rate' (float) keys
+        collision_count = results.get("collisions", results.get("collision_count", 0))
+        collision_rate = collision_count / total_steps
 
         # --- Correct causal latency ---
         adaptation_latency = MetricEngine.compute_adaptation_latency(
