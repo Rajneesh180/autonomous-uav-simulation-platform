@@ -55,31 +55,39 @@ class BufferAwareManager:
         }
 
     @staticmethod
-    def process_data_collection(uav_pos, node, dt: float, env=None) -> float:
+    def process_data_collection(uav_pos, node, dt: float, env=None,
+                                active_node_id: int = None) -> float:
         """
         Processes data collection over a time step dt.
         Returns the amount of data collected in Mbits.
+
+        Gap 7 (Wang et al., IEEE IoT 2022): When ENABLE_TDMA_SCHEDULING is True,
+        only the designated active node (active_node_id) may transmit per slot.
+        All other nodes are silenced — enforcing TDMA discipline.
         """
+        # TDMA enforcement: only the scheduled node transmits this step
+        if Config.ENABLE_TDMA_SCHEDULING and active_node_id is not None:
+            if node.id != active_node_id:
+                return 0.0  # TDMA silence — node waits for its slot
+
         from metrics.metric_engine import MetricEngine
         dist = MetricEngine.euclidean_distance(node.position(), uav_pos)
-        
+
         if not CommunicationEngine.probabilistic_sensing_success(dist):
-            # Packet loss or sensing failure
             return 0.0
-            
+
         rate_mbps = CommunicationEngine.achievable_data_rate(
             node.position(), uav_pos, env
         )
-        
+
         collectable_data = rate_mbps * dt
         data_collected = min(node.current_buffer, collectable_data)
-        
+
         node.current_buffer -= data_collected
         if data_collected > 0:
-            node.aoi_timer = 0.0  # Reset Age of Information timer
-        
-        # Structure safeguard
+            node.aoi_timer = 0.0  # Reset AoI timer on successful collection
+
         if node.current_buffer < 0:
             node.current_buffer = 0.0
-            
+
         return data_collected

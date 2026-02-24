@@ -15,6 +15,7 @@ from core.buffer_aware_manager import BufferAwareManager
 from core.clustering.cluster_manager import ClusterManager
 from path.pca_gls_router import PCAGLSRouter
 from path.ga_sequence_optimizer import GASequenceOptimizer
+from path.hover_optimizer import HoverOptimizer
 from core.digital_twin_map import DigitalTwinMap
 from core.rendezvous_selector import RendezvousSelector
 from core.obstacle_model import ObstacleHeightModel
@@ -372,8 +373,10 @@ class MissionController:
         # The UAV is capable of collecting data while in transit 
         # (probabilistic sensing over distance).
         data_collected = BufferAwareManager.process_data_collection(
-            self.uav.position(), self.current_target, dt, self.env
+            self.uav.position(), self.current_target, dt, self.env,
+            active_node_id=self.current_target.id  # Gap 7: TDMA — only this node transmits
         )
+
 
         # IEEE MetricsDashboard instrumentation: log achievable rate and cumulative data
         if data_collected > 0:

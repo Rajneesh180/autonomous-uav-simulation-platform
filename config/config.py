@@ -117,6 +117,20 @@ class Config:
     RP_COVERAGE_RADIUS = 120.0          # R_max: ground node TX range (metres)
 
     # =========================================================
+    # TDMA Single-Node Scheduling (Gap 7 — Wang et al., IEEE IoT 2022)
+    # =========================================================
+    ENABLE_TDMA_SCHEDULING = True       # enforce single-node-per-slot discipline
+
+    # =========================================================
+    # SCA Hover Position Optimizer (Gap 9)
+    # Successive Convex Approximation: refine hover xyz minimising path cost
+    # =========================================================
+    ENABLE_SCA_HOVER = True
+    SCA_MAX_ITERATIONS = 15             # max SCA refinement steps per hover point
+    SCA_STEP_SIZE = 3.0                 # initial gradient step (metres)
+    SCA_CONVERGENCE_TOL = 0.5           # distance convergence threshold (metres)
+
+    # =========================================================
     # IoT Node First-Order Radio Energy Model (Gap 2 — DST-BA)
     # Based on Heinzelman et al. first-order model:
     #   E_tx(b, d) = E_elec * b + E_amp * b * d^2  (Joules)
