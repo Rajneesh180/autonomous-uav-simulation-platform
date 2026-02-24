@@ -99,7 +99,7 @@ class Config:
     BS_GAMMA_0_DB = -10.0           # Reference SNR / channel gain (γ₀) in dB
     BS_PATH_LOSS_EXP = 2.5          # Path-loss exponent α for UAV-BS link
     BS_HEIGHT_M = 5.0               # Base station antenna height (metres)
-    BS_DATA_AGE_LIMIT = 100         # T_data_limit: max steps before forced uplink
+    BS_DATA_AGE_LIMIT = 300         # T_data_limit: max steps before forced uplink (was 100)
     BS_UPLINK_CHECK_INTERVAL = 10   # Check uplink urgency every N steps
     ENABLE_BS_UPLINK_MODEL = True   # Toggle BS uplink urgency + offload
 
@@ -115,6 +115,7 @@ class Config:
     # =========================================================
     ENABLE_RENDEZVOUS_SELECTION = True
     RP_COVERAGE_RADIUS = 120.0          # R_max: ground node TX range (metres)
+    RP_OBSTACLE_BUFFER = 35.0           # Min distance from obstacle footprint for RP eligibility
 
     # =========================================================
     # TDMA Single-Node Scheduling (Gap 7 — Wang et al., IEEE IoT 2022)

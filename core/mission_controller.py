@@ -281,11 +281,15 @@ class MissionController:
         # ---- Gap 1: Rendezvous Point Selection (Donipati et al., Algorithm 1) ----
         # Compress the full node set to a minimal RP subset so the UAV visits
         # far fewer waypoints, dramatically reducing path length and energy.
+        # Fix 3: pass obstacles so obstacle-adjacent nodes are excluded as RPs.
         if Config.ENABLE_RENDEZVOUS_SELECTION and len(remaining) > 3:
-            rp_nodes, rp_member_map = RendezvousSelector.apply(remaining)
+            rp_nodes, rp_member_map = RendezvousSelector.apply(
+                remaining, obstacles=self.env.obstacles
+            )
             if rp_nodes:
-                self.rp_member_map = rp_member_map   # store for analytics
-                remaining = rp_nodes                 # route through RPs only
+                self.rp_member_map = rp_member_map
+                remaining = rp_nodes
+
 
         ux, uy, uz = self.uav.position()
 

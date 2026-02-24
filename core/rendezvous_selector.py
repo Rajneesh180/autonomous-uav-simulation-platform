@@ -41,24 +41,31 @@ class RendezvousSelector:
     # Public API
     # ------------------------------------------------------------------
 
-    def select(self, nodes: List[Node]) -> Tuple[List[Node], dict]:
+    def select(self, nodes: List[Node], obstacles: list = None) -> Tuple[List[Node], dict]:
         """
         Execute the greedy RP selection algorithm.
 
         Parameters
         ----------
-        nodes : list of Node
-            The full ground-node set (exclude UAV anchor node 0).
+        nodes     : list of Node — the full ground-node set (exclude UAV anchor 0).
+        obstacles : list of Obstacle — if provided, nodes too close to any obstacle
+                    footprint are excluded from RP candidates to avoid trap zones.
 
         Returns
         -------
-        rp_nodes : list of Node
-            The selected Rendezvous Point nodes (UAV visit targets).
+        rp_nodes   : list of Node — selected Rendezvous Point nodes.
         member_map : dict {rp_id: [member_node_ids]}
-            Mapping of each RP to the non-RP nodes it covers.
         """
         if not nodes:
             return [], {}
+
+        # Filter out nodes that are too close to obstacles (Fix 3 — avoid trap zones)
+        buffer_r = Config.RP_OBSTACLE_BUFFER
+        if obstacles and buffer_r > 0:
+            safe_nodes = [n for n in nodes if not self._near_obstacle(n, obstacles, buffer_r)]
+            # keep all nodes if filtering is too aggressive (< 3 safe nodes)
+            if len(safe_nodes) >= 3:
+                nodes = safe_nodes
 
         node_map = {n.id: n for n in nodes}
 
@@ -109,6 +116,16 @@ class RendezvousSelector:
         }
 
     @staticmethod
+    def _near_obstacle(node: Node, obstacles: list, buffer_r: float) -> bool:
+        """Return True if node is within buffer_r of any obstacle bounding box."""
+        for obs in obstacles:
+            cx = max(obs.x1, min(node.x, obs.x2))
+            cy = max(obs.y1, min(node.y, obs.y2))
+            if math.hypot(node.x - cx, node.y - cy) < buffer_r:
+                return True
+        return False
+
+    @staticmethod
     def _dist(a: Node, b: Node) -> float:
         return math.hypot(a.x - b.x, a.y - b.y)
 
@@ -117,9 +134,10 @@ class RendezvousSelector:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def apply(nodes: List[Node], r_max: float = None) -> Tuple[List[Node], dict]:
+    def apply(nodes: List[Node], r_max: float = None,
+              obstacles: list = None) -> Tuple[List[Node], dict]:
         """
         Single-call convenience wrapper. Returns (rp_nodes, member_map).
         """
         selector = RendezvousSelector(r_max=r_max)
-        return selector.select(nodes)
+        return selector.select(nodes, obstacles=obstacles)
