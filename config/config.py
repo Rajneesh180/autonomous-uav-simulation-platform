@@ -93,6 +93,17 @@ class Config:
     NODE_TX_POWER = 0.1            # 100 mW
 
     # =========================================================
+    # Base Station Uplink Model (Gap 10 — Zheng & Liu, IEEE TVT 2025)
+    # R_BS = B log2(1 + γ₀ / d_3d^α)
+    # =========================================================
+    BS_GAMMA_0_DB = -10.0           # Reference SNR / channel gain (γ₀) in dB
+    BS_PATH_LOSS_EXP = 2.5          # Path-loss exponent α for UAV-BS link
+    BS_HEIGHT_M = 5.0               # Base station antenna height (metres)
+    BS_DATA_AGE_LIMIT = 100         # T_data_limit: max steps before forced uplink
+    BS_UPLINK_CHECK_INTERVAL = 10   # Check uplink urgency every N steps
+    ENABLE_BS_UPLINK_MODEL = True   # Toggle BS uplink urgency + offload
+
+    # =========================================================
     # Buffer & Data Collection Settings (DST-BA)
     # =========================================================
     DEFAULT_BUFFER_CAP_MBITS = 50.0 

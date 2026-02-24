@@ -17,6 +17,7 @@ from path.pca_gls_router import PCAGLSRouter
 from core.digital_twin_map import DigitalTwinMap
 from core.rendezvous_selector import RendezvousSelector
 from core.obstacle_model import ObstacleHeightModel
+from core.base_station_uplink import BaseStationUplinkModel
 
 
 class MissionController:
@@ -65,6 +66,10 @@ class MissionController:
         # IEEE-aligned metric instrumentation (MetricsDashboard)
         self.rate_log: list = []            # per-step achievable Shannon rate (Mbps)
         self.collected_data_mbits: float = 0.0  # cumulative data collected across all nodes
+
+        # Base Station Uplink state (Gap 10)
+        self.last_uplink_step: int = 0
+        self.total_uplinked_mbits: float = 0.0
 
         # Histories
         self.visited_history = []
@@ -187,7 +192,25 @@ class MissionController:
                     uav_pos=self.uav.position() if uav_nearby else None
                 )
 
+        # Gap 10: BS Uplink Urgency Check (Zheng & Liu, IEEE TVT 2025 — Eq. 25)
+        # Periodically evaluate data-age constraint: T_collect + T_fly + T_uplink ≤ T_limit
+        if (Config.ENABLE_BS_UPLINK_MODEL
+                and self.temporal.current_step % Config.BS_UPLINK_CHECK_INTERVAL == 0
+                and self.collected_data_mbits > 0):
+            must_uplink = BaseStationUplinkModel.must_uplink_now(
+                uav_pos=self.uav.position(),
+                base_pos=self.base_position,
+                payload_mbits=self.collected_data_mbits,
+                current_step=self.temporal.current_step,
+                last_uplink_step=self.last_uplink_step,
+            )
+            if must_uplink:
+                print(f"[BS Uplink] Step {self.temporal.current_step}: data-age limit approaching — offloading payload.")
+                BaseStationUplinkModel.execute_uplink(self, self.temporal.current_step)
+                self._trigger_replan("bs_uplink_return")
+
         self._move_one_step()
+
 
         # Histories
         self.visited_history.append(len(self.visited))
