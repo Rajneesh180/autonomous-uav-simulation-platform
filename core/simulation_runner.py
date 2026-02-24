@@ -99,10 +99,7 @@ def run_simulation(verbose=True, render=True, seed_override=None):
         "run_id": run_id,
         "seed": active_seed,
         "steps": step_counter,
-        "final_battery": mission.uav.current_battery,
-        "visited": len(mission.visited),
         "replans": temporal.replan_count,
-        "collisions": mission.collision_count,
         "unsafe_return": mission.unsafe_return_count,
         "event_count": mission.event_count,
         "event_timestamps": mission.event_timestamps,
@@ -114,12 +111,27 @@ def run_simulation(verbose=True, render=True, seed_override=None):
         ),
     }
 
-    # Semantic Evaluations
+    # ---- IEEE-aligned Comprehensive MetricsDashboard ----
+    dashboard = MetricEngine.compute_full_dashboard(
+        mission=mission,
+        env=env,
+        temporal=temporal,
+        time_step=float(Config.TIME_STEP),
+        collected_data_mbits=mission.collected_data_mbits,
+        rate_log=mission.rate_log,
+    )
+    results.update(dashboard)
+
+    # ---- Stability Metrics ----
+    stability = MetricEngine.compute_stability_metrics(results)
+    results.update(stability)
+
+    # ---- Semantic Evaluations ----
     if Config.ENABLE_SEMANTIC_CLUSTERING:
         visited_nodes_objs = [n for n in env.nodes if n.id in mission.visited]
         semantic_scores = MetricEngine.compute_semantic_metrics(
             visited_nodes=visited_nodes_objs,
-            all_nodes=env.nodes[1:], 
+            all_nodes=env.nodes[1:],
             active_labels=mission.active_labels
         )
         results.update(semantic_scores)

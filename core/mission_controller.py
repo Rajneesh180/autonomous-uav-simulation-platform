@@ -57,6 +57,10 @@ class MissionController:
         self.energy_prediction_error_sum = 0.0
         self.energy_prediction_samples = 0
 
+        # IEEE-aligned metric instrumentation (MetricsDashboard)
+        self.rate_log: list = []            # per-step achievable Shannon rate (Mbps)
+        self.collected_data_mbits: float = 0.0  # cumulative data collected across all nodes
+
         # Histories
         self.visited_history = []
         self.battery_history = []
@@ -309,7 +313,16 @@ class MissionController:
         data_collected = BufferAwareManager.process_data_collection(
             self.uav.position(), self.current_target, dt, self.env
         )
-        
+
+        # IEEE MetricsDashboard instrumentation: log achievable rate and cumulative data
+        if data_collected > 0:
+            self.collected_data_mbits += data_collected
+            # Compute instantaneous achievable Shannon rate at current UAV-node distance
+            _rate = CommunicationEngine.achievable_data_rate(
+                self.current_target.position(), self.uav.position()
+            )
+            self.rate_log.append(_rate)
+
         if data_collected > 0 and distance > 5.0:
             print(f"[Chord-Fly] Node {self.current_target.id} at {distance:.1f}m | Collected {data_collected:.2f}Mb | Rem: {self.current_target.current_buffer:.2f}Mb")
             
