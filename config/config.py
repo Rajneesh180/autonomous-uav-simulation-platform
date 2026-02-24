@@ -148,6 +148,13 @@ class Config:
     OBSTACLE_MOTION_MODE = "linear"  # linear | random_walk
     OBSTACLE_VELOCITY_SCALE = 0.6
 
+    # 3D Gaussian Obstacle Height Model (Gap 5 — Zheng & Liu, IEEE TVT 2025)
+    # z_obs(x,y) = Σ hᵢ * exp(-((x-xᵢ)/aˣ)² - ((y-yᵢ)/aʸ)²)
+    GAUSSIAN_SPREAD_X = 40.0        # aˣ: horizontal spread in x (metres)
+    GAUSSIAN_SPREAD_Y = 40.0        # aʸ: horizontal spread in y (metres)
+    VERTICAL_CLEARANCE = 10.0       # Δz: minimum clearance above obstacle peak (m)
+    ENABLE_GAUSSIAN_HEIGHT = True   # Toggle altitude constraint enforcement
+
     # =========================================================
     # Risk Zones
     # =========================================================

@@ -16,6 +16,7 @@ from core.clustering.cluster_manager import ClusterManager
 from path.pca_gls_router import PCAGLSRouter
 from core.digital_twin_map import DigitalTwinMap
 from core.rendezvous_selector import RendezvousSelector
+from core.obstacle_model import ObstacleHeightModel
 
 
 class MissionController:
@@ -432,7 +433,11 @@ class MissionController:
                 new_y = current_pos[1] + step_size * math.cos(pitch) * math.sin(yaw)
                 new_z = current_pos[2] + step_size * math.sin(pitch) if FeatureToggles.DIMENSIONS == "3D" else current_pos[2]
 
-                # Hard collision check
+                # Gap 5: 3D Gaussian altitude constraint (Zheng & Liu, IEEE TVT 2025)
+                # Clamp z so UAV never flies below z_obs(x,y) + vertical clearance
+                new_z = ObstacleHeightModel.enforce_altitude(new_x, new_y, new_z, self.env.obstacles)
+
+                # Hard collision check (2D footprint)
                 if self.env.point_in_obstacle((new_x, new_y)):
                     continue
 
