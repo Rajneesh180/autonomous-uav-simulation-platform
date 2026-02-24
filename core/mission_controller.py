@@ -14,6 +14,7 @@ from core.buffer_aware_manager import BufferAwareManager
 
 from core.clustering.cluster_manager import ClusterManager
 from path.pca_gls_router import PCAGLSRouter
+from path.ga_sequence_optimizer import GASequenceOptimizer
 from core.digital_twin_map import DigitalTwinMap
 from core.rendezvous_selector import RendezvousSelector
 from core.obstacle_model import ObstacleHeightModel
@@ -297,10 +298,24 @@ class MissionController:
                 if priority_subgroup:
                     remaining = priority_subgroup
 
-        # Execute PCA-GLS Meta-Heuristic on the priority subgroup
-        self.target_queue = PCAGLSRouter.optimize((ux, uy, uz), remaining)
+        # Stage 1: PCA-GLS Meta-Heuristic seed on the priority subgroup
+        pca_gls_order = PCAGLSRouter.optimize((ux, uy, uz), remaining)
+
+        # Stage 2: GA Visiting Sequence Refinement (Gap 4 — Zheng & Liu, IEEE TVT 2025)
+        # Uses PCA-GLS result as warm-start seed; refines with OX crossover + swap mutation
+        # subject to time-window feasibility constraints [e_j, l_j].
+        if Config.ENABLE_GA_SEQUENCE and len(remaining) >= 4:
+            self.target_queue = GASequenceOptimizer.apply(
+                start_pos=(ux, uy, uz),
+                nodes=remaining,
+                seed_order=pca_gls_order,
+            )
+            print(f"[GA Optimizer] Refined sequence of {len(self.target_queue)} nodes via GA+PCA-GLS")
+        else:
+            self.target_queue = pca_gls_order
 
         self.current_target = None
+
 
     def _rectangle_clearance(self, x, y, obs):
         dx = max(obs.x1 - x, 0, x - obs.x2)

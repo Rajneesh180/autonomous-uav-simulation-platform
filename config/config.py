@@ -147,6 +147,16 @@ class Config:
     ENABLE_TEMPORAL = True
 
     # =========================================================
+    # GA Visiting Sequence Optimizer (Gap 4 — Zheng & Liu, IEEE TVT 2025)
+    # =========================================================
+    ENABLE_GA_SEQUENCE = True
+    GA_POPULATION_SIZE = 30
+    GA_MAX_GENERATIONS = 50
+    GA_CROSSOVER_RATE = 0.85
+    GA_MUTATION_RATE = 0.15
+    GA_TW_PENALTY_WEIGHT = 5.0
+
+    # =========================================================
     # Hostility Level (Phase-3 Control Spectrum)
     # =========================================================
     HOSTILITY_LEVEL = "medium"  # low | medium | high | extreme
