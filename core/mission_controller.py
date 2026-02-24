@@ -56,6 +56,10 @@ class MissionController:
         # Rendezvous Point analytics (Gap 1)
         self.rp_member_map: dict = {}  # {rp_id: [member_node_ids]}
 
+        # RP+GA plan cache — recompute only when visit set changes (perf fix)
+        self._rp_cache_key: frozenset = frozenset()
+        self._cached_queue: list = []
+
         # Metrics
         self.energy_consumed_total = 0.0
         self.collision_count = 0
@@ -266,6 +270,14 @@ class MissionController:
             self.current_target = None
             return
 
+        # ---- Cache check: skip RP+GA if visit set unchanged (e.g. trap escapes) ----
+        current_key = frozenset(n.id for n in remaining)
+        if current_key == self._rp_cache_key and self._cached_queue:
+            # restore cached queue (filter out already-visited targets)
+            self.target_queue = [n for n in self._cached_queue if n.id not in self.visited]
+            if self.target_queue:
+                return   # serve existing plan, skip expensive RP+GA
+
         # ---- Gap 1: Rendezvous Point Selection (Donipati et al., Algorithm 1) ----
         # Compress the full node set to a minimal RP subset so the UAV visits
         # far fewer waypoints, dramatically reducing path length and energy.
@@ -315,7 +327,12 @@ class MissionController:
         else:
             self.target_queue = pca_gls_order
 
+        # Write back cache so trap-escape replans reuse this plan without re-running GA
+        self._rp_cache_key = current_key
+        self._cached_queue = self.target_queue[:]
+
         self.current_target = None
+
 
 
     def _rectangle_clearance(self, x, y, obs):
