@@ -160,18 +160,52 @@ class CommunicationEngine:
         return random.random() <= prob
 
     @staticmethod
-    def fill_buffer(node, dt: float):
+    def compute_node_tx_energy(bits: float, distance_m: float) -> float:
         """
-        Increases the node's buffer filling based on generation rate over time dt.
+        First-order radio energy model for IoT node transmission.
+        Aligned with Heinzelman et al. (canonical WSN energy model) and
+        Donipati et al. (DST-BA, IEEE TNSM 2025) network-lifetime formulation.
+
+            E_tx(b, d) = E_elec * b + E_amp * b * d^2  [Joules]
+
+        Parameters
+        ----------
+        bits       : number of bits transmitted in this time step
+        distance_m : Euclidean distance from node to UAV (metres)
+        """
+        return (Config.NODE_E_ELEC_J_PER_BIT * bits
+                + Config.NODE_E_AMP_J_PER_BIT_M2 * bits * distance_m ** 2)
+
+    @staticmethod
+    def fill_buffer(node, dt: float, uav_pos: tuple = None):
+        """
+        Increases the node's buffer filling based on data generation rate over dt.
         Also tracks Age of Information (AoI) and expires data if too old.
+
+        Gap 2 (Donipati et al. DST-BA): when the UAV is within communication range
+        (uav_pos provided), deduct TX energy from the node's battery using the
+        first-order radio energy model E_tx = E_elec*b + E_amp*b*d^2.
         """
         generated = node.data_generation_rate * dt
         node.current_buffer = min(node.buffer_capacity, node.current_buffer + generated)
-        
+
         if Config.ENABLE_AOI_EXPIRATION:
             node.aoi_timer += dt
             if node.aoi_timer >= Config.MAX_AOI_LIMIT:
-                # Data expires due to Age of Information limits
                 node.current_buffer = 0.0
                 node.aoi_timer = 0.0
+
+        # ---- Node TX energy depletion (first-order radio model) ----
+        if Config.ENABLE_NODE_ENERGY_DRAIN and uav_pos is not None and node.node_battery_J > 0:
+            import math
+            dx = uav_pos[0] - node.x
+            dy = uav_pos[1] - node.y
+            dist_m = math.hypot(dx, dy)
+
+            # Convert Mbits generated to bits
+            bits_generated = generated * 1e6
+            if bits_generated > 0 and dist_m > 0:
+                e_tx = CommunicationEngine.compute_node_tx_energy(bits_generated, dist_m)
+                node.tx_energy_consumed_J += e_tx
+                node.node_battery_J = max(0.0, node.node_battery_J - e_tx)
 

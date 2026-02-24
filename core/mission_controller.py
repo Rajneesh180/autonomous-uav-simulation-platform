@@ -168,10 +168,19 @@ class MissionController:
             return
 
         # Fill buffers for all unvisited nodes based on Generation Rate
+        # Pass UAV position only for nodes within sensing radius so the first-order
+        # radio TX energy model (Gap 2) drains their battery during active transmission.
         dt = float(Config.TIME_STEP)
+        uav_x, uav_y, uav_z = self.uav.position()
         for node in self.env.nodes[1:]:
             if node.id not in self.visited:
-                CommunicationEngine.fill_buffer(node, dt)
+                import math
+                dist_to_node = math.hypot(node.x - uav_x, node.y - uav_y)
+                uav_nearby = dist_to_node <= Config.ISAC_SENSING_RADIUS
+                CommunicationEngine.fill_buffer(
+                    node, dt,
+                    uav_pos=self.uav.position() if uav_nearby else None
+                )
 
         self._move_one_step()
 

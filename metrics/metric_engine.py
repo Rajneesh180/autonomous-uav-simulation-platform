@@ -259,20 +259,21 @@ class MetricEngine:
     @staticmethod
     def compute_network_lifetime(nodes) -> float:
         """
-        Network Lifetime (steps or seconds):
-        Proportional battery remaining averaged across ground IoT nodes.
-        Returns fraction [0, 1] — 1.0 = all nodes fully alive.
+        Network Lifetime Residual Energy Fraction:
+        Mean residual battery across all ground IoT nodes normalised by their
+        initial capacity. Value in [0, 1] — 1.0 means all nodes fully alive.
 
-        True network lifetime tracking requires per-node TX energy depletion
-        (implemented in Gap 2 / CommunicationEngine). This computes the residual
-        energy fraction as a normalised proxy.
-
-        Aligned with: Donipati et al. (DST-BA, IEEE TNSM 2025) — network lifetime KPI.
+        Uses node.node_battery_J (first-order radio TX energy model, Gap 2),
+        aligned with: Donipati et al. (DST-BA, IEEE TNSM 2025) network lifetime KPI.
         """
-        ground_nodes = [n for n in nodes if n.id != 0]  # exclude UAV
+        from config.config import Config
+        ground_nodes = [n for n in nodes if n.id != 0]
         if not ground_nodes:
             return 1.0
-        fractions = [n.current_battery / n.battery_capacity for n in ground_nodes]
+        init_cap = Config.NODE_BATTERY_CAPACITY_J
+        if init_cap <= 0:
+            return 1.0
+        fractions = [n.node_battery_J / init_cap for n in ground_nodes]
         return round(sum(fractions) / len(fractions), 6)
 
     @staticmethod

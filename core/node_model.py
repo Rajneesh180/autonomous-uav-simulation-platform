@@ -42,7 +42,7 @@ class Node:
     time_window_end: float = float("inf")
 
     # ---------------------------------------------------------
-    # Energy Model (Initialized from Config)
+    # Energy Model (Initialized from Config) — UAV fields
     # ---------------------------------------------------------
     battery_capacity: float = field(default_factory=lambda: Config.BATTERY_CAPACITY)
     current_battery: float = field(init=False)
@@ -52,11 +52,21 @@ class Node:
     return_threshold: float = field(default_factory=lambda: Config.RETURN_THRESHOLD)
 
     # ---------------------------------------------------------
+    # IoT Node First-Order Radio TX Energy (Gap 2 — Donipati et al.)
+    # E_tx(b, d) = E_elec * b + E_amp * b * d^2
+    # Tracks cumulative transmission energy expenditure of this ground node.
+    # ---------------------------------------------------------
+    node_battery_J: float = field(init=False)          # residual IoT sensor energy (J)
+    tx_energy_consumed_J: float = field(init=False)    # cumulative TX energy spent (J)
+
+    # ---------------------------------------------------------
     # Initialization
     # ---------------------------------------------------------
 
     def __post_init__(self):
         self.current_battery = self.battery_capacity
+        self.node_battery_J = Config.NODE_BATTERY_CAPACITY_J
+        self.tx_energy_consumed_J = 0.0
 
     # ---------------------------------------------------------
     # Utilities

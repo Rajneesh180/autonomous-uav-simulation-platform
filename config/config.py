@@ -99,6 +99,18 @@ class Config:
     DEFAULT_DATA_RATE_MBPS = 0.5    
 
     # =========================================================
+    # IoT Node First-Order Radio Energy Model (Gap 2 — DST-BA)
+    # Based on Heinzelman et al. first-order model:
+    #   E_tx(b, d) = E_elec * b + E_amp * b * d^2  (Joules)
+    # where b = number of bits transmitted, d = distance (m).
+    # Aligned with: Donipati et al. (DST-BA, IEEE TNSM 2025)
+    # =========================================================
+    NODE_E_ELEC_J_PER_BIT = 50e-9          # Electronics energy: 50 nJ/bit
+    NODE_E_AMP_J_PER_BIT_M2 = 10e-12       # Amplifier energy: 10 pJ/bit/m^2
+    NODE_BATTERY_CAPACITY_J = 0.5          # Ground node battery: 0.5 J (typical IoT sensor)
+    ENABLE_NODE_ENERGY_DRAIN = True         # Toggle node TX energy depletion
+
+    # =========================================================
     # Phase 3.5: Probabilistic Sensing & Age of Information
     # =========================================================
     ENABLE_PROBABILISTIC_SENSING = True
