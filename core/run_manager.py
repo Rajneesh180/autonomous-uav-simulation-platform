@@ -17,7 +17,6 @@ class RunManager:
             "logs": os.path.join(self.base_path, "logs"),
             "frames": os.path.join(self.base_path, "frames"),
             "plots": os.path.join(self.base_path, "plots"),
-            "figures": os.path.join(self.base_path, "figures"),
             "telemetry": os.path.join(self.base_path, "telemetry"),
             "animations": os.path.join(self.base_path, "animations"),
             "reports": os.path.join(self.base_path, "reports"),

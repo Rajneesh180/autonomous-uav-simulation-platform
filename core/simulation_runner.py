@@ -89,12 +89,19 @@ def run_simulation(verbose=True, render=True, seed_override=None):
     step_counter = 0
     frames_path = run_manager.get_path("frames")
     telemetry = TelemetryLogger(run_manager.get_path("telemetry"))
+    keyframe_interval = max(1, Config.FRAME_SUBSAMPLE_INTERVAL)
 
     while mission.is_active():
         mission.step()
         telemetry.log_step(step_counter, mission)
-        if render:
-            PlotRenderer.render_environment_frame(env, frames_path, step_counter)
+
+        # Render frames: all steps if render=True, otherwise keyframes only
+        should_render = render or (step_counter % keyframe_interval == 0)
+        if should_render:
+            PlotRenderer.render_environment_frame(
+                env, frames_path, step_counter, mission=mission
+            )
+
         step_counter += 1
 
     # Flush telemetry and save node state snapshot
@@ -216,11 +223,10 @@ def run_simulation(verbose=True, render=True, seed_override=None):
 
     PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
 
-    # ---- GIF Animation ----
-    if render:
-        AnimationBuilder.build_gif(
-            frames_dir=frames_path,
-            output_dir=run_manager.get_path("animations"),
+    # ---- GIF Animation (always generated from available keyframes) ----
+    AnimationBuilder.build_gif(
+        frames_dir=frames_path,
+        output_dir=run_manager.get_path("animations"),
             fps=10,
             max_frames=200,  # cap at 200 frames for reasonable GIF size
         )

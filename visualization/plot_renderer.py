@@ -194,10 +194,10 @@ class PlotRenderer:
     # ENVIRONMENT FRAME (TEMPORAL SNAPSHOT)
     # ----------------------------------------------------
     @staticmethod
-    def render_environment_frame(env, save_dir, step):
+    def render_environment_frame(env, save_dir, step, mission=None):
         PlotRenderer._ensure_dir(save_dir)
 
-        fig = plt.figure(figsize=(8, 6))
+        fig = plt.figure(figsize=(10, 7))
         is_3d = FeatureToggles.DIMENSIONS == "3D"
         
         if is_3d:
@@ -205,15 +205,29 @@ class PlotRenderer:
         else:
             ax = fig.add_subplot(111)
 
-        # -------- Nodes --------
-        xs = [node.x for node in env.nodes]
-        ys = [node.y for node in env.nodes]
-        
-        if is_3d:
-            zs = [node.z for node in env.nodes]
-            ax.scatter(xs, ys, zs, c="blue")
-        else:
-            ax.scatter(xs, ys, c="blue")
+        # -------- Determine visited set --------
+        visited_ids = set()
+        if mission is not None:
+            visited_ids = mission.visited
+
+        # -------- Nodes (colour by visit status) --------
+        for node in env.nodes[1:]:  # skip UAV anchor
+            if node.id in visited_ids:
+                colour, marker = "#4CAF50", "o"   # green = visited
+            else:
+                buf_ratio = node.current_buffer / max(node.buffer_capacity, 1e-6)
+                if buf_ratio > 0.5:
+                    colour = "#2196F3"             # blue = data waiting
+                else:
+                    colour = "#9E9E9E"             # grey = low buffer
+                marker = "o"
+
+            if is_3d:
+                ax.scatter(node.x, node.y, getattr(node, 'z', 0),
+                           c=colour, s=40, marker=marker, edgecolors="black", linewidths=0.3)
+            else:
+                ax.scatter(node.x, node.y, c=colour, s=40, marker=marker,
+                           edgecolors="black", linewidths=0.3, zorder=4)
 
         # -------- Obstacles --------
         for obs in env.obstacles:
@@ -269,11 +283,10 @@ class PlotRenderer:
 
                 if is_3d:
                     trail_z = [p[2] for p in env.uav_trail if len(p) > 2]
-                    # Ensure z array matches length just in case old 2D data is inside
                     if len(trail_z) == len(trail_x):
-                        ax.plot(trail_x, trail_y, zs=trail_z, linewidth=1.2, alpha=0.8, color="black", zorder=5)
+                        ax.plot(trail_x, trail_y, zs=trail_z, linewidth=1.2, alpha=0.8, color="#1565C0", zorder=5)
                 else:
-                    ax.plot(trail_x, trail_y, linewidth=1.2, alpha=0.8, color="black", zorder=5)
+                    ax.plot(trail_x, trail_y, linewidth=1.2, alpha=0.8, color="#1565C0", zorder=5)
 
             # --- UAV Marker ---
             if is_3d:
@@ -281,12 +294,27 @@ class PlotRenderer:
             else:
                 ax.scatter(env.uav.x, env.uav.y, s=120, marker="^", c="black", edgecolors="white", linewidths=0.8, zorder=10)
 
+            # --- Target connection line ---
+            if mission is not None and mission.current_target and not is_3d:
+                tgt = mission.current_target
+                ax.plot([env.uav.x, tgt.x], [env.uav.y, tgt.y],
+                        linestyle="--", color="red", linewidth=0.8, alpha=0.6, zorder=6)
+
         ax.set_xlim(0, env.width)
         ax.set_ylim(0, env.height)
         if is_3d:
             ax.set_zlim(0, 50)
-            
-        ax.set_title(f"Step {step}")
+
+        # -------- HUD Overlay (step, battery, coverage) --------
+        total_nodes = len(env.nodes) - 1
+        n_visited = len(visited_ids) if visited_ids else 0
+        battery_pct = 0.0
+        if hasattr(env, "uav"):
+            from config.config import Config
+            battery_pct = (env.uav.current_battery / Config.BATTERY_CAPACITY) * 100
+
+        title = f"Step {step}  |  Battery: {battery_pct:.0f}%  |  Visited: {n_visited}/{total_nodes}"
+        ax.set_title(title, fontsize=11, fontweight="bold")
 
         # -------- Replan Flash --------
         if hasattr(env, "temporal_engine"):
@@ -294,33 +322,16 @@ class PlotRenderer:
             if flash:
                 ax.set_facecolor((1.0, 0.85, 0.85))
                 if is_3d:
-                    ax.text2D(
-                        0.5,
-                        0.95,
-                        "REPLAN TRIGGERED",
-                        transform=ax.transAxes,
-                        ha="center",
-                        va="top",
-                        fontsize=12,
-                        color="red",
-                        fontweight="bold",
-                    )
+                    ax.text2D(0.5, 0.92, "REPLAN", transform=ax.transAxes,
+                              ha="center", fontsize=11, color="red", fontweight="bold")
                 else:
-                    ax.text(
-                        0.5,
-                        0.95,
-                        "REPLAN TRIGGERED",
-                        transform=ax.transAxes,
-                        ha="center",
-                        va="top",
-                        fontsize=12,
-                        color="red",
-                        fontweight="bold",
-                    )
+                    ax.text(0.5, 0.92, "REPLAN", transform=ax.transAxes,
+                            ha="center", fontsize=11, color="red", fontweight="bold")
 
         filename = f"{step:04d}.png"
-        fig.savefig(f"{save_dir}/{filename}", dpi=200)
+        fig.savefig(f"{save_dir}/{filename}", dpi=150)
         plt.close(fig)
+
 
     # ============================================================
     #  IEEE-Grade Post-Run Visualisations  (v0.5)

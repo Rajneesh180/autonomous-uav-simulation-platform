@@ -161,6 +161,7 @@ class Config:
     MAX_TIME_STEPS = 800
 
     ENABLE_TEMPORAL = True
+    FRAME_SUBSAMPLE_INTERVAL = 20   # render every Nth step as a keyframe (always-on)
 
     # =========================================================
     # GA Visiting Sequence Optimizer (Gap 4 — Zheng & Liu, IEEE TVT 2025)
