@@ -86,7 +86,7 @@ class IEEEDocLogger:
 | GA Population | — | {Config.GA_POPULATION_SIZE} |
 | GA Generations | — | {Config.GA_MAX_GENERATIONS} |
 | BS Data-Age Limit | $T_{{limit}}$ | {Config.BS_DATA_AGE_LIMIT} steps |
-| Node TX Battery | $E_{{node}}$ | {Config.NODE_BATTERY_J} J |
+| Node TX Battery | $E_{{node}}$ | {Config.NODE_BATTERY_CAPACITY_J} J |
 
 ## 3. IEEE-Aligned Performance Metrics
 

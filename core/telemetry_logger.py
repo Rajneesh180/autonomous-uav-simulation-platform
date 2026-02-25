@@ -131,7 +131,7 @@ class TelemetryLogger:
                     round(node.aoi_timer, 4),
                     round(getattr(node, "max_aoi_timer", 0.0), 4),
                     round(getattr(node, "node_battery_J", 0.0), 6),
-                    round(getattr(node, "initial_node_battery_J", Config.NODE_BATTERY_J), 6),
+                    round(getattr(node, "initial_node_battery_J", Config.NODE_BATTERY_CAPACITY_J), 6),
                     1 if node.id in mission.visited else 0,
                 ])
 

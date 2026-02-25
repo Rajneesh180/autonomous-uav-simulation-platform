@@ -415,7 +415,7 @@ class PlotRenderer:
         ys = [n.y for n in nodes]
 
         from config.config import Config
-        initial = Config.NODE_BATTERY_J
+        initial = Config.NODE_BATTERY_CAPACITY_J
         residuals = [
             getattr(n, "node_battery_J", initial) / max(initial, 1e-6)
             for n in nodes
