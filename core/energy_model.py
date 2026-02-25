@@ -131,21 +131,26 @@ class EnergyModel:
         """
         Conservative return check.
 
-        Includes:
-        - Euclidean distance
-        - Risk multiplier
-        - 5% battery safety buffer
+        Computes total energy needed to fly from current_pos back to base at
+        the configured UAV_STEP_SIZE per TIME_STEP, which gives a realistic
+        speed (e.g. 10 m/s). Previously this passed the full distance as a
+        single dt, producing supersonic speeds and absurd energy estimates.
         """
-
         distance_back = MetricEngine.euclidean_distance(current_pos, base_pos)
-
         adjusted_distance = distance_back * max(1.0, risk_multiplier)
 
-        required = EnergyModel.energy_for_distance(node, adjusted_distance)
+        # Realistic speed: metres per step / time step
+        v = Config.UAV_STEP_SIZE / max(float(Config.TIME_STEP), 1e-3)
+        power = EnergyModel.propulsion_power(v)
+        dt = float(Config.TIME_STEP)
+
+        # Number of steps to cover the adjusted distance
+        n_steps = adjusted_distance / max(Config.UAV_STEP_SIZE, 1e-3)
+        required = power * dt * n_steps     # total energy (Joules)
 
         safety_buffer = node.battery_capacity * 0.05
-
         return node.current_battery >= (required + safety_buffer)
+
 
     @staticmethod
     def should_return(node) -> bool:
