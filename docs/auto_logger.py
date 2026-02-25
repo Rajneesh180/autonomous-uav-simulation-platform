@@ -148,6 +148,9 @@ class IEEEDocLogger:
 | ![Trajectory]({plots_rel}/trajectory_summary.png) | UAV Trajectory Summary |
 | ![Energy Map]({plots_rel}/node_energy_heatmap.png) | IoT Node Residual Energy |
 | ![3D View]({plots_rel}/trajectory_3d_isometric.png) | 3D Isometric Trajectory |
+| ![Speed Heatmap]({plots_rel}/trajectory_heatmap.png) | Speed-Coloured Trajectory |
+| ![AoI Timeline]({plots_rel}/aoi_timeline.png) | Per-Node AoI Progression |
+| ![Battery+Replans]({plots_rel}/battery_replans.png) | Battery Discharge with Replan Events |
 
 ## 5. Reproducibility
 
@@ -155,7 +158,7 @@ class IEEEDocLogger:
 - **Seed:** `{results.get('seed', 'N/A')}`
 - **Config Snapshot:** `visualization/runs/{run_id}/logs/config_snapshot.json`
 - **Telemetry CSV:** `visualization/runs/{run_id}/telemetry/step_telemetry.csv`
-- **Animation:** `visualization/runs/{run_id}/animations/trajectory.gif`
+- **Animation:** `visualization/runs/{run_id}/animations/trajectory.mp4`
 
 ---
 *Auto-generated — Autonomous UAV Simulation Platform*

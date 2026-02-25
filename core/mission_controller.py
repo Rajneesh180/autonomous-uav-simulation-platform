@@ -81,6 +81,7 @@ class MissionController:
         self.visited_history = []
         self.battery_history = []
         self.replan_history = []
+        self.aoi_history = {}  # node_id → [aoi_per_step]
 
         # Replan cooldown
         self.last_replan_step = -100
@@ -222,6 +223,12 @@ class MissionController:
         self.visited_history.append(len(self.visited))
         self.battery_history.append(self.uav.current_battery)
         self.replan_history.append(self.temporal.replan_count)
+
+        # Per-node AoI snapshot
+        for node in self.env.nodes[1:]:
+            if node.id not in self.aoi_history:
+                self.aoi_history[node.id] = []
+            self.aoi_history[node.id].append(node.aoi_timer)
 
         # Frame saving
         if (

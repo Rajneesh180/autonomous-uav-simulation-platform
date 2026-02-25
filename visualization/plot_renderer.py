@@ -644,3 +644,195 @@ class PlotRenderer:
             ax.view_init(elev=elev, azim=azim)
 
             PlotRenderer._save_dual(fig, save_dir, f"trajectory_3d_{view_name}")
+
+    # ----------------------------------------------------------
+    # 6. Speed-Coloured Trajectory Heatmap
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_trajectory_heatmap(env, save_dir: str):
+        """
+        2D trajectory with path segments coloured by instantaneous speed.
+        Cool blue = slow (hovering), hot red = fast (transit).
+        """
+        import numpy as np
+        from matplotlib.collections import LineCollection
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        if not hasattr(env, "uav_trail") or len(env.uav_trail) < 3:
+            return
+
+        trail = env.uav_trail
+        xs = [p[0] for p in trail]
+        ys = [p[1] for p in trail]
+
+        # Compute per-segment speed
+        speeds = []
+        for i in range(1, len(xs)):
+            dx = xs[i] - xs[i-1]
+            dy = ys[i] - ys[i-1]
+            speeds.append((dx**2 + dy**2) ** 0.5)
+        speeds = np.array(speeds)
+
+        # Normalise
+        if speeds.max() > 0:
+            norm_speeds = speeds / speeds.max()
+        else:
+            norm_speeds = np.zeros_like(speeds)
+
+        fig, ax = plt.subplots(figsize=(10, 7))
+
+        # Obstacles
+        for obs in env.obstacles:
+            rect = plt.Rectangle(
+                (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
+                color="#B71C1C", alpha=0.15, edgecolor="#B71C1C",
+            )
+            ax.add_patch(rect)
+
+        # Nodes
+        for node in env.nodes[1:]:
+            ax.scatter(node.x, node.y, c="#9E9E9E", s=20, edgecolors="black",
+                       linewidths=0.3, zorder=3)
+
+        # Coloured trajectory segments
+        points = np.array([xs, ys]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+        lc = LineCollection(segments, cmap="coolwarm", linewidths=1.5, zorder=5)
+        lc.set_array(norm_speeds)
+        ax.add_collection(lc)
+
+        cbar = plt.colorbar(lc, ax=ax)
+        cbar.set_label("Relative Speed (0=hover, 1=max transit)")
+
+        ax.set_xlim(0, env.width)
+        ax.set_ylim(0, env.height)
+        ax.set_xlabel("X (m)")
+        ax.set_ylabel("Y (m)")
+        ax.set_title("Trajectory Speed Heatmap", fontsize=14, fontweight="bold")
+        ax.set_aspect("equal")
+
+        PlotRenderer._save_dual(fig, save_dir, "trajectory_heatmap")
+
+    # ----------------------------------------------------------
+    # 7. Per-Node AoI Timeline
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_aoi_timeline(aoi_history: dict, save_dir: str):
+        """
+        Time-series plot showing AoI progression for the top-10
+        highest-peak-AoI nodes.
+
+        aoi_history : dict mapping node_id → list of AoI values per step
+        """
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        if not aoi_history:
+            return
+
+        # Sort by peak AoI, take top 10
+        peaks = {nid: max(vals) for nid, vals in aoi_history.items()}
+        top_nodes = sorted(peaks, key=peaks.get, reverse=True)[:10]
+
+        fig, ax = plt.subplots(figsize=(12, 5))
+
+        cmap = plt.cm.get_cmap("tab10")
+        for i, nid in enumerate(top_nodes):
+            vals = aoi_history[nid]
+            ax.plot(vals, label=f"Node {nid}", color=cmap(i), linewidth=0.8, alpha=0.8)
+
+        ax.set_xlabel("Step")
+        ax.set_ylabel("Age of Information (s)")
+        ax.set_title("Per-Node AoI Timeline (Top 10 Peak)", fontsize=13, fontweight="bold")
+        ax.legend(loc="upper left", ncol=2, fontsize=8)
+
+        PlotRenderer._save_dual(fig, save_dir, "aoi_timeline")
+
+    # ----------------------------------------------------------
+    # 8. Battery Discharge with Replan Event Overlay
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_battery_with_replans(battery_hist: list, replan_steps: list,
+                                     save_dir: str):
+        """
+        Battery discharge curve with vertical lines marking replan events.
+        """
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        fig, ax = plt.subplots(figsize=(12, 5))
+
+        ax.plot(battery_hist, color="#1565C0", linewidth=1.2, label="Battery (J)")
+        ax.fill_between(range(len(battery_hist)), battery_hist,
+                        alpha=0.1, color="#1565C0")
+
+        # Replan vertical markers
+        for rs in replan_steps:
+            if 0 <= rs < len(battery_hist):
+                ax.axvline(x=rs, color="#E53935", linestyle="--", linewidth=0.6, alpha=0.6)
+
+        # Add one labelled line for the legend
+        if replan_steps:
+            ax.axvline(x=replan_steps[0], color="#E53935", linestyle="--",
+                       linewidth=0.6, alpha=0.6, label="Replan Event")
+
+        ax.set_xlabel("Step")
+        ax.set_ylabel("Battery (J)")
+        ax.set_title("Battery Discharge with Replan Events", fontsize=13, fontweight="bold")
+        ax.legend(loc="upper right")
+
+        PlotRenderer._save_dual(fig, save_dir, "battery_replans")
+
+    # ----------------------------------------------------------
+    # 9. Run Comparison Viewer
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_run_comparison(run_a: dict, run_b: dict, save_dir: str,
+                               label_a: str = "Run A", label_b: str = "Run B"):
+        """
+        Side-by-side bar chart comparing key metrics from two simulation runs.
+        Renders as a table + grouped bar chart.
+        """
+        import numpy as np
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        metrics = [
+            ("Coverage (%)", "coverage_ratio_percent"),
+            ("DR (%)", "data_collection_rate_percent"),
+            ("Nodes Visited", "nodes_visited"),
+            ("Avg AoI (s)", "average_aoi_s"),
+            ("Energy/Node (J)", "energy_per_node_J"),
+            ("Steps", "steps"),
+        ]
+
+        labels = [m[0] for m in metrics]
+        vals_a = [run_a.get(m[1], 0) for m in metrics]
+        vals_b = [run_b.get(m[1], 0) for m in metrics]
+
+        x = np.arange(len(labels))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(12, 5))
+        bars_a = ax.bar(x - width/2, vals_a, width, label=label_a,
+                        color="#1565C0", alpha=0.8)
+        bars_b = ax.bar(x + width/2, vals_b, width, label=label_b,
+                        color="#FF9800", alpha=0.8)
+
+        # Value labels on bars
+        for bar in bars_a:
+            h = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2, h, f"{h:.1f}",
+                    ha="center", va="bottom", fontsize=7)
+        for bar in bars_b:
+            h = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2, h, f"{h:.1f}",
+                    ha="center", va="bottom", fontsize=7)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, fontsize=9)
+        ax.set_title("Run Comparison", fontsize=14, fontweight="bold")
+        ax.legend()
+
+        PlotRenderer._save_dual(fig, save_dir, "run_comparison")

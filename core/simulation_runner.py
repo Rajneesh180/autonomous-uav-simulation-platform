@@ -223,13 +223,27 @@ def run_simulation(verbose=True, render=True, seed_override=None):
 
     PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
 
-    # ---- GIF Animation (always generated from available keyframes) ----
-    AnimationBuilder.build_gif(
+    # ---- v0.5.2 Advanced Plots ----
+    PlotRenderer.render_trajectory_heatmap(env=env, save_dir=visuals_path)
+
+    PlotRenderer.render_aoi_timeline(
+        aoi_history=mission.aoi_history,
+        save_dir=visuals_path
+    )
+
+    PlotRenderer.render_battery_with_replans(
+        battery_hist=mission.battery_history,
+        replan_steps=mission.replan_timestamps,
+        save_dir=visuals_path
+    )
+
+    # ---- MP4 Animation (always generated from available keyframes) ----
+    AnimationBuilder.build_mp4(
         frames_dir=frames_path,
         output_dir=run_manager.get_path("animations"),
-            fps=10,
-            max_frames=200,  # cap at 200 frames for reasonable GIF size
-        )
+        fps=4,
+        max_frames=200,
+    )
 
     # ---- IEEE Experiment Report ----
     IEEEDocLogger.generate_experiment_doc(
