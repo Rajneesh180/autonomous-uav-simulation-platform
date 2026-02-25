@@ -13,8 +13,11 @@ from core.run_manager import RunManager
 from core.mission_controller import MissionController
 from core.stability_monitor import StabilityMonitor
 from core.clustering.cluster_manager import ClusterManager
+from core.telemetry_logger import TelemetryLogger
 from visualization.plot_renderer import PlotRenderer
+from visualization.animation_builder import AnimationBuilder
 from metrics.metric_engine import MetricEngine
+from docs.auto_logger import IEEEDocLogger
 
 
 def run_simulation(verbose=True, render=True, seed_override=None):
@@ -85,12 +88,18 @@ def run_simulation(verbose=True, render=True, seed_override=None):
 
     step_counter = 0
     frames_path = run_manager.get_path("frames")
+    telemetry = TelemetryLogger(run_manager.get_path("telemetry"))
 
     while mission.is_active():
         mission.step()
+        telemetry.log_step(step_counter, mission)
         if render:
             PlotRenderer.render_environment_frame(env, frames_path, step_counter)
         step_counter += 1
+
+    # Flush telemetry and save node state snapshot
+    telemetry.save_node_state(mission)
+    telemetry.close()
 
     # ---------------------------------------------------------
     # Aggregate Results
@@ -165,20 +174,80 @@ def run_simulation(verbose=True, render=True, seed_override=None):
     # Final Visual Metric Artifact Generation
     # ---------------------------------------------------------
     visuals_path = run_manager.get_path("plots")
-    
+
+    # Legacy plots
     PlotRenderer.render_environment(env, visuals_path)
-    
+
     PlotRenderer.render_energy_plots(
         visited=len(mission.visited),
         energy_consumed=mission.energy_consumed_total,
         save_dir=visuals_path
     )
-    
+
     PlotRenderer.render_time_series(
         visited_hist=mission.visited_history,
         battery_hist=mission.battery_history,
         replan_hist=mission.replan_history,
         save_dir=visuals_path
     )
+
+    # ---- v0.5 IEEE-Quality Post-Run Plots ----
+    PlotRenderer.render_radar_chart(results, visuals_path)
+
+    PlotRenderer.render_node_energy_heatmap(
+        nodes=env.nodes[1:],
+        env_width=env.width,
+        env_height=env.height,
+        save_dir=visuals_path
+    )
+
+    PlotRenderer.render_trajectory_summary(
+        env=env,
+        visited_ids=mission.visited,
+        save_dir=visuals_path
+    )
+
+    PlotRenderer.render_dashboard_panel(
+        results=results,
+        battery_hist=mission.battery_history,
+        visited_hist=mission.visited_history,
+        save_dir=visuals_path
+    )
+
+    PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
+
+    # ---- GIF Animation ----
+    if render:
+        AnimationBuilder.build_gif(
+            frames_dir=frames_path,
+            output_dir=run_manager.get_path("animations"),
+            fps=10,
+            max_frames=200,  # cap at 200 frames for reasonable GIF size
+        )
+
+    # ---- IEEE Experiment Report ----
+    IEEEDocLogger.generate_experiment_doc(
+        results=results,
+        metrics=stability,
+        run_id=run_id,
+        reports_dir=run_manager.get_path("reports"),
+    )
+
+    # ---- Post-Run Artifact Manifest ----
+    print(f"\n{'='*55}")
+    print(f"  Run Artifacts — {run_id}")
+    print(f"{'='*55}")
+    base = run_manager.base_path
+    artifact_count = 0
+    for root, dirs, files in os.walk(base):
+        for fname in sorted(files):
+            fpath = os.path.join(root, fname)
+            rel = os.path.relpath(fpath, base)
+            size_kb = os.path.getsize(fpath) / 1024
+            print(f"  {rel:50s} {size_kb:8.1f} KB")
+            artifact_count += 1
+    print(f"{'='*55}")
+    print(f"  Total: {artifact_count} artifacts in {base}")
+    print(f"{'='*55}\n")
 
     return results
