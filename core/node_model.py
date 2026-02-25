@@ -36,8 +36,9 @@ class Node:
     current_buffer: float = 0.0
     data_generation_rate: float = field(default_factory=lambda: Config.DEFAULT_DATA_RATE_MBPS)
     
-    aoi_timer: float = 0.0  # Age of Information counter
-    
+    aoi_timer: float = 0.0      # Age of Information counter (current, resets on collection)
+    max_aoi_timer: float = 0.0  # Peak AoI recorded just before each collection reset
+
     time_window_start: float = 0.0
     time_window_end: float = float("inf")
 

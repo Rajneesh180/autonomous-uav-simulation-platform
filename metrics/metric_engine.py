@@ -94,6 +94,15 @@ class MetricEngine:
 
     @staticmethod
     def compute_adaptation_latency(event_times, replan_times):
+        """
+        Mean adaptation latency (steps): the delay between an anomaly event
+        and the replanning response triggered by it.
+
+        latency_i = replan_times[i] - event_times[i]
+
+        For events where replan_times[i] == event_times[i] (same-step response,
+        e.g. bs_uplink_return), latency = 0 — correctly reflecting immediate response.
+        """
         if not event_times or not replan_times:
             return 0.0
 
@@ -101,11 +110,12 @@ class MetricEngine:
         r_index = 0
 
         for e in event_times:
-            while r_index < len(replan_times) and replan_times[r_index] <= e:
+            # Find the first replan that occurs AT or AFTER this event
+            while r_index < len(replan_times) and replan_times[r_index] < e:
                 r_index += 1
 
             if r_index < len(replan_times):
-                latency = replan_times[r_index] - e
+                latency = max(0, replan_times[r_index] - e)  # delta, never negative
                 latencies.append(latency)
 
         if not latencies:
@@ -218,16 +228,22 @@ class MetricEngine:
     @staticmethod
     def compute_average_aoi(nodes) -> float:
         """
-        Mean Age of Information (AoI) across all IoT nodes at mission end.
-        AoI measures data freshness: lower is better.
+        Mean Peak Age of Information (AoI) across all IoT nodes.
 
-        Aligned with:
-        - Zheng & Liu (IEEE TVT 2025): T_data = t_s + t_Fs ≤ T_limit
-        - Donipati et al. (DST-BA, IEEE TNSM 2025): AoI-aware buffer management
+        AoI is defined as the time elapsed since a node's data was last collected.
+        For nodes that were visited: their max_aoi_timer captures the peak AoI
+        observed before the most recent collection reset.
+        For unvisited nodes: aoi_timer is the total elapsed mission time (never reset).
+
+        Mathematical definition (Zheng & Liu, IEEE TVT 2025 — Eq. 24):
+            avg_AoI = (1/N) * Σ max_AoI_i
+
+        A lower value indicates fresher data. Units: seconds (TIME_STEP=1s assumed).
         """
         if not nodes:
             return 0.0
-        aoi_values = [n.aoi_timer for n in nodes]
+        # Use max_aoi_timer if available (peak before reset), else current aoi_timer
+        aoi_values = [getattr(n, 'max_aoi_timer', n.aoi_timer) for n in nodes]
         return round(sum(aoi_values) / len(aoi_values), 4)
 
     @staticmethod

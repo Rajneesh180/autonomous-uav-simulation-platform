@@ -85,6 +85,7 @@ class BufferAwareManager:
 
         node.current_buffer -= data_collected
         if data_collected > 0:
+            node.max_aoi_timer = max(node.max_aoi_timer, node.aoi_timer)  # record peak before reset
             node.aoi_timer = 0.0  # Reset AoI timer on successful collection
 
         if node.current_buffer < 0:

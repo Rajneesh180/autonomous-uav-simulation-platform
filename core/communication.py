@@ -246,8 +246,10 @@ class CommunicationEngine:
         if Config.ENABLE_AOI_EXPIRATION:
             node.aoi_timer += dt
             if node.aoi_timer >= Config.MAX_AOI_LIMIT:
+                node.max_aoi_timer = max(node.max_aoi_timer, node.aoi_timer)  # record peak
                 node.current_buffer = 0.0
                 node.aoi_timer = 0.0
+
 
         # ---- Node TX energy depletion (first-order radio model) ----
         if Config.ENABLE_NODE_ENERGY_DRAIN and uav_pos is not None and node.node_battery_J > 0:

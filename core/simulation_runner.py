@@ -112,14 +112,19 @@ def run_simulation(verbose=True, render=True, seed_override=None):
     }
 
     # ---- IEEE-aligned Comprehensive MetricsDashboard ----
+    # Bug Fix: total_collected_mbits = all payload offloaded + any remaining in-flight payload
+    total_data_collected = (
+        getattr(mission, "total_uplinked_mbits", 0.0) + mission.collected_data_mbits
+    )
     dashboard = MetricEngine.compute_full_dashboard(
         mission=mission,
         env=env,
         temporal=temporal,
         time_step=float(Config.TIME_STEP),
-        collected_data_mbits=mission.collected_data_mbits,
+        collected_data_mbits=total_data_collected,
         rate_log=mission.rate_log,
     )
+
     results.update(dashboard)
 
     # ---- Stability Metrics ----
