@@ -158,7 +158,8 @@ class Config:
     # Temporal Engine
     # =========================================================
     TIME_STEP = 1
-    MAX_TIME_STEPS = 400
+    MAX_TIME_STEPS = 800
+
     ENABLE_TEMPORAL = True
 
     # =========================================================
