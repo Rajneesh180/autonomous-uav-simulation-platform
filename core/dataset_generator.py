@@ -65,10 +65,9 @@ def generate_nodes(
         for i in range(count):
             nodes.append(Node(id=i, x=random.randint(0, width), y=random.randint(0, height)))
 
-    from config.feature_toggles import FeatureToggles
-    if FeatureToggles.DIMENSIONS == "3D":
-        for node in nodes:
-            node.z = random.uniform(0.0, 30.0)
+    # Physics is always 3D.  Ground IoT sensors sit at z = 0.
+    for node in nodes:
+        node.z = 0.0
 
     return nodes
 
@@ -84,9 +83,8 @@ def spawn_single_node(width, height, node_id, env):
         y = random.randint(0, height)
 
         if not env.point_in_obstacle((x, y)):
-            from config.feature_toggles import FeatureToggles
-            z = random.uniform(0.0, 30.0) if FeatureToggles.DIMENSIONS == "3D" else 0.0
-            return Node(node_id, x, y, z=z)
+            # Ground IoT sensor — z is always 0
+            return Node(node_id, x, y, z=0.0)
 
         attempts += 1
 

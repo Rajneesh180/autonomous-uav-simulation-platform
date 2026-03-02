@@ -77,11 +77,11 @@ def main():
         help="Enable Matplotlib/Pygame telemetry visualizer."
     )
     parser.add_argument(
-        "--dimensions", 
+        "--render-mode", 
         type=str, 
-        choices=["2D", "3D"], 
+        choices=["2D", "3D", "both"], 
         default="2D",
-        help="Run environment mathematically in 2D or 3D."
+        help="Visualisation projection: '2D' top-down, '3D' perspective, or 'both'."
     )
     parser.add_argument(
         "--obstacles", 

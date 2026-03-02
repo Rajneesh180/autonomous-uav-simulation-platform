@@ -7,11 +7,11 @@ class MetricEngine:
     # -------- Distance --------
     @staticmethod
     def euclidean_distance(p1, p2):
-        return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1[:2], p2[:2])))
+        """Always-3D Euclidean distance.  Gracefully handles 2D tuples."""
+        return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1[:3], p2[:3])))
 
-    @staticmethod
-    def euclidean_distance_3d(p1, p2):
-        return math.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[2])**2)
+    # Backward-compatible alias
+    euclidean_distance_3d = euclidean_distance
 
     @staticmethod
     def path_length(points):

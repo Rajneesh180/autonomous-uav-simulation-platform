@@ -48,7 +48,7 @@ class IEEEDocLogger:
         doc = f"""# Simulation Experiment Report — {run_id}
 
 > **Generated:** {timestamp}
-> **Seed:** {results.get('seed', 'N/A')} | **Steps:** {results.get('steps', 0)} | **Dimensions:** {FeatureToggles.DIMENSIONS}
+> **Seed:** {results.get('seed', 'N/A')} | **Steps:** {results.get('steps', 0)} | **Render Mode:** {FeatureToggles.RENDER_MODE}
 
 ---
 

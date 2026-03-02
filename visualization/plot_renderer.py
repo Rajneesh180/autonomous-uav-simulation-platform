@@ -21,7 +21,7 @@ class PlotRenderer:
         PlotRenderer._ensure_dir(save_dir)
 
         fig = plt.figure(figsize=(8, 6))
-        is_3d = FeatureToggles.DIMENSIONS == "3D"
+        is_3d = FeatureToggles.RENDER_MODE in ("3D", "both")
         
         if is_3d:
             ax = fig.add_subplot(111, projection='3d')
@@ -198,7 +198,7 @@ class PlotRenderer:
         PlotRenderer._ensure_dir(save_dir)
 
         fig = plt.figure(figsize=(10, 7))
-        is_3d = FeatureToggles.DIMENSIONS == "3D"
+        is_3d = FeatureToggles.RENDER_MODE in ("3D", "both")
         
         if is_3d:
             ax = fig.add_subplot(111, projection='3d')

@@ -5,7 +5,8 @@ class FeatureToggles:
     """
 
     # --- Core Mechanics ---
-    DIMENSIONS = "2D"           # "2D" or "3D"
+    # Physics always runs in 3D.  RENDER_MODE controls visualisation only.
+    RENDER_MODE = "2D"          # "2D", "3D", or "both"
     ENABLE_OBSTACLES = True     # Apply obstacle constraints
     MOVING_OBSTACLES = True     # Evolve obstacles temporally
 
@@ -16,8 +17,8 @@ class FeatureToggles:
     @classmethod
     def apply_overrides(cls, args):
         """Inject CLI arguments into the toggle state unconditionally."""
-        if hasattr(args, "dimensions") and args.dimensions:
-            cls.DIMENSIONS = str(args.dimensions).upper()
+        if hasattr(args, "render_mode") and args.render_mode:
+            cls.RENDER_MODE = str(args.render_mode).upper()
             
         if hasattr(args, "obstacles"):
             cls.ENABLE_OBSTACLES = str(args.obstacles).lower() == 'true'

@@ -63,6 +63,9 @@ class MissionController:
         # SCA Hover Position Map — refined hover coords per node (Gap 5: Zheng & Liu §III-E)
         self._hover_positions: dict = {}  # {node_id: (x, y, z)}
 
+        # Per-node hover step counter (prevents infinite center-hover)
+        self._hover_step_count: dict = {}  # {node_id: int}
+
         # Metrics
         self.energy_consumed_total = 0.0
         self.collision_count = 0
@@ -405,16 +408,11 @@ class MissionController:
 
         dx = target_pos[0] - current_pos[0]
         dy = target_pos[1] - current_pos[1]
-        
-        from config.feature_toggles import FeatureToggles
-        if FeatureToggles.DIMENSIONS == "3D":
-            dz = target_pos[2] - current_pos[2]
-            distance = math.sqrt(dx**2 + dy**2 + dz**2)
-            base_pitch = math.atan2(dz, math.hypot(dx, dy))
-        else:
-            dz = 0.0
-            distance = math.hypot(dx, dy)
-            base_pitch = 0.0
+
+        # Physics is always 3D — compute full dz / distance / pitch
+        dz = target_pos[2] - current_pos[2]
+        distance = math.sqrt(dx**2 + dy**2 + dz**2)
+        base_pitch = math.atan2(dz, math.hypot(dx, dy))
 
         dt = float(Config.TIME_STEP)
 
@@ -456,17 +454,49 @@ class MissionController:
             hover_e = EnergyModel.hover_energy(self.uav, dt)
             EnergyModel.consume(self.uav, hover_e)
             self.energy_consumed_total += hover_e
-            
+
             hover_strategy = BufferAwareManager.get_optimal_hover_strategy(self.uav.position(), self.current_target, self.env)
-            
+
             # Phase 3.8: LoS Occlusion Failsafe
             if hover_strategy['required_service_time'] == float('inf'):
                 print(f"[Warning] Node {self.current_target.id} Data Rate is 0 Mbps (NLoS Blocked). Abandoning target.")
-                self.visited.add(self.current_target.id) # Mark visited to avoid infinite loops
+                self.visited.add(self.current_target.id)
+                self._hover_step_count.pop(self.current_target.id, None)
                 self.current_target = None
                 return
-                
-            print(f"[Center-Hover] Node {self.current_target.id} | Reqd Time: {hover_strategy['required_service_time']:.2f}s | Vol: {self.current_target.current_buffer:.2f}Mb")
+
+            # Active buffer drain during center-hover (fixes DST-BA gap)
+            data_collected = BufferAwareManager.process_data_collection(
+                self.uav.position(), self.current_target, dt, self.env,
+                active_node_id=self.current_target.id
+            )
+            if data_collected > 0:
+                self.collected_data_mbits += data_collected
+                _rate = CommunicationEngine.achievable_data_rate(
+                    self.current_target.position(), self.uav.position()
+                )
+                self.rate_log.append(_rate)
+
+            # Per-node hover timeout — prevents infinite hovering
+            nid = self.current_target.id
+            self._hover_step_count[nid] = self._hover_step_count.get(nid, 0) + 1
+
+            if self.current_target.current_buffer <= 1e-3:
+                self.visited.add(nid)
+                print(f"[Visited] Node {nid} (Buffer drained via Center-Hover)")
+                self._hover_step_count.pop(nid, None)
+                self.current_target = None
+                return
+
+            if self._hover_step_count[nid] >= Config.MAX_HOVER_STEPS_PER_NODE:
+                self.visited.add(nid)
+                residual = self.current_target.current_buffer
+                print(f"[Hover Timeout] Node {nid} abandoned after {Config.MAX_HOVER_STEPS_PER_NODE} steps | Residual: {residual:.2f}Mb")
+                self._hover_step_count.pop(nid, None)
+                self.current_target = None
+                return
+
+            print(f"[Center-Hover] Node {self.current_target.id} | Hover #{self._hover_step_count[nid]} | Vol: {self.current_target.current_buffer:.2f}Mb")
             return
 
         dt = float(Config.TIME_STEP)
@@ -513,7 +543,7 @@ class MissionController:
 
         # Generate motion primitives around the constrained base angles
         yaw_offsets = [0] + Config.STEERING_ANGLES
-        pitch_offsets = [0, -15, 15] if FeatureToggles.DIMENSIONS == "3D" else [0]
+        pitch_offsets = [0, -15, 15]  # Always 3D motion primitives
         
         for yaw_offset in yaw_offsets:
             for pitch_offset in pitch_offsets:
@@ -523,7 +553,7 @@ class MissionController:
                 # Spherical to Cartesian representation
                 new_x = current_pos[0] + step_size * math.cos(pitch) * math.cos(yaw)
                 new_y = current_pos[1] + step_size * math.cos(pitch) * math.sin(yaw)
-                new_z = current_pos[2] + step_size * math.sin(pitch) if FeatureToggles.DIMENSIONS == "3D" else current_pos[2]
+                new_z = current_pos[2] + step_size * math.sin(pitch)  # Always 3D vertical motion
 
                 # Gap 5: 3D Gaussian altitude constraint (Zheng & Liu, IEEE TVT 2025)
                 # Clamp z so UAV never flies below z_obs(x,y) + vertical clearance

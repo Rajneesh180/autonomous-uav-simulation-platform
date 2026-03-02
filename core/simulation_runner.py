@@ -95,9 +95,8 @@ def run_simulation(verbose=True, render=True, seed_override=None):
         mission.step()
         telemetry.log_step(step_counter, mission)
 
-        # Render frames: all steps if render=True, otherwise keyframes only
-        should_render = render or (step_counter % keyframe_interval == 0)
-        if should_render:
+        # Render frames only when explicitly requested (single-run mode)
+        if render and (step_counter % keyframe_interval == 0):
             PlotRenderer.render_environment_frame(
                 env, frames_path, step_counter, mission=mission
             )
@@ -179,95 +178,97 @@ def run_simulation(verbose=True, render=True, seed_override=None):
 
     # ---------------------------------------------------------
     # Final Visual Metric Artifact Generation
+    # Gate heavy artifacts behind render flag (batch runs skip this)
     # ---------------------------------------------------------
-    visuals_path = run_manager.get_path("plots")
+    if render:
+        visuals_path = run_manager.get_path("plots")
 
-    # Legacy plots
-    PlotRenderer.render_environment(env, visuals_path)
+        # Legacy plots
+        PlotRenderer.render_environment(env, visuals_path)
 
-    PlotRenderer.render_energy_plots(
-        visited=len(mission.visited),
-        energy_consumed=mission.energy_consumed_total,
-        save_dir=visuals_path
-    )
+        PlotRenderer.render_energy_plots(
+            visited=len(mission.visited),
+            energy_consumed=mission.energy_consumed_total,
+            save_dir=visuals_path
+        )
 
-    PlotRenderer.render_time_series(
-        visited_hist=mission.visited_history,
-        battery_hist=mission.battery_history,
-        replan_hist=mission.replan_history,
-        save_dir=visuals_path
-    )
+        PlotRenderer.render_time_series(
+            visited_hist=mission.visited_history,
+            battery_hist=mission.battery_history,
+            replan_hist=mission.replan_history,
+            save_dir=visuals_path
+        )
 
-    # ---- v0.5 IEEE-Quality Post-Run Plots ----
-    PlotRenderer.render_radar_chart(results, visuals_path)
+        # ---- v0.5 IEEE-Quality Post-Run Plots ----
+        PlotRenderer.render_radar_chart(results, visuals_path)
 
-    PlotRenderer.render_node_energy_heatmap(
-        nodes=env.nodes[1:],
-        env_width=env.width,
-        env_height=env.height,
-        save_dir=visuals_path
-    )
+        PlotRenderer.render_node_energy_heatmap(
+            nodes=env.nodes[1:],
+            env_width=env.width,
+            env_height=env.height,
+            save_dir=visuals_path
+        )
 
-    PlotRenderer.render_trajectory_summary(
-        env=env,
-        visited_ids=mission.visited,
-        save_dir=visuals_path
-    )
+        PlotRenderer.render_trajectory_summary(
+            env=env,
+            visited_ids=mission.visited,
+            save_dir=visuals_path
+        )
 
-    PlotRenderer.render_dashboard_panel(
-        results=results,
-        battery_hist=mission.battery_history,
-        visited_hist=mission.visited_history,
-        save_dir=visuals_path
-    )
+        PlotRenderer.render_dashboard_panel(
+            results=results,
+            battery_hist=mission.battery_history,
+            visited_hist=mission.visited_history,
+            save_dir=visuals_path
+        )
 
-    PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
+        PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
 
-    # ---- v0.5.2 Advanced Plots ----
-    PlotRenderer.render_trajectory_heatmap(env=env, save_dir=visuals_path)
+        # ---- v0.5.2 Advanced Plots ----
+        PlotRenderer.render_trajectory_heatmap(env=env, save_dir=visuals_path)
 
-    PlotRenderer.render_aoi_timeline(
-        aoi_history=mission.aoi_history,
-        save_dir=visuals_path
-    )
+        PlotRenderer.render_aoi_timeline(
+            aoi_history=mission.aoi_history,
+            save_dir=visuals_path
+        )
 
-    PlotRenderer.render_battery_with_replans(
-        battery_hist=mission.battery_history,
-        replan_steps=mission.replan_timestamps,
-        save_dir=visuals_path
-    )
+        PlotRenderer.render_battery_with_replans(
+            battery_hist=mission.battery_history,
+            replan_steps=mission.replan_timestamps,
+            save_dir=visuals_path
+        )
 
-    # ---- MP4 Animation (always generated from available keyframes) ----
-    AnimationBuilder.build_mp4(
-        frames_dir=frames_path,
-        output_dir=run_manager.get_path("animations"),
-        fps=4,
-        max_frames=200,
-    )
+        # ---- MP4 Animation ----
+        AnimationBuilder.build_mp4(
+            frames_dir=frames_path,
+            output_dir=run_manager.get_path("animations"),
+            fps=4,
+            max_frames=200,
+        )
 
-    # ---- IEEE Experiment Report ----
-    IEEEDocLogger.generate_experiment_doc(
-        results=results,
-        metrics=stability,
-        run_id=run_id,
-        reports_dir=run_manager.get_path("reports"),
-    )
+        # ---- IEEE Experiment Report ----
+        IEEEDocLogger.generate_experiment_doc(
+            results=results,
+            metrics=stability,
+            run_id=run_id,
+            reports_dir=run_manager.get_path("reports"),
+        )
 
-    # ---- Post-Run Artifact Manifest ----
-    print(f"\n{'='*55}")
-    print(f"  Run Artifacts — {run_id}")
-    print(f"{'='*55}")
-    base = run_manager.base_path
-    artifact_count = 0
-    for root, dirs, files in os.walk(base):
-        for fname in sorted(files):
-            fpath = os.path.join(root, fname)
-            rel = os.path.relpath(fpath, base)
-            size_kb = os.path.getsize(fpath) / 1024
-            print(f"  {rel:50s} {size_kb:8.1f} KB")
-            artifact_count += 1
-    print(f"{'='*55}")
-    print(f"  Total: {artifact_count} artifacts in {base}")
-    print(f"{'='*55}\n")
+        # ---- Post-Run Artifact Manifest ----
+        print(f"\n{'='*55}")
+        print(f"  Run Artifacts — {run_id}")
+        print(f"{'='*55}")
+        base = run_manager.base_path
+        artifact_count = 0
+        for root, dirs, files in os.walk(base):
+            for fname in sorted(files):
+                fpath = os.path.join(root, fname)
+                rel = os.path.relpath(fpath, base)
+                size_kb = os.path.getsize(fpath) / 1024
+                print(f"  {rel:50s} {size_kb:8.1f} KB")
+                artifact_count += 1
+        print(f"{'='*55}")
+        print(f"  Total: {artifact_count} artifacts in {base}")
+        print(f"{'='*55}\n")
 
     return results

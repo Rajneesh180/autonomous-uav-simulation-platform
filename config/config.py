@@ -107,7 +107,8 @@ class Config:
     # Buffer & Data Collection Settings (DST-BA)
     # =========================================================
     DEFAULT_BUFFER_CAP_MBITS = 50.0 
-    DEFAULT_DATA_RATE_MBPS = 0.5    
+    DEFAULT_DATA_RATE_MBPS = 0.5
+    MAX_HOVER_STEPS_PER_NODE = 30    # Safety cap: abandon node after N hover steps (prevents infinite hover)
 
     # =========================================================
     # Rendezvous Point (RP) Selection (Gap 1 — Donipati et al.)
@@ -409,6 +410,10 @@ class Config:
         # --- Base Station Uplink ---
         _check(cls.BS_DATA_AGE_LIMIT >= 1,
                "BS_DATA_AGE_LIMIT must be >= 1 (steps)")
+
+        # --- Buffer / Hover ---
+        _check(cls.MAX_HOVER_STEPS_PER_NODE >= 1,
+               "MAX_HOVER_STEPS_PER_NODE must be >= 1")
 
         if errors:
             msg = "Configuration validation failed:\n" + "\n".join(
