@@ -6,7 +6,7 @@ from config.config import Config
 from config.feature_toggles import FeatureToggles
 from core.batch_runner import BatchRunner
 from core.simulation_runner import run_simulation
-from docs.auto_logger import IEEEDocLogger
+from metrics.auto_logger import IEEEDocLogger
 from metrics.metric_engine import MetricEngine
 
 

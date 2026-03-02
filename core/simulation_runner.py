@@ -17,7 +17,7 @@ from core.telemetry_logger import TelemetryLogger
 from visualization.plot_renderer import PlotRenderer
 from visualization.animation_builder import AnimationBuilder
 from metrics.metric_engine import MetricEngine
-from docs.auto_logger import IEEEDocLogger
+from metrics.auto_logger import IEEEDocLogger
 
 
 def run_simulation(verbose=True, render=True, seed_override=None):
