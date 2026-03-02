@@ -176,6 +176,13 @@ class Config:
     GA_TW_PENALTY_WEIGHT = 5.0
 
     # =========================================================
+    # GLS Penalty Augmentation (Donipati et al., IEEE TNSM 2025)
+    # =========================================================
+    GLS_LAMBDA = 0.3            # Penalty weight λ — scales augmented cost term
+    GLS_MAX_ITERATIONS = 20     # Maximum GLS penalty iterations before termination
+    GLS_PATIENCE = 5            # Early-stop if no real-distance improvement for N iters
+
+    # =========================================================
     # Hostility Level (Phase-3 Control Spectrum)
     # =========================================================
     HOSTILITY_LEVEL = "medium"  # low | medium | high | extreme
@@ -356,6 +363,14 @@ class Config:
                "GA_CROSSOVER_RATE must be in [0, 1]")
         _check(0 <= cls.GA_MUTATION_RATE <= 1,
                "GA_MUTATION_RATE must be in [0, 1]")
+
+        # --- GLS Penalty Augmentation ---
+        _check(cls.GLS_LAMBDA > 0,
+               "GLS_LAMBDA must be positive (penalty weight)")
+        _check(cls.GLS_MAX_ITERATIONS >= 1,
+               "GLS_MAX_ITERATIONS must be >= 1")
+        _check(cls.GLS_PATIENCE >= 1,
+               "GLS_PATIENCE must be >= 1 (early-stop window)")
 
         # --- Temporal ---
         _check(cls.TIME_STEP > 0,

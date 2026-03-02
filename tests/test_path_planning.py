@@ -63,6 +63,34 @@ class TestPCAGLSRouter:
         route = PCAGLSRouter.optimize(uav_start_pos, [])
         assert route == []
 
+    def test_gls_refine_improves_over_raw_two_opt(self, sample_nodes):
+        """GLS refinement should produce distance ≤ single 2-opt pass."""
+        raw = PCAGLSRouter._two_opt(list(sample_nodes))
+        gls = PCAGLSRouter._gls_refine(list(sample_nodes))
+        raw_dist = _route_distance([n.position() for n in raw])
+        gls_dist = _route_distance([n.position() for n in gls])
+        # GLS should be at least as good (≤) — may equal on small instances
+        assert gls_dist <= raw_dist + 1e-6
+
+    def test_gls_route_is_valid_permutation(self, sample_nodes):
+        """GLS output must be a permutation of the input nodes."""
+        result = PCAGLSRouter._gls_refine(list(sample_nodes))
+        assert len(result) == len(sample_nodes)
+        assert {n.id for n in result} == {n.id for n in sample_nodes}
+
+    def test_two_opt_augmented_accepts_custom_cost(self, sample_nodes):
+        """Augmented 2-opt should accept an arbitrary edge cost function."""
+        def constant_cost(na, nb):
+            return 1.0  # uniform cost — any permutation is optimal
+        result = PCAGLSRouter._two_opt_augmented(list(sample_nodes), constant_cost)
+        assert len(result) == len(sample_nodes)
+
+    def test_route_distance_helper(self, sample_nodes):
+        """_route_distance should return a non-negative float."""
+        d = PCAGLSRouter._route_distance(sample_nodes)
+        assert isinstance(d, float)
+        assert d >= 0.0
+
 
 # ------------------------------------------------------------------
 # GA Sequence Optimizer tests
