@@ -151,6 +151,7 @@ class Config:
     MIN_SENSING_PROB_THRESH = 0.7  # Threshold below which sensing is invalid
     MAX_AOI_LIMIT = 200            # Time-steps until data expires
     ENABLE_AOI_EXPIRATION = True
+    AOI_URGENCY_WEIGHT = 1.5        # AoI-to-priority boost multiplier for semantic clustering
     SENSING_OMEGA = 0.95           # Target cumulative sensing success probability (Gap 3)
     SENSING_SLOT_DURATION = 1.0    # Duration of each sensing trial slot T_s (seconds)
 
@@ -286,3 +287,131 @@ class Config:
             Config.NODE_REMOVAL_PROBABILITY = 0.4
             Config.PREDICTION_HORIZON = 5
             Config.STEERING_ANGLES = [15, -15, 30, -30, 45, -45, 60, -60]
+
+    # =========================================================
+    # Configuration Validation (Research-Grade Assertions)
+    # =========================================================
+    @classmethod
+    def validate(cls):
+        """
+        Pre-flight configuration sanity checks.
+
+        Raises ValueError with a descriptive message for any parameter that
+        violates physical, algorithmic, or domain-specific constraints.
+        This method should be called once at startup (before any simulation
+        run) to surface misconfigurations early.
+        """
+        errors: list = []
+
+        def _check(condition: bool, msg: str):
+            if not condition:
+                errors.append(msg)
+
+        # --- Map / Geometry ---
+        _check(cls.MAP_WIDTH > 0 and cls.MAP_HEIGHT > 0,
+               "MAP_WIDTH and MAP_HEIGHT must be positive integers")
+        _check(cls.NODE_COUNT >= 2,
+               "NODE_COUNT must be >= 2 (at least UAV + 1 ground node)")
+        _check(cls.CLUSTER_COUNT >= 1,
+               "CLUSTER_COUNT must be >= 1")
+        _check(cls.DATASET_MODE in ("random", "priority_heavy", "deadline_critical",
+                                     "risk_dense", "mixed_feature"),
+               f"Unknown DATASET_MODE: '{cls.DATASET_MODE}'")
+
+        # --- Energy / Aerodynamics ---
+        _check(cls.BATTERY_CAPACITY > 0,
+               "BATTERY_CAPACITY must be positive (Joules)")
+        _check(cls.UAV_MASS > 0,
+               "UAV_MASS must be positive (kg)")
+        _check(0 < cls.RETURN_THRESHOLD < 1,
+               "RETURN_THRESHOLD must be in (0, 1) — fraction of battery")
+        _check(cls.ENERGY_PER_METER > 0,
+               "ENERGY_PER_METER must be positive")
+
+        # --- Communication ---
+        _check(cls.UAV_FLIGHT_ALTITUDE > 0,
+               "UAV_FLIGHT_ALTITUDE must be positive (metres)")
+        _check(cls.BANDWIDTH > 0,
+               "BANDWIDTH must be positive (Hz)")
+        _check(cls.NODE_TX_POWER > 0,
+               "NODE_TX_POWER must be positive (Watts)")
+        _check(cls.CARRIER_FREQUENCY > 0,
+               "CARRIER_FREQUENCY must be positive (Hz)")
+
+        # --- SCA Hover Optimizer ---
+        _check(cls.SCA_MAX_ITERATIONS >= 1,
+               "SCA_MAX_ITERATIONS must be >= 1")
+        _check(cls.SCA_STEP_SIZE > 0,
+               "SCA_STEP_SIZE must be positive (metres)")
+        _check(cls.SCA_CONVERGENCE_TOL > 0,
+               "SCA_CONVERGENCE_TOL must be positive (metres)")
+
+        # --- GA Sequence Optimizer ---
+        _check(cls.GA_POPULATION_SIZE >= 4,
+               "GA_POPULATION_SIZE must be >= 4 for crossover to operate")
+        _check(cls.GA_MAX_GENERATIONS >= 1,
+               "GA_MAX_GENERATIONS must be >= 1")
+        _check(0 <= cls.GA_CROSSOVER_RATE <= 1,
+               "GA_CROSSOVER_RATE must be in [0, 1]")
+        _check(0 <= cls.GA_MUTATION_RATE <= 1,
+               "GA_MUTATION_RATE must be in [0, 1]")
+
+        # --- Temporal ---
+        _check(cls.TIME_STEP > 0,
+               "TIME_STEP must be positive")
+        _check(cls.MAX_TIME_STEPS >= 1,
+               "MAX_TIME_STEPS must be >= 1")
+
+        # --- AoI / Sensing ---
+        _check(cls.MAX_AOI_LIMIT >= 1,
+               "MAX_AOI_LIMIT must be >= 1")
+        _check(cls.AOI_URGENCY_WEIGHT >= 0,
+               "AOI_URGENCY_WEIGHT must be non-negative")
+        _check(0 < cls.SENSING_OMEGA <= 1,
+               "SENSING_OMEGA must be in (0, 1]")
+
+        # --- Clustering ---
+        _check(cls.REDUCTION_DIMS >= 1,
+               "REDUCTION_DIMS must be >= 1")
+        _check(cls.CLUSTER_ALGO_MODE in ("kmeans", "dbscan"),
+               f"Unknown CLUSTER_ALGO_MODE: '{cls.CLUSTER_ALGO_MODE}'")
+        _check(cls.DBSCAN_EPS > 0,
+               "DBSCAN_EPS must be positive")
+        _check(cls.DBSCAN_MIN_SAMPLES >= 1,
+               "DBSCAN_MIN_SAMPLES must be >= 1")
+        _check(cls.SCALING_METHOD in ("minmax", "zscore"),
+               f"Unknown SCALING_METHOD: '{cls.SCALING_METHOD}'")
+
+        # --- Motion Model ---
+        _check(cls.UAV_STEP_SIZE > 0,
+               "UAV_STEP_SIZE must be positive (m/step)")
+        _check(cls.MAX_YAW_RATE > 0,
+               "MAX_YAW_RATE must be positive (deg/s)")
+        _check(cls.MAX_PITCH_RATE > 0,
+               "MAX_PITCH_RATE must be positive (deg/s)")
+        _check(cls.MAX_ACCELERATION > 0,
+               "MAX_ACCELERATION must be positive (m/s^2)")
+        _check(cls.COLLISION_MARGIN >= 0,
+               "COLLISION_MARGIN must be non-negative (metres)")
+
+        # --- Hostility ---
+        _check(cls.HOSTILITY_LEVEL in ("low", "medium", "high", "extreme"),
+               f"Unknown HOSTILITY_LEVEL: '{cls.HOSTILITY_LEVEL}'")
+
+        # --- RP Selection ---
+        _check(cls.RP_COVERAGE_RADIUS > 0,
+               "RP_COVERAGE_RADIUS must be positive (metres)")
+
+        # --- Node Energy ---
+        _check(cls.NODE_BATTERY_CAPACITY_J > 0,
+               "NODE_BATTERY_CAPACITY_J must be positive (Joules)")
+
+        # --- Base Station Uplink ---
+        _check(cls.BS_DATA_AGE_LIMIT >= 1,
+               "BS_DATA_AGE_LIMIT must be >= 1 (steps)")
+
+        if errors:
+            msg = "Configuration validation failed:\n" + "\n".join(
+                f"  [{i+1}] {e}" for i, e in enumerate(errors)
+            )
+            raise ValueError(msg)

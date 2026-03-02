@@ -48,10 +48,11 @@ class SemanticClusterer:
         
         # Phase 3.9: Age of Information (AoI) Calculus
         # Dynamically boost the Priority (Index 3) based on AoI Staleness (Index 9)
-        # Assuming AoI is scaled 0-1, we add a heavy 1.5x multiplier to the priority 
-        # to force the PCA/DBSCAN algorithms to break geo-clusters and rescue stale data.
+        # Configurable weight (Config.AOI_URGENCY_WEIGHT) controls how aggressively
+        # stale-data nodes override spatial proximity in PCA/DBSCAN clustering.
         if scaled.shape[1] > 9:
-            scaled[:, 3] += (scaled[:, 9] * 1.5)
+            from config.config import Config
+            scaled[:, 3] += (scaled[:, 9] * Config.AOI_URGENCY_WEIGHT)
             
         return scaled
 

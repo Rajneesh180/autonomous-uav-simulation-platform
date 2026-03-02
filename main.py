@@ -105,6 +105,10 @@ def main():
     Config.ENABLE_OBSTACLES = FeatureToggles.ENABLE_OBSTACLES
     Config.ENABLE_MOVING_OBSTACLES = FeatureToggles.MOVING_OBSTACLES
 
+    # Pre-flight configuration validation
+    Config.apply_hostility_profile()
+    Config.validate()
+
     print("=== Autonomous UAV Simulation Platform ===")
 
     if args.mode == "single":

@@ -60,6 +60,9 @@ class MissionController:
         self._rp_cache_key: frozenset = frozenset()
         self._cached_queue: list = []
 
+        # SCA Hover Position Map — refined hover coords per node (Gap 5: Zheng & Liu §III-E)
+        self._hover_positions: dict = {}  # {node_id: (x, y, z)}
+
         # Metrics
         self.energy_consumed_total = 0.0
         self.collision_count = 0
@@ -338,6 +341,23 @@ class MissionController:
         else:
             self.target_queue = pca_gls_order
 
+        # Stage 3: SCA Hover Position Refinement (Gap 5 — Zheng & Liu, IEEE TVT 2025 §III-E)
+        # Optimises the exact (x, y, z) hover coordinate above each node to minimise
+        # inter-waypoint travel cost while respecting obstacle altitude constraints.
+        if Config.ENABLE_SCA_HOVER and self.target_queue:
+            hover_coords = HoverOptimizer.apply_sequence(
+                uav_start=(ux, uy, uz),
+                nodes=self.target_queue,
+                obstacles=self.env.obstacles,
+            )
+            self._hover_positions = {
+                node.id: pos
+                for node, pos in zip(self.target_queue, hover_coords)
+            }
+            print(f"[SCA Hover] Refined {len(hover_coords)} hover positions (α={Config.SCA_STEP_SIZE}, tol={Config.SCA_CONVERGENCE_TOL})")
+        else:
+            self._hover_positions = {}
+
         # Write back cache so trap-escape replans reuse this plan without re-running GA
         self._rp_cache_key = current_key
         self._cached_queue = self.target_queue[:]
@@ -377,7 +397,10 @@ class MissionController:
                 return
             self.current_target = self.target_queue.pop(0)
 
-        target_pos = self.current_target.position()
+        # Use SCA-refined hover position if available; otherwise fall back to node position
+        target_pos = self._hover_positions.get(
+            self.current_target.id, self.current_target.position()
+        )
         current_pos = self.uav.position()
 
         dx = target_pos[0] - current_pos[0]
