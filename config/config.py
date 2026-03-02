@@ -16,9 +16,12 @@ class Config:
     ENABLE_SEMANTIC_CLUSTERING = True
     SCALING_METHOD = "minmax"          # minmax | zscore
     REDUCTION_DIMS = 3                 # Target components for PCA
-    CLUSTER_ALGO_MODE = "dbscan"       # kmeans | dbscan
+    CLUSTER_ALGO_MODE = "dbscan"       # kmeans | dbscan | gmm | auto
     DBSCAN_EPS = 0.2                   # Calibrated for normalized 800x600 latent space
     DBSCAN_MIN_SAMPLES = 4             # Minimum dense neighbors to form a Routing Centroid
+    AUTO_K_MIN = 2                     # Minimum k for adaptive cluster count search
+    AUTO_K_MAX = 10                    # Maximum k (capped by len(nodes)//3)
+    SILHOUETTE_RECLUSTER_THRESH = 0.3  # Quality threshold: recluster if silhouette < this
 
     # =========================================================
     # Randomness / Reproducibility
@@ -389,12 +392,18 @@ class Config:
         # --- Clustering ---
         _check(cls.REDUCTION_DIMS >= 1,
                "REDUCTION_DIMS must be >= 1")
-        _check(cls.CLUSTER_ALGO_MODE in ("kmeans", "dbscan"),
+        _check(cls.CLUSTER_ALGO_MODE in ("kmeans", "dbscan", "gmm", "auto"),
                f"Unknown CLUSTER_ALGO_MODE: '{cls.CLUSTER_ALGO_MODE}'")
         _check(cls.DBSCAN_EPS > 0,
                "DBSCAN_EPS must be positive")
         _check(cls.DBSCAN_MIN_SAMPLES >= 1,
                "DBSCAN_MIN_SAMPLES must be >= 1")
+        _check(cls.AUTO_K_MIN >= 2,
+               "AUTO_K_MIN must be >= 2")
+        _check(cls.AUTO_K_MAX >= cls.AUTO_K_MIN,
+               "AUTO_K_MAX must be >= AUTO_K_MIN")
+        _check(0 < cls.SILHOUETTE_RECLUSTER_THRESH <= 1,
+               "SILHOUETTE_RECLUSTER_THRESH must be in (0, 1]")
         _check(cls.SCALING_METHOD in ("minmax", "zscore"),
                f"Unknown SCALING_METHOD: '{cls.SCALING_METHOD}'")
 

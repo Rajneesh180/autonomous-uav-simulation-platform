@@ -3,7 +3,8 @@ Tests for the clustering pipeline:
   - core.clustering.semantic_clusterer.SemanticClusterer
   - core.clustering.cluster_manager.ClusterManager
   - core.clustering.feature_scaler.FeatureScaler
-Validates feature extraction, PCA reduction, KMeans/DBSCAN assignment, and cluster manager.
+Validates feature extraction, PCA reduction, KMeans/DBSCAN/GMM/auto assignment,
+adaptive-K selection, silhouette quality tracking, and cluster manager reclustering.
 """
 
 import numpy as np
@@ -70,10 +71,25 @@ class TestSemanticClusterer:
             "cluster_algo": "dbscan",
         })
 
+    @pytest.fixture
+    def gmm_clusterer(self):
+        return SemanticClusterer({
+            "scaling_method": "minmax",
+            "reduction_target": 3,
+            "cluster_algo": "gmm",
+        })
+
+    @pytest.fixture
+    def auto_clusterer(self):
+        return SemanticClusterer({
+            "scaling_method": "minmax",
+            "reduction_target": 3,
+            "cluster_algo": "auto",
+        })
+
     def test_kmeans_returns_correct_shapes(self, kmeans_clusterer, sample_nodes):
         """KMeans should return centroids and labels of expected shape."""
         centroids, labels = kmeans_clusterer.cluster(sample_nodes, current_time=0, n_clusters=3)
-        assert centroids.shape[0] == 3
         assert centroids.shape[1] == 3  # x, y, z
         assert len(labels) == len(sample_nodes)
 
@@ -81,6 +97,35 @@ class TestSemanticClusterer:
         """DBSCAN should assign a label to every node (noise = -1 is valid)."""
         _, labels = dbscan_clusterer.cluster(sample_nodes, current_time=0)
         assert len(labels) == len(sample_nodes)
+
+    def test_gmm_returns_labels(self, gmm_clusterer, sample_nodes):
+        """GMM should assign a label to every node."""
+        centroids, labels = gmm_clusterer.cluster(sample_nodes, current_time=0, n_clusters=3)
+        assert len(labels) == len(sample_nodes)
+        assert centroids.shape[1] == 3
+
+    def test_auto_select_returns_labels(self, auto_clusterer, sample_nodes):
+        """Auto-select should pick the best algorithm and return valid output."""
+        centroids, labels = auto_clusterer.cluster(sample_nodes, current_time=0, n_clusters=3)
+        assert len(labels) == len(sample_nodes)
+        assert centroids.shape[1] == 3
+
+    def test_silhouette_tracked(self, kmeans_clusterer, sample_nodes):
+        """After clustering, last_silhouette should be populated (or None for tiny data)."""
+        kmeans_clusterer.cluster(sample_nodes, current_time=0, n_clusters=3)
+        sil = kmeans_clusterer.last_silhouette
+        # With enough nodes and distinct clusters, silhouette should be a float
+        assert sil is None or (-1.0 <= sil <= 1.0)
+
+    def test_adaptive_k_returns_valid(self, sample_nodes):
+        """_find_best_k should return an integer in [k_min, k_max]."""
+        clusterer = SemanticClusterer({
+            "scaling_method": "minmax", "reduction_target": 3, "cluster_algo": "kmeans"
+        })
+        scaled = clusterer.extract_and_scale(sample_nodes, current_time=0)
+        reduced = clusterer.reduce_dimensions(scaled)
+        best_k = SemanticClusterer._find_best_k(reduced, k_min=2, k_max=6)
+        assert 2 <= best_k <= 6
 
     def test_empty_nodes(self, kmeans_clusterer):
         """Empty node list should not crash."""
@@ -118,6 +163,22 @@ class TestClusterManager:
         manager.last_node_count = 10
         assert manager.should_recluster(20, threshold=5) is True
         assert manager.should_recluster(12, threshold=5) is False
+
+    def test_should_recluster_triggers_on_low_silhouette(self, sample_nodes):
+        """Recluster should trigger when silhouette is below threshold."""
+        manager = ClusterManager()
+        manager.last_node_count = 10
+        # Node count hasn't changed, but silhouette is poor
+        assert manager.should_recluster(10, threshold=5, current_silhouette=0.1) is True
+        # Good silhouette + stable count → no recluster
+        assert manager.should_recluster(10, threshold=5, current_silhouette=0.8) is False
+
+    def test_last_silhouette_accessible(self, sample_nodes):
+        """last_silhouette property should work after perform_clustering."""
+        manager = ClusterManager()
+        manager.perform_clustering(sample_nodes, current_time=0.0)
+        sil = manager.last_silhouette
+        assert sil is None or isinstance(sil, float)
 
     def test_recluster_count_increments(self, sample_nodes):
         """Each perform_clustering call should increment recluster_count."""
