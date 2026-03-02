@@ -25,7 +25,7 @@ import random
 from typing import List, Tuple
 
 from config.config import Config
-from core.node_model import Node
+from core.models.node_model import Node
 
 
 class GASequenceOptimizer:

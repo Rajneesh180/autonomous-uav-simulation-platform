@@ -1,5 +1,5 @@
 import random
-from core.node_model import Node
+from core.models.node_model import Node
 
 
 def generate_nodes(
@@ -74,7 +74,7 @@ def generate_nodes(
 
 def spawn_single_node(width, height, node_id, env):
     import random
-    from core.node_model import Node
+    from core.models.node_model import Node
 
     attempts = 0
 

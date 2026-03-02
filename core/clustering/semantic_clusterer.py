@@ -8,7 +8,7 @@ try:
 except ImportError:
     PCA = None
 
-from core.node_model import Node
+from core.models.node_model import Node
 from core.clustering.feature_scaler import FeatureScaler
 
 

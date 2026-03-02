@@ -1,5 +1,5 @@
 import math
-from core.communication import CommunicationEngine
+from core.comms.communication import CommunicationEngine
 from config.config import Config
 
 

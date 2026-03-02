@@ -1,6 +1,6 @@
 import math
 from typing import List, Tuple
-from core.obstacle_model import Obstacle
+from core.models.obstacle_model import Obstacle
 from config.config import Config
 from metrics.metric_engine import MetricEngine
 import copy

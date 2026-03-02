@@ -4,10 +4,10 @@ import json
 
 from config.config import Config
 from core.seed_manager import set_global_seed
-from core.environment_model import Environment
+from core.models.environment_model import Environment
 from core.dataset_generator import generate_nodes
-from core.obstacle_model import Obstacle
-from core.risk_zone_model import RiskZone
+from core.models.obstacle_model import Obstacle
+from core.models.risk_zone_model import RiskZone
 from core.temporal_engine import TemporalEngine
 from core.run_manager import RunManager
 from core.mission_controller import MissionController

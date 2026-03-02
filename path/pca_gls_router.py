@@ -1,6 +1,6 @@
 import math
 from typing import List, Tuple
-from core.node_model import Node
+from core.models.node_model import Node
 
 class PCAGLSRouter:
     """

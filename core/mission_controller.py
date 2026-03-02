@@ -4,22 +4,22 @@ import random
 
 from config.config import Config
 from core.temporal_engine import TemporalEngine
-from core.energy_model import EnergyModel
-from core.environment_model import Environment
-from core.node_model import Node
+from core.models.energy_model import EnergyModel
+from core.models.environment_model import Environment
+from core.models.node_model import Node
 from core.dataset_generator import spawn_single_node
 from visualization.plot_renderer import PlotRenderer
-from core.communication import CommunicationEngine
-from core.buffer_aware_manager import BufferAwareManager
+from core.comms.communication import CommunicationEngine
+from core.comms.buffer_aware_manager import BufferAwareManager
 
 from core.clustering.cluster_manager import ClusterManager
 from path.pca_gls_router import PCAGLSRouter
 from path.ga_sequence_optimizer import GASequenceOptimizer
 from path.hover_optimizer import HoverOptimizer
-from core.digital_twin_map import DigitalTwinMap
+from core.sensing.digital_twin_map import DigitalTwinMap
 from core.rendezvous_selector import RendezvousSelector
-from core.obstacle_model import ObstacleHeightModel
-from core.base_station_uplink import BaseStationUplinkModel
+from core.models.obstacle_model import ObstacleHeightModel
+from core.comms.base_station_uplink import BaseStationUplinkModel
 
 
 class MissionController:

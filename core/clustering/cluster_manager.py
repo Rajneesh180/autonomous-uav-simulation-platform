@@ -1,6 +1,6 @@
 from typing import List, Tuple
 import numpy as np
-from core.node_model import Node
+from core.models.node_model import Node
 from config.config import Config
 from core.clustering.semantic_clusterer import SemanticClusterer
 

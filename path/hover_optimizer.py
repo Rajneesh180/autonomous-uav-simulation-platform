@@ -21,7 +21,7 @@ import math
 from typing import Tuple, List, Optional
 
 from config.config import Config
-from core.obstacle_model import ObstacleHeightModel
+from core.models.obstacle_model import ObstacleHeightModel
 
 
 class HoverOptimizer:
