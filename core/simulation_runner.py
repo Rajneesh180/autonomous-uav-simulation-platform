@@ -1,4 +1,5 @@
 import os
+import random
 import time
 import json
 
@@ -70,8 +71,14 @@ def run_simulation(verbose=True, render=True, seed_override=None):
     # Environment Features
     # ---------------------------------------------------------
     if Config.ENABLE_OBSTACLES:
-        env.add_obstacle(Obstacle(200, 200, 350, 350))
-        env.add_obstacle(Obstacle(500, 100, 650, 250))
+        _rng = random.Random(active_seed + Config.OBSTACLE_SEED_OFFSET)
+        margin = 60
+        for _ in range(Config.OBSTACLE_COUNT):
+            x1 = _rng.randint(margin, Config.MAP_WIDTH  - margin - 120)
+            y1 = _rng.randint(margin, Config.MAP_HEIGHT - margin - 100)
+            w  = _rng.randint(80, 160)
+            h  = _rng.randint(80, 140)
+            env.add_obstacle(Obstacle(x1, y1, x1 + w, y1 + h))
 
     if Config.ENABLE_RISK_ZONES:
         env.add_risk_zone(RiskZone(100, 400, 300, 550, multiplier=1.8))
@@ -236,6 +243,65 @@ def run_simulation(verbose=True, render=True, seed_override=None):
             battery_hist=mission.battery_history,
             replan_steps=mission.replan_timestamps,
             save_dir=visuals_path
+        )
+
+        # ---- Phase-4: Semantic Clustering Overlays ----
+        if Config.ENABLE_SEMANTIC_CLUSTERING and len(mission.active_labels) > 0:
+            PlotRenderer.render_semantic_clustering(
+                env=env,
+                active_labels=mission.active_labels,
+                active_centroids=mission.active_centroids,
+                save_dir=visuals_path,
+            )
+            if hasattr(mission, "cluster_manager") and mission.cluster_manager is not None:
+                reduced = getattr(mission.cluster_manager, "last_reduced_features", None)
+                if reduced is not None:
+                    PlotRenderer.render_clustering_pca_space(
+                        reduced_features=reduced,
+                        active_labels=mission.active_labels,
+                        save_dir=visuals_path,
+                    )
+
+        # ---- Phase-4: Routing Pipeline Compression ----
+        if Config.ENABLE_RENDEZVOUS_SELECTION and hasattr(mission, "rp_member_map"):
+            rp_all = list(mission.rp_member_map.keys()) if mission.rp_member_map else []
+            PlotRenderer.render_routing_pipeline(
+                env=env,
+                rp_nodes=rp_all,
+                rp_member_map=mission.rp_member_map,
+                route_sequence=getattr(mission, "_cached_queue", []),
+                save_dir=visuals_path,
+            )
+            PlotRenderer.render_rendezvous_compression(
+                env=env,
+                all_nodes=env.nodes[1:],
+                rp_nodes=rp_all,
+                rp_member_map=mission.rp_member_map,
+                save_dir=visuals_path,
+            )
+
+        # ---- Phase-4: Communication Quality ----
+        PlotRenderer.render_communication_quality(
+            nodes=env.nodes,
+            uav_trail=getattr(env, "uav_trail", []),
+            save_dir=visuals_path,
+        )
+
+        # ---- Phase-4: Mission Progress Combined ----
+        data_hist = getattr(mission, "collected_data_history", [])
+        aoi_mean_hist = [
+            sum(v[-1] for v in mission.aoi_history.values() if v) / max(len(mission.aoi_history), 1)
+            if mission.aoi_history else 0.0
+        ]  # scalar fallback — build per-step mean if available
+        if hasattr(mission, "aoi_mean_history"):
+            aoi_mean_hist = mission.aoi_mean_history
+        PlotRenderer.render_mission_progress_combined(
+            visited_hist=mission.visited_history,
+            battery_hist=mission.battery_history,
+            data_hist=data_hist,
+            aoi_mean_hist=aoi_mean_hist,
+            replan_steps=mission.replan_timestamps,
+            save_dir=visuals_path,
         )
 
         # ---- MP4 Animation ----
