@@ -836,3 +836,389 @@ class PlotRenderer:
         ax.legend()
 
         PlotRenderer._save_dual(fig, save_dir, "run_comparison")
+
+    # ----------------------------------------------------------
+    # 10. Semantic Clustering — Geographic Space Overlay
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_semantic_clustering(env, active_labels, active_centroids, save_dir: str):
+        """
+        2D geographic map with colour-coded node clusters, centroid markers, and
+        convex-hull cluster boundaries.  Noise points (label == -1) are shown grey.
+        """
+        import numpy as np
+        from scipy.spatial import ConvexHull
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        cmap = plt.cm.get_cmap("tab10")
+        unique_labels = sorted(set(active_labels))
+        nodes = env.nodes[1:]  # exclude base station
+
+        fig, ax = plt.subplots(figsize=(10, 7))
+
+        # Obstacles
+        for obs in env.obstacles:
+            rect = plt.Rectangle(
+                (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
+                color="#B71C1C", alpha=0.15, edgecolor="#B71C1C", linewidth=1,
+            )
+            ax.add_patch(rect)
+
+        for label in unique_labels:
+            mask = [i for i, l in enumerate(active_labels) if l == label and i < len(nodes)]
+            if not mask:
+                continue
+            colour = "#9E9E9E" if label == -1 else cmap(label % 10)
+            xs = [nodes[i].x for i in mask]
+            ys = [nodes[i].y for i in mask]
+            ax.scatter(xs, ys, c=[colour]*len(xs), s=40,
+                       edgecolors="black", linewidths=0.4, zorder=3,
+                       label=f"Cluster {label}" if label != -1 else "Noise")
+
+            # Convex hull boundary for valid clusters with ≥3 points
+            if label != -1 and len(mask) >= 3:
+                pts = np.array(list(zip(xs, ys)))
+                try:
+                    hull = ConvexHull(pts)
+                    hull_pts = np.append(hull.vertices, hull.vertices[0])
+                    ax.plot(pts[hull_pts, 0], pts[hull_pts, 1],
+                            color=colour, linewidth=1.2, linestyle="--", alpha=0.6)
+                except Exception:
+                    pass
+
+        # Centroid markers
+        for idx, centroid in enumerate(active_centroids):
+            if np.all(np.array(centroid) == 0):
+                continue
+            ax.scatter(centroid[0], centroid[1], marker="*", s=220,
+                       color=cmap(idx % 10), edgecolors="black", linewidths=0.8,
+                       zorder=5)
+            ax.annotate(f"C{idx}", (centroid[0], centroid[1]),
+                        textcoords="offset points", xytext=(6, 4), fontsize=7)
+
+        # Base station
+        base = env.nodes[0]
+        ax.scatter(base.x, base.y, c="black", s=120, marker="s", zorder=6, label="Base Station")
+
+        ax.set_xlim(0, env.width)
+        ax.set_ylim(0, env.height)
+        ax.set_xlabel("X (m)")
+        ax.set_ylabel("Y (m)")
+        ax.set_title("Semantic Clustering — Geographic Distribution", fontsize=14, fontweight="bold")
+        ax.legend(loc="upper right", fontsize=8, ncol=2, framealpha=0.8)
+        ax.set_aspect("equal")
+
+        PlotRenderer._save_dual(fig, save_dir, "semantic_clustering_geo")
+
+    # ----------------------------------------------------------
+    # 11. Semantic Clustering — PCA Latent Space
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_clustering_pca_space(reduced_features, active_labels, save_dir: str):
+        """
+        2D PCA-space scatter plot showing cluster assignments in the latent feature space.
+
+        reduced_features : (N, ≥2) array-like of PCA-projected node features
+        active_labels    : list/array of integer cluster labels (len == N)
+        """
+        import numpy as np
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        arr = np.array(reduced_features)
+        if arr.ndim < 2 or arr.shape[1] < 2:
+            return
+
+        cmap = plt.cm.get_cmap("tab10")
+        unique_labels = sorted(set(active_labels))
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        for label in unique_labels:
+            mask = [i for i, l in enumerate(active_labels) if l == label]
+            colour = "#9E9E9E" if label == -1 else cmap(label % 10)
+            ax.scatter(arr[mask, 0], arr[mask, 1],
+                       c=[colour]*len(mask), s=45,
+                       edgecolors="black", linewidths=0.3, alpha=0.85,
+                       label=f"Cluster {label}" if label != -1 else "Noise / Outliers")
+
+        ax.set_xlabel("PCA Component 1")
+        ax.set_ylabel("PCA Component 2")
+        ax.set_title("Semantic Clustering — PCA Latent Space", fontsize=14, fontweight="bold")
+        ax.legend(loc="best", fontsize=8, framealpha=0.8)
+
+        PlotRenderer._save_dual(fig, save_dir, "semantic_clustering_pca")
+
+    # ----------------------------------------------------------
+    # 12. Routing Pipeline Compression — 3-Panel Figure
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_routing_pipeline(env, rp_nodes, rp_member_map, route_sequence, save_dir: str):
+        """
+        3-panel figure showing the full routing compression pipeline:
+        Panel 1 — Raw IoT node deployment
+        Panel 2 — RP compression (greedy neighbourhood)
+        Panel 3 — Final optimised UAV route
+        """
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        fig.suptitle("Routing Pipeline Compression", fontsize=14, fontweight="bold")
+
+        all_nodes = env.nodes[1:]
+
+        def _draw_obstacles(ax):
+            for obs in env.obstacles:
+                rect = plt.Rectangle(
+                    (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
+                    color="#B71C1C", alpha=0.15, edgecolor="#B71C1C",
+                )
+                ax.add_patch(rect)
+
+        # Panel 1: raw nodes
+        ax = axes[0]
+        _draw_obstacles(ax)
+        ax.scatter([n.x for n in all_nodes], [n.y for n in all_nodes],
+                   c="#42A5F5", s=25, edgecolors="black", linewidths=0.3)
+        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=100, marker="s")
+        ax.set_title(f"(a) Raw Deployment  [{len(all_nodes)} nodes]", fontsize=10)
+        ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
+        ax.set_aspect("equal"); ax.set_xlabel("X (m)"); ax.set_ylabel("Y (m)")
+
+        # Panel 2: RP compression
+        ax = axes[1]
+        _draw_obstacles(ax)
+        # dim out non-RP nodes
+        ax.scatter([n.x for n in all_nodes], [n.y for n in all_nodes],
+                   c="#BDBDBD", s=15, edgecolors="none", alpha=0.4)
+        # coverage circles for each RP
+        for rp in (rp_nodes or []):
+            circle = plt.Circle((rp.x, rp.y), 120, color="#FF9800", alpha=0.12)
+            ax.add_patch(circle)
+        ax.scatter([n.x for n in (rp_nodes or [])], [n.y for n in (rp_nodes or [])],
+                   c="#FF9800", s=70, edgecolors="black", linewidths=0.5, zorder=4, marker="D")
+        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=100, marker="s")
+        ax.set_title(f"(b) RP Compression  [{len(rp_nodes or [])} RPs]", fontsize=10)
+        ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
+        ax.set_aspect("equal"); ax.set_xlabel("X (m)")
+
+        # Panel 3: optimised route
+        ax = axes[2]
+        _draw_obstacles(ax)
+        ax.scatter([n.x for n in all_nodes], [n.y for n in all_nodes],
+                   c="#BDBDBD", s=15, edgecolors="none", alpha=0.3)
+        seq = route_sequence or []
+        if len(seq) >= 2:
+            xs = [env.nodes[0].x] + [n.x for n in seq]
+            ys = [env.nodes[0].y] + [n.y for n in seq]
+            ax.plot(xs, ys, color="#4CAF50", linewidth=1.2, zorder=3)
+            for i, (x, y) in enumerate(zip(xs[1:], ys[1:]), start=1):
+                ax.annotate(str(i), (x, y), textcoords="offset points",
+                            xytext=(4, 4), fontsize=6, color="#1B5E20")
+        ax.scatter([n.x for n in seq], [n.y for n in seq],
+                   c="#4CAF50", s=50, edgecolors="black", linewidths=0.4, zorder=4)
+        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=100, marker="s")
+        ax.set_title(f"(c) Optimised Route  [{len(seq)} waypoints]", fontsize=10)
+        ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
+        ax.set_aspect("equal"); ax.set_xlabel("X (m)")
+
+        plt.tight_layout(rect=[0, 0, 1, 0.93])
+        PlotRenderer._save_dual(fig, save_dir, "routing_pipeline")
+
+    # ----------------------------------------------------------
+    # 13. Communication Quality — Data Rate & Buffer Levels
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_communication_quality(nodes, uav_trail, save_dir: str):
+        """
+        Two-panel communication quality figure:
+        Panel 1 — Scatter of achievable data rate vs UAV–node 2D distance
+        Panel 2 — Histogram of buffer occupancy across active nodes at mission end
+        """
+        import numpy as np
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        sensor_nodes = [n for n in nodes if n.id != 0]
+        if not sensor_nodes:
+            return
+
+        # Compute mean UAV position from trail for distance proxy
+        if uav_trail and len(uav_trail) > 0:
+            mean_x = float(np.mean([p[0] for p in uav_trail]))
+            mean_y = float(np.mean([p[1] for p in uav_trail]))
+        else:
+            mean_x, mean_y = 400.0, 300.0
+
+        distances = [((n.x - mean_x)**2 + (n.y - mean_y)**2) ** 0.5 for n in sensor_nodes]
+        data_rates = [getattr(n, "current_rate_mbps", 0.0) for n in sensor_nodes]
+        buffer_fill = [
+            min(100.0, getattr(n, "buffer_fill_mbits", 0.0) /
+                max(getattr(n, "buffer_cap_mbits", 1.0), 1e-6) * 100)
+            for n in sensor_nodes
+        ]
+
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        fig.suptitle("Communication Quality Analysis", fontsize=13, fontweight="bold")
+
+        # Panel 1: data rate vs distance
+        ax = axes[0]
+        ax.scatter(distances, data_rates, c="#1565C0", s=35,
+                   edgecolors="black", linewidths=0.3, alpha=0.75)
+        ax.set_xlabel("UAV–Node Distance (m)")
+        ax.set_ylabel("Achievable Data Rate (Mbps)")
+        ax.set_title("(a) Link Rate vs Distance")
+
+        # Fit a simple 1/d^2 trend line for visual reference
+        d_sorted = sorted(distances)
+        if d_sorted and d_sorted[-1] > 0:
+            trend_d = np.linspace(max(1, d_sorted[0]), d_sorted[-1], 200)
+            max_rate = max(data_rates) if data_rates else 1.0
+            # Normalised inverse-square reference
+            scale = max_rate * (min(d_sorted) ** 2) if d_sorted[0] > 0 else max_rate
+            trend_r = scale / (trend_d ** 2 + 1e-6)
+            ax.plot(trend_d, trend_r, color="#E53935", linewidth=1,
+                    linestyle="--", label="1/d² reference")
+            ax.legend(fontsize=8)
+
+        # Panel 2: buffer occupancy histogram
+        ax = axes[1]
+        ax.hist(buffer_fill, bins=15, color="#FF9800", edgecolor="black",
+                linewidth=0.5, alpha=0.85)
+        ax.set_xlabel("Buffer Occupancy (%)")
+        ax.set_ylabel("Node Count")
+        ax.set_title("(b) Buffer Fill Distribution")
+        ax.axvline(x=80, color="#E53935", linestyle="--", linewidth=1,
+                   label="80% threshold")
+        ax.legend(fontsize=8)
+
+        plt.tight_layout(rect=[0, 0, 1, 0.93])
+        PlotRenderer._save_dual(fig, save_dir, "communication_quality")
+
+    # ----------------------------------------------------------
+    # 14. Mission Progress Combined — 4-Panel
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_mission_progress_combined(
+        visited_hist: list,
+        battery_hist: list,
+        data_hist: list,
+        aoi_mean_hist: list,
+        replan_steps: list,
+        save_dir: str,
+    ):
+        """
+        4-panel mission progress figure:
+        [0] Visited nodes  [1] Battery discharge  [2] Data collected  [3] Mean AoI
+        Replan events are overlaid as vertical markers on all panels.
+        """
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        fig, axes = plt.subplots(2, 2, figsize=(14, 8), sharex=True)
+        fig.suptitle("Mission Progress Overview", fontsize=14, fontweight="bold")
+
+        series = [
+            (axes[0, 0], visited_hist,   "#4CAF50", "Nodes Visited",         "Count"),
+            (axes[0, 1], battery_hist,   "#1565C0", "Battery Remaining (J)", "Joules"),
+            (axes[1, 0], data_hist,      "#FF9800", "Data Collected (Mbits)","Mbits"),
+            (axes[1, 1], aoi_mean_hist,  "#9C27B0", "Mean AoI (steps)",      "Steps"),
+        ]
+
+        for ax, hist, colour, title, ylabel in series:
+            if hist:
+                ax.plot(hist, color=colour, linewidth=1.2)
+                ax.fill_between(range(len(hist)), hist, alpha=0.08, color=colour)
+            ax.set_title(title, fontsize=11)
+            ax.set_ylabel(ylabel, fontsize=9)
+            # Replan event markers
+            for rs in replan_steps:
+                if hist and 0 <= rs < len(hist):
+                    ax.axvline(x=rs, color="#E53935", linestyle="--",
+                               linewidth=0.5, alpha=0.5)
+
+        axes[1, 0].set_xlabel("Simulation Step")
+        axes[1, 1].set_xlabel("Simulation Step")
+
+        # Single legend entry for replan events
+        if replan_steps:
+            axes[0, 0].axvline(x=-1, color="#E53935", linestyle="--",
+                               linewidth=0.8, label="Replan")
+            axes[0, 0].legend(fontsize=8, loc="upper left")
+
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        PlotRenderer._save_dual(fig, save_dir, "mission_progress_combined")
+
+    # ----------------------------------------------------------
+    # 15. Rendezvous Compression — Before / After
+    # ----------------------------------------------------------
+    @staticmethod
+    def render_rendezvous_compression(env, all_nodes, rp_nodes, rp_member_map, save_dir: str):
+        """
+        Side-by-side before/after figure illustrating RP compression:
+        - Left: all nodes coloured by RP membership
+        - Right: only the RP waypoints with coverage radii
+        Includes a compression ratio annotation.
+        """
+        import numpy as np
+        PlotRenderer._ensure_dir(save_dir)
+        PlotRenderer._set_ieee_style()
+
+        cmap = plt.cm.get_cmap("tab20")
+        rp_list = rp_nodes or []
+        rp_map  = rp_member_map or {}
+
+        # Build node → RP colour map
+        node_colour = {}
+        for rp_idx, (rp, members) in enumerate(rp_map.items()):
+            for m in members:
+                node_colour[m.id] = cmap(rp_idx % 20)
+
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        fig.suptitle(
+            f"Rendezvous Point Compression  "
+            f"({len(all_nodes)} nodes → {len(rp_list)} RPs, "
+            f"ratio = {len(all_nodes)/max(len(rp_list), 1):.1f}×)",
+            fontsize=13, fontweight="bold",
+        )
+
+        def _draw_obs(ax):
+            for obs in env.obstacles:
+                rect = plt.Rectangle(
+                    (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
+                    color="#B71C1C", alpha=0.12, edgecolor="#B71C1C",
+                )
+                ax.add_patch(rect)
+
+        # Left panel — all nodes coloured by cluster
+        ax = axes[0]
+        _draw_obs(ax)
+        for n in all_nodes:
+            col = node_colour.get(n.id, "#9E9E9E")
+            ax.scatter(n.x, n.y, c=[col], s=30, edgecolors="black", linewidths=0.3)
+        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=120, marker="s")
+        ax.set_title(f"(a) All Nodes  [{len(all_nodes)}]", fontsize=10)
+        ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
+        ax.set_xlabel("X (m)"); ax.set_ylabel("Y (m)"); ax.set_aspect("equal")
+
+        # Right panel — RP waypoints with coverage radii
+        ax = axes[1]
+        _draw_obs(ax)
+        # dim underlying nodes
+        ax.scatter([n.x for n in all_nodes], [n.y for n in all_nodes],
+                   c="#BDBDBD", s=10, edgecolors="none", alpha=0.35)
+        for rp_idx, rp in enumerate(rp_list):
+            colour = cmap(rp_idx % 20)
+            circle = plt.Circle((rp.x, rp.y), 120, color=colour, alpha=0.12)
+            ax.add_patch(circle)
+            ax.scatter(rp.x, rp.y, c=[colour], s=80, marker="D",
+                       edgecolors="black", linewidths=0.5, zorder=4)
+        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=120, marker="s")
+        ax.set_title(f"(b) Rendezvous Points  [{len(rp_list)}]", fontsize=10)
+        ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
+        ax.set_xlabel("X (m)"); ax.set_aspect("equal")
+
+        plt.tight_layout(rect=[0, 0, 1, 0.92])
+        PlotRenderer._save_dual(fig, save_dir, "rendezvous_compression")
