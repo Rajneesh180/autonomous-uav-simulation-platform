@@ -17,6 +17,10 @@ import json
 import os
 from typing import Dict, List
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
 from config.config import Config
 from core.batch_runner import BatchRunner
 
@@ -24,7 +28,7 @@ from core.batch_runner import BatchRunner
 # ── Parameter Sweep Definitions ──────────────────────────────────────
 # Maps parameter label → (Config attribute, list of values to sweep)
 DEFAULT_SWEEPS: Dict[str, tuple] = {
-    "node_count": ("NUM_NODES",     [10, 20, 40, 60, 80, 100]),
+    "node_count": ("NODE_COUNT",    [10, 20, 40, 60, 80, 100]),
     "map_size":   ("MAP_WIDTH",     [200, 400, 600, 800, 1000]),
 }
 
@@ -79,7 +83,75 @@ def run_scalability(
         json.dump(results, fh, indent=2)
     print(f"\n[ScalabilityRunner] Results saved → {out_path}")
 
+    _generate_scalability_plots(results, param, output_dir)
+
     return results
+
+
+def _generate_scalability_plots(results: Dict[str, dict], param: str, output_dir: str) -> None:
+    """
+    Generate publication-quality line plots from a completed scalability sweep.
+    Saves PNG + PDF to *output_dir*/plots/.
+    """
+    plot_dir = os.path.join(output_dir, "plots")
+    os.makedirs(plot_dir, exist_ok=True)
+
+    x_vals  = sorted(results.keys(), key=lambda k: float(k))
+    x_float = [float(v) for v in x_vals]
+
+    xlabel_map = {
+        "node_count": "Number of IoT Nodes",
+        "map_size":   "Map Dimension (m)",
+    }
+    xlabel = xlabel_map.get(param, param.replace("_", " ").title())
+
+    plt.rcParams.update({
+        "font.family": "serif", "font.size": 10,
+        "axes.labelsize": 12, "axes.titlesize": 13,
+        "axes.grid": True, "grid.alpha": 0.3,
+        "figure.dpi": 150,
+    })
+
+    metrics_to_plot = [
+        ("coverage_ratio_percent",      "Coverage Ratio (%)",
+         "#1565C0", "Coverage vs " + xlabel),
+        ("replan_frequency",            "Replan Frequency (replans/step)",
+         "#E53935", "Replan Frequency vs " + xlabel),
+        ("path_stability_index",        "Path Stability Index",
+         "#4CAF50", "Path Stability vs " + xlabel),
+    ]
+
+    for metric_key, ylabel, colour, title in metrics_to_plot:
+        y_mean, y_err = [], []
+        for v in x_vals:
+            entry = results[v].get(metric_key, {})
+            y_mean.append(entry.get("mean", 0.0))
+            y_err.append(entry.get("ci95", 0.0))
+
+        if not any(y_mean):
+            continue
+
+        fig, ax = plt.subplots(figsize=(7, 4.5))
+        ax.plot(x_float, y_mean, marker="o", color=colour, linewidth=1.8, markersize=5)
+        ax.fill_between(
+            x_float,
+            [m - e for m, e in zip(y_mean, y_err)],
+            [m + e for m, e in zip(y_mean, y_err)],
+            alpha=0.15, color=colour,
+        )
+        ax.errorbar(x_float, y_mean, yerr=y_err, fmt="none",
+                    ecolor=colour, elinewidth=1, capsize=3)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title, fontweight="bold")
+        ax.set_xticks(x_float)
+
+        fname = f"scalability_{param}_{metric_key}"
+        for ext in ("png", "pdf"):
+            fig.savefig(os.path.join(plot_dir, f"{fname}.{ext}"),
+                        format=ext, bbox_inches="tight")
+        plt.close(fig)
+        print(f"[ScalabilityRunner] Plot saved → {plot_dir}/{fname}.png")
 
 
 # ── CLI ──────────────────────────────────────────────────────────────
