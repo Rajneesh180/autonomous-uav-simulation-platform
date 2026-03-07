@@ -177,6 +177,7 @@ class Config:
     GA_CROSSOVER_RATE = 0.85
     GA_MUTATION_RATE = 0.15
     GA_TW_PENALTY_WEIGHT = 5.0
+    GA_ENERGY_WEIGHT = 0.003     # Weight for 3D altitude-aware energy term in GA fitness
 
     # =========================================================
     # GLS Penalty Augmentation (Donipati et al., IEEE TNSM 2025)
@@ -194,6 +195,8 @@ class Config:
     # Obstacles
     # =========================================================
     ENABLE_OBSTACLES = True
+    OBSTACLE_COUNT = 3           # Number of obstacles to generate per run (seeded)
+    OBSTACLE_SEED_OFFSET = 7     # Offset added to RANDOM_SEED for obstacle RNG
     ENABLE_MOVING_OBSTACLES = True
     OBSTACLE_MOTION_MODE = "linear"  # linear | random_walk
     OBSTACLE_VELOCITY_SCALE = 0.6
