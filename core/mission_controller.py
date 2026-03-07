@@ -8,7 +8,6 @@ from core.models.energy_model import EnergyModel
 from core.models.environment_model import Environment
 from core.models.node_model import Node, UAVState, SensorNode
 from core.dataset_generator import spawn_single_node
-from visualization.plot_renderer import PlotRenderer
 from core.comms.communication import CommunicationEngine
 from core.comms.buffer_aware_manager import BufferAwareManager
 
@@ -24,12 +23,11 @@ from core.comms.base_station_uplink import BaseStationUplinkModel
 
 class MissionController:
     def __init__(
-        self, env: Environment, temporal: TemporalEngine, run_manager=None, render=True
+        self, env: Environment, temporal: TemporalEngine, run_manager=None
     ):
         self.env = env
         self.temporal = temporal
         self.run_manager = run_manager
-        self.render_enabled = render
 
         # UAV anchor
         self.uav: UAVState = env.uav
@@ -124,21 +122,6 @@ class MissionController:
     def step(self):
         if not self.temporal.tick():
             return
-
-        if self.render_enabled:
-            # We enforce Matplotlib interactive dash for Phase 3.6 fidelity
-            if not hasattr(self, 'interactive_dash'):
-                from visualization.interactive_dashboard import InteractiveDashboard
-                self.interactive_dash = InteractiveDashboard(self.env)
-                
-            self.interactive_dash.render(
-                self.uav, 
-                self.current_target, 
-                self.temporal.current_step, 
-                self.base_position, 
-                self.active_centroids
-            )
-            # print(f"[Time Step] {self.temporal.current_step}")
 
         # Obstacle motion toggle
         if Config.ENABLE_MOVING_OBSTACLES:
@@ -243,19 +226,6 @@ class MissionController:
         self.aoi_mean_history.append(
             sum(step_aoi_vals) / len(step_aoi_vals) if step_aoi_vals else 0.0
         )
-
-        # Frame saving
-        if (
-            self.render_enabled
-            and Config.ENABLE_VISUALS
-            and self.run_manager
-            and self.temporal.current_step % Config.FRAME_SAVE_INTERVAL == 0
-        ):
-            PlotRenderer.render_environment_frame(
-                self.env,
-                self.run_manager.get_path("frames"),
-                self.temporal.current_step,
-            )
 
         self._check_terminal_conditions()
 

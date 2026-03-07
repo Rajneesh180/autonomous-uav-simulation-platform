@@ -17,6 +17,7 @@ from core.clustering.cluster_manager import ClusterManager
 from core.telemetry_logger import TelemetryLogger
 from visualization.plot_renderer import PlotRenderer
 from visualization.animation_builder import AnimationBuilder
+from visualization.interactive_dashboard import InteractiveDashboard
 from metrics.metric_engine import MetricEngine
 from metrics.auto_logger import IEEEDocLogger
 
@@ -90,7 +91,6 @@ def run_simulation(verbose=True, render=True, seed_override=None):
         env,
         temporal,
         run_manager=run_manager,
-        render=render,
     )
 
     step_counter = 0
@@ -98,15 +98,27 @@ def run_simulation(verbose=True, render=True, seed_override=None):
     telemetry = TelemetryLogger(run_manager.get_path("telemetry"))
     keyframe_interval = max(1, Config.FRAME_SUBSAMPLE_INTERVAL)
 
+    # Interactive dashboard (created once, updated each step when rendering)
+    interactive_dash = InteractiveDashboard(env) if render else None
+
     while mission.is_active():
         mission.step()
         telemetry.log_step(step_counter, mission)
 
-        # Render frames only when explicitly requested (single-run mode)
-        if render and (step_counter % keyframe_interval == 0):
-            PlotRenderer.render_environment_frame(
-                env, frames_path, step_counter, mission=mission
-            )
+        # Render frames and live dashboard only when explicitly requested
+        if render:
+            if interactive_dash is not None:
+                interactive_dash.render(
+                    mission.uav,
+                    mission.current_target,
+                    temporal.current_step,
+                    mission.base_position,
+                    mission.active_centroids,
+                )
+            if step_counter % keyframe_interval == 0:
+                PlotRenderer.render_environment_frame(
+                    env, frames_path, step_counter, mission=mission
+                )
 
         step_counter += 1
 
