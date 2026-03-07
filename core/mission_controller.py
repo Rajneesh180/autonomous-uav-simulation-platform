@@ -17,8 +17,8 @@ from path.ga_sequence_optimizer import GASequenceOptimizer
 from path.hover_optimizer import HoverOptimizer
 from core.sensing.digital_twin_map import DigitalTwinMap
 from core.rendezvous_selector import RendezvousSelector
-from core.models.obstacle_model import ObstacleHeightModel
 from core.comms.base_station_uplink import BaseStationUplinkModel
+from core.physics_engine import PhysicsEngine
 
 
 class MissionController:
@@ -179,7 +179,6 @@ class MissionController:
         uav_x, uav_y, uav_z = self.uav.position()
         for node in self.env.sensors:
             if node.id not in self.visited:
-                import math
                 dist_to_node = math.hypot(node.x - uav_x, node.y - uav_y)
                 uav_nearby = dist_to_node <= Config.ISAC_SENSING_RADIUS
                 CommunicationEngine.fill_buffer(
@@ -359,28 +358,8 @@ class MissionController:
 
 
 
-    def _rectangle_clearance(self, x, y, obs):
-        dx = max(obs.x1 - x, 0, x - obs.x2)
-        dy = max(obs.y1 - y, 0, y - obs.y2)
-        return math.hypot(dx, dy)
-
-    def _predicted_clearance(self, x, y, obs):
-        if not Config.ENABLE_MOVING_OBSTACLES:
-            return self._rectangle_clearance(x, y, obs)
-
-        # Predict next position (linear motion model)
-        pred_x1 = obs.x1 + obs.vx
-        pred_x2 = obs.x2 + obs.vx
-        pred_y1 = obs.y1 + obs.vy
-        pred_y2 = obs.y2 + obs.vy
-
-        dx = max(pred_x1 - x, 0, x - pred_x2)
-        dy = max(pred_y1 - y, 0, y - pred_y2)
-
-        return math.hypot(dx, dy)
-
     # ---------------------------------------------------------
-    # Motion Primitive Selection (Research-Clean Version)
+    # Motion: Target Selection, Service, and Physics Delegation
     # ---------------------------------------------------------
 
     def _move_one_step(self):
@@ -398,29 +377,21 @@ class MissionController:
 
         dx = target_pos[0] - current_pos[0]
         dy = target_pos[1] - current_pos[1]
-
-        # Physics is always 3D — compute full dz / distance / pitch
         dz = target_pos[2] - current_pos[2]
         distance = math.sqrt(dx**2 + dy**2 + dz**2)
-        base_pitch = math.atan2(dz, math.hypot(dx, dy))
 
         dt = float(Config.TIME_STEP)
 
         # -------------------------------------------------------------
         # Buffer-Aware Dynamic Service Time (DST-BA): 'Chord-Fly' Check
         # -------------------------------------------------------------
-        # The UAV is capable of collecting data while in transit 
-        # (probabilistic sensing over distance).
         data_collected = BufferAwareManager.process_data_collection(
             self.uav.position(), self.current_target, dt, self.env,
-            active_node_id=self.current_target.id  # Gap 7: TDMA — only this node transmits
+            active_node_id=self.current_target.id
         )
 
-
-        # IEEE MetricsDashboard instrumentation: log achievable rate and cumulative data
         if data_collected > 0:
             self.collected_data_mbits += data_collected
-            # Compute instantaneous achievable Shannon rate at current UAV-node distance
             _rate = CommunicationEngine.achievable_data_rate(
                 self.current_target.position(), self.uav.position()
             )
@@ -428,8 +399,8 @@ class MissionController:
 
         if data_collected > 0 and distance > 5.0:
             print(f"[Chord-Fly] Node {self.current_target.id} at {distance:.1f}m | Collected {data_collected:.2f}Mb | Rem: {self.current_target.current_buffer:.2f}Mb")
-            
-        # Check if the buffer is empty. If so, we bypass reaching the exact coordinate!
+
+        # Check if buffer drained via chord-fly
         if self.current_target.current_buffer <= 1e-3:
             self.visited.add(self.current_target.id)
             print(f"[Visited] Node {self.current_target.id} (Buffer completely drained via DST-BA)")
@@ -438,7 +409,6 @@ class MissionController:
 
         # -------------------------------------------------------------
         # Target Reached: Analytical Service (Donipati et al., TNSM 2025)
-        # τ* = D_i(t) / R_i(t) — single-shot buffer drain
         # -------------------------------------------------------------
         if distance < 1e-3:
             outcome = BufferAwareManager.execute_service(
@@ -485,251 +455,31 @@ class MissionController:
             self.current_target = None
             return
 
-        dt = float(Config.TIME_STEP)
-        
-        # Acceleration Dynamics
-        v_current_mag = math.sqrt(self.uav.vx**2 + self.uav.vy**2 + self.uav.vz**2)
-        target_v_mag = min(Config.UAV_STEP_SIZE / dt, distance / dt) if dt > 0 else 0.0
-        
-        # Max acceleration constraint
-        max_dv = Config.MAX_ACCELERATION * dt
-        if target_v_mag - v_current_mag > max_dv:
-            v_mag = v_current_mag + max_dv
-        elif v_current_mag - target_v_mag > max_dv:
-            v_mag = max(0.0, v_current_mag - max_dv)
-        else:
-            v_mag = target_v_mag
-            
-        step_size = v_mag * dt
-        
-        ideal_yaw = math.atan2(dy, dx)
-        max_yaw_change = math.radians(Config.MAX_YAW_RATE) * dt
-        max_pitch_change = math.radians(Config.MAX_PITCH_RATE) * dt
-        
-        def constrain_angle(ideal, current, max_change):
-            diff = (ideal - current)
-            diff = (diff + math.pi) % (2 * math.pi) - math.pi
-            if abs(diff) > max_change:
-                return current + math.copysign(max_change, diff)
-            return ideal
-            
-        base_yaw = constrain_angle(ideal_yaw, self.uav.yaw, max_yaw_change)
-        # Using base_pitch calculated from earlier which correctly extracts dz against dx,dy
-        c_base_pitch = constrain_angle(base_pitch, self.uav.pitch, max_pitch_change)
+        # -------------------------------------------------------------
+        # Physics-Based Movement (delegated to PhysicsEngine)
+        # -------------------------------------------------------------
+        move = PhysicsEngine.execute_movement(
+            self.uav, target_pos, self.env, self.digital_twin, self.base_position
+        )
 
-        best_score = float("inf")
-        best_move = None
-        
-        # Phase 3.5: ISAC Digital Twin Scan (Update local map)
-        if Config.ENABLE_ISAC_DIGITAL_TWIN:
-            self.digital_twin.scan_environment(self.uav.position(), self.env.obstacles)
-            routing_obstacles = self.digital_twin.known_obstacles
-        else:
-            routing_obstacles = self.env.obstacles
+        # Track energy and prediction error
+        self.energy_consumed_total += move.energy_consumed
+        if move.energy_consumed > 0:
+            # Phase-3 Energy Prediction Error (deterministic model → error = 0)
+            self.energy_prediction_error_sum += 0.0
+            self.energy_prediction_samples += 1
 
-        # Generate motion primitives around the constrained base angles
-        yaw_offsets = [0] + Config.STEERING_ANGLES
-        pitch_offsets = [0, -15, 15]  # Always 3D motion primitives
-        
-        for yaw_offset in yaw_offsets:
-            for pitch_offset in pitch_offsets:
-                yaw = base_yaw + math.radians(yaw_offset)
-                pitch = c_base_pitch + math.radians(pitch_offset)
-
-                # Spherical to Cartesian representation
-                new_x = current_pos[0] + step_size * math.cos(pitch) * math.cos(yaw)
-                new_y = current_pos[1] + step_size * math.cos(pitch) * math.sin(yaw)
-                new_z = current_pos[2] + step_size * math.sin(pitch)  # Always 3D vertical motion
-
-                # Gap 5: 3D Gaussian altitude constraint (Zheng & Liu, IEEE TVT 2025)
-                # Clamp z so UAV never flies below z_obs(x,y) + vertical clearance
-                new_z = ObstacleHeightModel.enforce_altitude(new_x, new_y, new_z, self.env.obstacles)
-
-                # Hard collision check (2D footprint)
-                if self.env.point_in_obstacle((new_x, new_y)):
-                    continue
-
-                travel_distance = math.sqrt((new_x - current_pos[0])**2 + (new_y - current_pos[1])**2 + (new_z - current_pos[2])**2)
-
-                risk_mult = self.env.risk_multiplier((new_x, new_y))
-                adjusted_distance = travel_distance * risk_mult
-
-                # Energy feasibility
-                if not EnergyModel.can_travel(self.uav, adjusted_distance):
-                    continue
-
-                # ---------- SCORING COMPONENTS ----------
-
-                # 1. Alignment score (cosine similarity in 3D)
-                to_target_vec = (dx, dy, dz)
-                move_vec = (new_x - current_pos[0], new_y - current_pos[1], new_z - current_pos[2])
-
-                dot = to_target_vec[0] * move_vec[0] + to_target_vec[1] * move_vec[1] + to_target_vec[2] * move_vec[2]
-                norm_prod = (
-                    math.sqrt(sum(v**2 for v in to_target_vec)) * math.sqrt(sum(v**2 for v in move_vec)) + Config.SCORE_EPS
-                )
-
-                alignment_score = 1 - (dot / norm_prod)  # smaller is better
-
-                # 2. Obstacle proximity penalty
-                obstacle_penalty = 0.0
-
-                for obs in routing_obstacles:
-                    clearance = self._predicted_clearance(new_x, new_y, obs)
-
-                    # Hard rejection if inside safety margin
-                    if clearance < Config.COLLISION_MARGIN:
-                        obstacle_penalty += 1000.0
-                    else:
-                        # Smooth inverse-distance penalty
-                        obstacle_penalty += 1.0 / (clearance + 1e-5)
-
-                # 3. Risk penalty
-                risk_penalty = risk_mult - 1.0
-
-                # 4. Energy penalty
-                energy_penalty = adjusted_distance
-
-                # ---------- TOTAL SCORE ----------
-
-                total_score = (
-                    Config.ALIGNMENT_WEIGHT * alignment_score
-                    + Config.OBSTACLE_PENALTY_WEIGHT * obstacle_penalty
-                    + Config.RISK_PENALTY_WEIGHT * risk_penalty
-                    + Config.ENERGY_PENALTY_WEIGHT * energy_penalty
-                )
-
-                if total_score < best_score:
-                    best_score = total_score
-                    best_move = (new_x, new_y, new_z, adjusted_distance, yaw, pitch, v_mag, step_size)
-
-        # If no valid motion primitive found
-        if best_move is None:
+        if move.collision:
             self.collision_count += 1
             print(f"[Warning] UAV trapped near ({current_pos[0]:.1f}, {current_pos[1]:.1f}). Forcing aggressive escape bounce.")
-            
-            # Escape Traps: Aggressive reverse + scatter bounce
-            import random
-            bounce_dist = 15.0
-            escape_yaw = self.uav.yaw + math.pi + random.uniform(-0.5, 0.5)
-            
-            self.uav.x = max(0.0, min(float(self.env.width), self.uav.x + bounce_dist * math.cos(escape_yaw)))
-            self.uav.y = max(0.0, min(float(self.env.height), self.uav.y + bounce_dist * math.sin(escape_yaw)))
-            self.uav.yaw = escape_yaw
-            
-            self._trigger_replan("collision_escape")
-            
-            # DO NOT set current_target to None here! That breaks the routing queue.
-            # Instead, the replan will generate a new valid routing graph around the obstacle.
+            self._trigger_replan(move.replan_reason)
             return
 
-        new_x, new_y, new_z, adjusted_distance, chosen_yaw, chosen_pitch, v_mag, step_size = best_move
-        
-        dt = float(Config.TIME_STEP)
-
-        # Update Kinematics
-        new_vx = (new_x - self.uav.x) / dt if dt > 0 else 0.0
-        new_vy = (new_y - self.uav.y) / dt if dt > 0 else 0.0
-        new_vz = (new_z - self.uav.z) / dt if dt > 0 else 0.0
-        
-        ax = (new_vx - self.uav.vx) / dt if dt > 0 else 0.0
-        ay = (new_vy - self.uav.vy) / dt if dt > 0 else 0.0
-        az = (new_vz - self.uav.vz) / dt if dt > 0 else 0.0
-
-        # --- Energy Prediction ---
-        # Propulsion aerodynamic power + Mechanical Acceleration Power
-        mechanical_energy = EnergyModel.mechanical_energy(self.uav, (ax, ay, az))
-        aerodynamic_energy = EnergyModel.energy_for_distance(self.uav, adjusted_distance)
-        predicted_energy = mechanical_energy + aerodynamic_energy
-
-        EnergyModel.consume(self.uav, predicted_energy)
-        self.energy_consumed_total += predicted_energy
-
-        # --- Phase-3 Energy Prediction Error Instrumentation ---
-        actual_energy_drop = predicted_energy  # deterministic model (for now)
-        prediction_error = abs(predicted_energy - actual_energy_drop)
-
-        self.energy_prediction_error_sum += prediction_error
-        self.energy_prediction_samples += 1
-
-        # Return safety check
-        if not EnergyModel.can_return_to_base(
-            self.uav,
-            (new_x, new_y),
-            self.base_position,
-            self.env.risk_multiplier((new_x, new_y)),
-        ):
+        if move.unsafe_return:
             self.unsafe_return_count += 1
-            self._trigger_replan("energy_risk")
+            self._trigger_replan(move.replan_reason)
             self.temporal.active = False
             return
-
-        # Apply movement
-        self.uav.x = new_x
-        self.uav.y = new_y
-        self.uav.z = new_z
-        self.uav.yaw = chosen_yaw
-        self.uav.pitch = chosen_pitch
-        self.uav.vx = new_vx
-        self.uav.vy = new_vy
-        self.uav.vz = new_vz
-
-        self.env.uav_trail.append((new_x, new_y, new_z))
-        if len(self.env.uav_trail) > 30:
-            self.env.uav_trail.pop(0)
-
-    # ---------------------------------------------------------
-    # Predictive Safety Check
-    # ---------------------------------------------------------
-
-    def _is_direction_safe(self, current_pos, angle, step_size):
-
-        for i in range(1, Config.PREDICTION_HORIZON + 1):
-
-            sim_x = current_pos[0] + i * step_size * math.cos(angle)
-            sim_y = current_pos[1] + i * step_size * math.sin(angle)
-
-            # Predict obstacle future positions
-            routing_obstacles = self.digital_twin.known_obstacles if Config.ENABLE_ISAC_DIGITAL_TWIN else self.env.obstacles
-            for obs in routing_obstacles:
-                future_x1 = obs.x1 + i * obs.vx * Config.OBSTACLE_VELOCITY_SCALE
-                future_y1 = obs.y1 + i * obs.vy * Config.OBSTACLE_VELOCITY_SCALE
-                future_x2 = obs.x2 + i * obs.vx * Config.OBSTACLE_VELOCITY_SCALE
-                future_y2 = obs.y2 + i * obs.vy * Config.OBSTACLE_VELOCITY_SCALE
-
-                if future_x1 <= sim_x <= future_x2 and future_y1 <= sim_y <= future_y2:
-                    return False
-
-        # Final immediate step energy check
-        new_x = current_pos[0] + step_size * math.cos(angle)
-        new_y = current_pos[1] + step_size * math.sin(angle)
-
-        travel_distance = math.hypot(new_x - current_pos[0], new_y - current_pos[1])
-        risk_mult = self.env.risk_multiplier((new_x, new_y))
-        adjusted_distance = travel_distance * risk_mult
-
-        if not EnergyModel.can_travel(self.uav, adjusted_distance):
-            return False
-
-        energy = EnergyModel.energy_for_distance(self.uav, adjusted_distance)
-        EnergyModel.consume(self.uav, energy)
-        self.energy_consumed_total += energy
-
-        if not EnergyModel.can_return_to_base(
-            self.uav, (new_x, new_y), self.base_position, risk_mult
-        ):
-            self.unsafe_return_count += 1
-            self._trigger_replan("energy_risk")
-            return False
-
-        self.uav.x = new_x
-        self.uav.y = new_y
-
-        self.env.uav_trail.append((new_x, new_y))
-        if len(self.env.uav_trail) > 30:
-            self.env.uav_trail.pop(0)
-
-        return True
 
     # ---------------------------------------------------------
     # Terminal
