@@ -10,7 +10,7 @@ except ImportError:
     PCA = None
     silhouette_score = None
 
-from core.models.node_model import Node
+from core.models.node_model import Node, SensorNode
 from core.clustering.feature_scaler import FeatureScaler
 
 

@@ -1,10 +1,10 @@
 import random
-from core.models.node_model import Node
+from core.models.node_model import Node, SensorNode
 
 
 def generate_nodes(
     mode: str, count: int, width: int, height: int, seed: int | None = None
-):
+) -> list[SensorNode]:
     if seed is not None:
         random.seed(seed)
 
@@ -72,9 +72,9 @@ def generate_nodes(
     return nodes
 
 
-def spawn_single_node(width, height, node_id, env):
+def spawn_single_node(width, height, node_id, env) -> SensorNode | None:
     import random
-    from core.models.node_model import Node
+    from core.models.node_model import Node, SensorNode
 
     attempts = 0
 

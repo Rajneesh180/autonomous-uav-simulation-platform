@@ -6,7 +6,7 @@ from config.config import Config
 from core.temporal_engine import TemporalEngine
 from core.models.energy_model import EnergyModel
 from core.models.environment_model import Environment
-from core.models.node_model import Node
+from core.models.node_model import Node, UAVState, SensorNode
 from core.dataset_generator import spawn_single_node
 from visualization.plot_renderer import PlotRenderer
 from core.comms.communication import CommunicationEngine
@@ -32,10 +32,10 @@ class MissionController:
         self.render_enabled = render
 
         # UAV anchor
-        self.uav: Node = env.nodes[0]
+        self.uav: UAVState = env.uav
 
         # Mission state
-        self.target_queue: List[Node] = []
+        self.target_queue: List[SensorNode] = []
         self.current_target: Optional[Node] = None
         self.visited: Set[int] = set()
 
@@ -102,8 +102,7 @@ class MissionController:
         self.event_timestamps = []
         self.replan_timestamps = []
 
-        # UAV trail
-        self.env.uav = self.uav
+        # UAV trail (env.uav already set by add_node; keep trail attr)
         self.env.uav_trail = []
 
         self._initialize_queue()
@@ -176,7 +175,7 @@ class MissionController:
                 self._trigger_replan("node_spawned")
 
         # Periodically re-evaluate Semantic Clusters
-        unvisited_nodes = [n for n in self.env.nodes[1:] if n.id not in self.visited]
+        unvisited_nodes = [n for n in self.env.sensors if n.id not in self.visited]
         if self.temporal.current_step % 50 == 0 or self.cluster_manager.should_recluster(len(unvisited_nodes)):
             self.active_centroids, self.active_labels = self.cluster_manager.perform_clustering(
                 unvisited_nodes, self.temporal.current_step
@@ -198,7 +197,7 @@ class MissionController:
         # radio TX energy model (Gap 2) drains their battery during active transmission.
         dt = float(Config.TIME_STEP)
         uav_x, uav_y, uav_z = self.uav.position()
-        for node in self.env.nodes[1:]:
+        for node in self.env.sensors:
             if node.id not in self.visited:
                 import math
                 dist_to_node = math.hypot(node.x - uav_x, node.y - uav_y)
@@ -236,7 +235,7 @@ class MissionController:
 
         # Per-node AoI snapshot and mean AoI history
         step_aoi_vals = []
-        for node in self.env.nodes[1:]:
+        for node in self.env.sensors:
             if node.id not in self.aoi_history:
                 self.aoi_history[node.id] = []
             self.aoi_history[node.id].append(node.aoi_timer)
@@ -285,7 +284,7 @@ class MissionController:
     def _recompute_plan(self):
 
         # Remaining unvisited nodes (exclude UAV anchor at index 0)
-        remaining = [n for n in self.env.nodes[1:] if n.id not in self.visited]
+        remaining = [n for n in self.env.sensors if n.id not in self.visited]
 
         if not remaining:
             self.target_queue = []

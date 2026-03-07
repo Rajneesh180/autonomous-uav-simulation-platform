@@ -94,7 +94,7 @@ class InteractiveDashboard:
         from config.config import Config
         max_aoi = getattr(Config, 'MAX_AOI_LIMIT', 200.0)
         
-        for node in self.env.nodes[1:]:
+        for node in self.env.sensors:
             xs.append(node.x)
             ys.append(node.y)
             zs.append(getattr(node, 'z', 0.0))
@@ -124,7 +124,7 @@ class InteractiveDashboard:
         else:
             ax.scatter(xs, ys, c=colors, s=sizes, edgecolors='black')
             # Text Tag rendering (Buffer / AoI)
-            for node in self.env.nodes[1:]:
+            for node in self.env.sensors:
                 if node.current_buffer > 0.01:
                     ax.text(node.x + 5, node.y + 5, f"AoI: {getattr(node, 'aoi_timer', 0.0):.1f}s", fontsize=7)
 

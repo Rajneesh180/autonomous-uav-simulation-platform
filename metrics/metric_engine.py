@@ -316,7 +316,7 @@ class MetricEngine:
         steps = temporal.current_step if temporal.current_step > 0 else 1
 
         deadline_violations = MetricEngine.compute_deadline_violations(
-            env.nodes[1:], steps
+            env.sensors, steps
         )
 
         mission_success = MetricEngine.compute_mission_success(
@@ -326,7 +326,7 @@ class MetricEngine:
             deadline_violations=deadline_violations,
         )
 
-        dr_result = MetricEngine.compute_data_collection_rate(env.nodes[1:], collected_data_mbits)
+        dr_result = MetricEngine.compute_data_collection_rate(env.sensors, collected_data_mbits)
 
         return {
             # ---- IEEE-aligned core metrics ----
@@ -337,7 +337,7 @@ class MetricEngine:
             "total_collected_mbits": round(collected_data_mbits, 4),
             "collision_rate": MetricEngine.compute_collision_rate(mission.collision_count, steps),
             "mission_completion_time_s": MetricEngine.compute_mission_completion_time(steps, time_step),
-            "average_aoi_s": MetricEngine.compute_average_aoi(env.nodes[1:]),
+            "average_aoi_s": MetricEngine.compute_average_aoi(env.sensors),
             "average_achievable_rate_mbps": MetricEngine.compute_average_achievable_rate(rate_log),
             "network_lifetime_residual": MetricEngine.compute_network_lifetime(env.nodes),
             "deadline_violations": deadline_violations,

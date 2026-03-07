@@ -211,7 +211,7 @@ class PlotRenderer:
             visited_ids = mission.visited
 
         # -------- Nodes (colour by visit status) --------
-        for node in env.nodes[1:]:  # skip UAV anchor
+        for node in env.sensors:  # skip UAV anchor
             if node.id in visited_ids:
                 colour, marker = "#4CAF50", "o"   # green = visited
             else:
@@ -477,7 +477,7 @@ class PlotRenderer:
             ax.add_patch(rect)
 
         # Nodes — visited vs unvisited
-        for node in env.nodes[1:]:
+        for node in env.sensors:
             colour = "#4CAF50" if node.id in visited_ids else "#E53935"
             marker = "o" if node.id in visited_ids else "x"
             ax.scatter(node.x, node.y, c=colour, s=50, marker=marker,
@@ -485,7 +485,7 @@ class PlotRenderer:
             ax.annotate(str(node.id), (node.x + 4, node.y + 4), fontsize=6, color="gray")
 
         # Base station
-        base = env.nodes[0]
+        base = env.uav
         ax.scatter(base.x, base.y, c="black", s=150, marker="s", zorder=10, label="Base Station")
 
         # UAV trail
@@ -601,14 +601,14 @@ class PlotRenderer:
             ax = fig.add_subplot(111, projection="3d")
 
             # Nodes
-            for node in env.nodes[1:]:
+            for node in env.sensors:
                 aoi = getattr(node, "aoi_timer", 0.0)
                 colour = "#4CAF50" if aoi < 50 else ("#FF9800" if aoi < 200 else "#E53935")
                 ax.scatter(node.x, node.y, getattr(node, "z", 0),
                            c=colour, s=30, edgecolors="black", linewidths=0.3)
 
             # Base station
-            base = env.nodes[0]
+            base = env.uav
             ax.scatter(base.x, base.y, 0, c="black", s=100, marker="s", zorder=10)
 
             # Obstacles as prisms
@@ -691,7 +691,7 @@ class PlotRenderer:
             ax.add_patch(rect)
 
         # Nodes
-        for node in env.nodes[1:]:
+        for node in env.sensors:
             ax.scatter(node.x, node.y, c="#9E9E9E", s=20, edgecolors="black",
                        linewidths=0.3, zorder=3)
 
@@ -853,7 +853,7 @@ class PlotRenderer:
 
         cmap = plt.cm.get_cmap("tab10")
         unique_labels = sorted(set(active_labels))
-        nodes = env.nodes[1:]  # exclude base station
+        nodes = env.sensors  # exclude UAV anchor
 
         fig, ax = plt.subplots(figsize=(10, 7))
 
@@ -898,7 +898,7 @@ class PlotRenderer:
                         textcoords="offset points", xytext=(6, 4), fontsize=7)
 
         # Base station
-        base = env.nodes[0]
+        base = env.uav
         ax.scatter(base.x, base.y, c="black", s=120, marker="s", zorder=6, label="Base Station")
 
         ax.set_xlim(0, env.width)
@@ -967,7 +967,7 @@ class PlotRenderer:
         fig, axes = plt.subplots(1, 3, figsize=(18, 6))
         fig.suptitle("Routing Pipeline Compression", fontsize=14, fontweight="bold")
 
-        all_nodes = env.nodes[1:]
+        all_nodes = env.sensors
 
         def _draw_obstacles(ax):
             for obs in env.obstacles:
@@ -982,7 +982,7 @@ class PlotRenderer:
         _draw_obstacles(ax)
         ax.scatter([n.x for n in all_nodes], [n.y for n in all_nodes],
                    c="#42A5F5", s=25, edgecolors="black", linewidths=0.3)
-        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=100, marker="s")
+        ax.scatter(env.uav.x, env.uav.y, c="black", s=100, marker="s")
         ax.set_title(f"(a) Raw Deployment  [{len(all_nodes)} nodes]", fontsize=10)
         ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
         ax.set_aspect("equal"); ax.set_xlabel("X (m)"); ax.set_ylabel("Y (m)")
@@ -999,7 +999,7 @@ class PlotRenderer:
             ax.add_patch(circle)
         ax.scatter([n.x for n in (rp_nodes or [])], [n.y for n in (rp_nodes or [])],
                    c="#FF9800", s=70, edgecolors="black", linewidths=0.5, zorder=4, marker="D")
-        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=100, marker="s")
+        ax.scatter(env.uav.x, env.uav.y, c="black", s=100, marker="s")
         ax.set_title(f"(b) RP Compression  [{len(rp_nodes or [])} RPs]", fontsize=10)
         ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
         ax.set_aspect("equal"); ax.set_xlabel("X (m)")
@@ -1011,15 +1011,15 @@ class PlotRenderer:
                    c="#BDBDBD", s=15, edgecolors="none", alpha=0.3)
         seq = route_sequence or []
         if len(seq) >= 2:
-            xs = [env.nodes[0].x] + [n.x for n in seq]
-            ys = [env.nodes[0].y] + [n.y for n in seq]
+            xs = [env.uav.x] + [n.x for n in seq]
+            ys = [env.uav.y] + [n.y for n in seq]
             ax.plot(xs, ys, color="#4CAF50", linewidth=1.2, zorder=3)
             for i, (x, y) in enumerate(zip(xs[1:], ys[1:]), start=1):
                 ax.annotate(str(i), (x, y), textcoords="offset points",
                             xytext=(4, 4), fontsize=6, color="#1B5E20")
         ax.scatter([n.x for n in seq], [n.y for n in seq],
                    c="#4CAF50", s=50, edgecolors="black", linewidths=0.4, zorder=4)
-        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=100, marker="s")
+        ax.scatter(env.uav.x, env.uav.y, c="black", s=100, marker="s")
         ax.set_title(f"(c) Optimised Route  [{len(seq)} waypoints]", fontsize=10)
         ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
         ax.set_aspect("equal"); ax.set_xlabel("X (m)")
@@ -1198,7 +1198,7 @@ class PlotRenderer:
         for n in all_nodes:
             col = node_colour.get(n.id, "#9E9E9E")
             ax.scatter(n.x, n.y, c=[col], s=30, edgecolors="black", linewidths=0.3)
-        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=120, marker="s")
+        ax.scatter(env.uav.x, env.uav.y, c="black", s=120, marker="s")
         ax.set_title(f"(a) All Nodes  [{len(all_nodes)}]", fontsize=10)
         ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
         ax.set_xlabel("X (m)"); ax.set_ylabel("Y (m)"); ax.set_aspect("equal")
@@ -1215,7 +1215,7 @@ class PlotRenderer:
             ax.add_patch(circle)
             ax.scatter(rp.x, rp.y, c=[colour], s=80, marker="D",
                        edgecolors="black", linewidths=0.5, zorder=4)
-        ax.scatter(env.nodes[0].x, env.nodes[0].y, c="black", s=120, marker="s")
+        ax.scatter(env.uav.x, env.uav.y, c="black", s=120, marker="s")
         ax.set_title(f"(b) Rendezvous Points  [{len(rp_list)}]", fontsize=10)
         ax.set_xlim(0, env.width); ax.set_ylim(0, env.height)
         ax.set_xlabel("X (m)"); ax.set_aspect("equal")

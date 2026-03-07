@@ -4,7 +4,7 @@ Validates dataclass fields, position tuple, feature vector, and buffer dynamics.
 """
 
 import pytest
-from core.models.node_model import Node
+from core.models.node_model import Node, UAVState, SensorNode
 from config.config import Config
 
 

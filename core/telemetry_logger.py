@@ -87,7 +87,7 @@ class TelemetryLogger:
         self._prev_pos = (x, y, z)
 
         # Average AoI across all non-UAV nodes
-        ground_nodes = mission.env.nodes[1:]
+        ground_nodes = mission.env.sensors
         aoi_avg = 0.0
         if ground_nodes:
             aoi_avg = sum(n.aoi_timer for n in ground_nodes) / len(ground_nodes)
@@ -120,7 +120,7 @@ class TelemetryLogger:
             writer = csv.writer(f)
             writer.writerow(self.NODE_COLUMNS)
 
-            for node in mission.env.nodes[1:]:
+            for node in mission.env.sensors:
                 writer.writerow([
                     node.id,
                     round(node.x, 2),

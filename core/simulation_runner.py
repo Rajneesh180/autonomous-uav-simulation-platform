@@ -158,7 +158,7 @@ def run_simulation(verbose=True, render=True, seed_override=None):
         visited_nodes_objs = [n for n in env.nodes if n.id in mission.visited]
         semantic_scores = MetricEngine.compute_semantic_metrics(
             visited_nodes=visited_nodes_objs,
-            all_nodes=env.nodes[1:],
+            all_nodes=env.sensors,
             active_labels=mission.active_labels
         )
         results.update(semantic_scores)
@@ -210,7 +210,7 @@ def run_simulation(verbose=True, render=True, seed_override=None):
         PlotRenderer.render_radar_chart(results, visuals_path)
 
         PlotRenderer.render_node_energy_heatmap(
-            nodes=env.nodes[1:],
+            nodes=env.sensors,
             env_width=env.width,
             env_height=env.height,
             save_dir=visuals_path
@@ -274,7 +274,7 @@ def run_simulation(verbose=True, render=True, seed_override=None):
             )
             PlotRenderer.render_rendezvous_compression(
                 env=env,
-                all_nodes=env.nodes[1:],
+                all_nodes=env.sensors,
                 rp_nodes=rp_all,
                 rp_member_map=mission.rp_member_map,
                 save_dir=visuals_path,

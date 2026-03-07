@@ -1,7 +1,7 @@
 import random
 
-from typing import List, Tuple
-from core.models.node_model import Node
+from typing import List, Optional, Tuple
+from core.models.node_model import Node, UAVState, SensorNode
 
 COLLISION_MARGIN = 5
 
@@ -13,6 +13,9 @@ class Environment:
 
         # -------- Core Containers --------
         self.nodes: List[Node] = []
+        # Typed accessors for Stage 1 entity separation: env.uav and env.sensors
+        # self.uav is set to nodes[0] when the first node is added via add_node().
+        self.uav: Optional[UAVState] = None
 
         # -------- Reserved Containers (Phase-2 Ready) --------
         self.cluster_centers = []
@@ -24,8 +27,15 @@ class Environment:
         self.environment_changed = False
 
     # ---------------- Nodes ----------------
+    @property
+    def sensors(self) -> List[SensorNode]:
+        """All ground IoT sensor nodes (nodes[1:])."""
+        return self.nodes[1:]
+
     def add_node(self, node: Node):
         self.nodes.append(node)
+        if self.uav is None:
+            self.uav = node  # First node added is always the UAV anchor
 
     def get_node_count(self) -> int:
         return len(self.nodes)

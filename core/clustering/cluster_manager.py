@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 import numpy as np
-from core.models.node_model import Node
+from core.models.node_model import Node, SensorNode
 from config.config import Config
 from core.clustering.semantic_clusterer import SemanticClusterer
 

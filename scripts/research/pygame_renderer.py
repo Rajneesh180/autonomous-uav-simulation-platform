@@ -64,7 +64,7 @@ class PygameRenderer:
             pygame.draw.rect(self.screen, (220, 180, 50), rect, 2, border_radius=4)
 
         # 3. Render Nodes (Buffer Visuals)
-        for node in env.nodes[1:]: # Skip Base Station index 0 if any
+        for node in env.sensors:  # Skip UAV anchor
             capacity_ratio = node.current_buffer / (node.buffer_capacity + 1e-6)
             
             if capacity_ratio >= 0.95:

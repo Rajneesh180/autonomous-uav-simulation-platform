@@ -6,7 +6,7 @@ Provides reusable Node, Obstacle, Environment, and configuration factories.
 import pytest
 import math
 
-from core.models.node_model import Node
+from core.models.node_model import Node, UAVState, SensorNode
 from core.models.obstacle_model import Obstacle, ObstacleHeightModel
 from core.models.energy_model import EnergyModel
 from core.models.environment_model import Environment

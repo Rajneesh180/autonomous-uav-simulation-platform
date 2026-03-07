@@ -1,6 +1,6 @@
 import math
 from typing import Dict, List, Tuple
-from core.models.node_model import Node
+from core.models.node_model import Node, SensorNode
 from config.config import Config
 
 

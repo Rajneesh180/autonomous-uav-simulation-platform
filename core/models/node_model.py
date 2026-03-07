@@ -97,3 +97,12 @@ class Node:
             self.reliability,
             self.aoi_timer
         ]
+
+
+# ---------------------------------------------------------
+# Stage 1 Entity Aliases — typed names for the three roles
+# a Node object can play. No structural change; pure typing.
+# ---------------------------------------------------------
+UAVState = Node       # The airborne vehicle (nodes[0] / env.uav)
+SensorNode = Node     # Ground IoT sensor (nodes[1:] / env.sensors)
+BaseStation = Node    # Fixed collection point (future: env.base_station)
