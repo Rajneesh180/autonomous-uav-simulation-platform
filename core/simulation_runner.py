@@ -167,7 +167,7 @@ def run_simulation(verbose=True, render=True, seed_override=None):
 
     # ---- Semantic Evaluations ----
     if Config.ENABLE_SEMANTIC_CLUSTERING:
-        visited_nodes_objs = [n for n in env.nodes if n.id in mission.visited]
+        visited_nodes_objs = [n for n in env.sensors if n.id in mission.visited]
         semantic_scores = MetricEngine.compute_semantic_metrics(
             visited_nodes=visited_nodes_objs,
             all_nodes=env.sensors,
@@ -294,7 +294,7 @@ def run_simulation(verbose=True, render=True, seed_override=None):
 
         # ---- Phase-4: Communication Quality ----
         PlotRenderer.render_communication_quality(
-            nodes=env.nodes,
+            nodes=env.sensors,
             uav_trail=getattr(env, "uav_trail", []),
             save_dir=visuals_path,
         )

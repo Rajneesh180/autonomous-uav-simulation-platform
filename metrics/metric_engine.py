@@ -312,7 +312,7 @@ class MetricEngine:
         collected_data_mbits : total Mbits collected during mission
         rate_log       : list of per-step achievable rates (Mbps)
         """
-        total_nodes = len(env.nodes) - 1  # exclude UAV anchor node
+        total_nodes = len(env.sensors)
         steps = temporal.current_step if temporal.current_step > 0 else 1
 
         deadline_violations = MetricEngine.compute_deadline_violations(
@@ -339,7 +339,7 @@ class MetricEngine:
             "mission_completion_time_s": MetricEngine.compute_mission_completion_time(steps, time_step),
             "average_aoi_s": MetricEngine.compute_average_aoi(env.sensors),
             "average_achievable_rate_mbps": MetricEngine.compute_average_achievable_rate(rate_log),
-            "network_lifetime_residual": MetricEngine.compute_network_lifetime(env.nodes),
+            "network_lifetime_residual": MetricEngine.compute_network_lifetime(env.sensors),
             "deadline_violations": deadline_violations,
             # ---- Coverage & efficiency ----
             "nodes_visited": len(mission.visited),

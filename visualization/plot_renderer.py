@@ -29,11 +29,12 @@ class PlotRenderer:
             ax = fig.add_subplot(111)
 
         # -------- Nodes --------
-        xs = [node.x for node in env.nodes]
-        ys = [node.y for node in env.nodes]
+        all_nodes = [env.uav] + env.sensors if hasattr(env, 'uav') and env.uav else env.sensors
+        xs = [node.x for node in all_nodes]
+        ys = [node.y for node in all_nodes]
         
         if is_3d:
-            zs = [node.z for node in env.nodes]
+            zs = [node.z for node in all_nodes]
             ax.scatter(xs, ys, zs, c="blue", label="Nodes")
         else:
             ax.scatter(xs, ys, c="blue", label="Nodes")
@@ -306,7 +307,7 @@ class PlotRenderer:
             ax.set_zlim(0, 50)
 
         # -------- HUD Overlay (step, battery, coverage) --------
-        total_nodes = len(env.nodes) - 1
+        total_nodes = len(env.sensors)
         n_visited = len(visited_ids) if visited_ids else 0
         battery_pct = 0.0
         if hasattr(env, "uav"):

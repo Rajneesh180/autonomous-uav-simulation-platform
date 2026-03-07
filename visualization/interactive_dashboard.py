@@ -172,4 +172,5 @@ class InteractiveDashboard:
         if step == 1 or step % 50 == 0:
             ax.legend(loc="upper right")
             
-        plt.pause(0.001)
+        if plt.get_backend().lower() not in ('agg', 'pdf', 'svg', 'ps'):
+            plt.pause(0.001)

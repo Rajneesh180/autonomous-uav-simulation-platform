@@ -15,9 +15,15 @@ class ClusterManager:
     ``should_recluster`` returns True even when the node count is stable.
     """
 
+    # Minimum steps between silhouette-triggered reclusters to avoid
+    # running the full DBSCAN + PCA pipeline every single step when the
+    # score stays below the threshold.
+    RECLUSTER_COOLDOWN = 50
+
     def __init__(self):
         self.last_node_count = 0
         self.recluster_count = 0
+        self._steps_since_recluster = self.RECLUSTER_COOLDOWN  # allow first call
 
         conf = {
             "scaling_method": Config.SCALING_METHOD,
@@ -42,10 +48,16 @@ class ClusterManager:
         Triggers:
           1. Node count changed by ≥ *threshold* since last clustering.
           2. Cluster quality (silhouette) dropped below the configured
-             ``SILHOUETTE_RECLUSTER_THRESH``.
+             ``SILHOUETTE_RECLUSTER_THRESH`` **and** the cooldown has
+             elapsed (prevents running every step).
         """
+        self._steps_since_recluster += 1
+
         if abs(current_node_count - self.last_node_count) >= threshold:
             return True
+
+        if self._steps_since_recluster < self.RECLUSTER_COOLDOWN:
+            return False
 
         sil = current_silhouette if current_silhouette is not None else self.last_silhouette
         if sil is not None and sil < Config.SILHOUETTE_RECLUSTER_THRESH:
@@ -63,6 +75,7 @@ class ClusterManager:
         """Execute semantic clustering and cache centroids / labels."""
         self.last_node_count = len(nodes)
         self.recluster_count += 1
+        self._steps_since_recluster = 0
 
         self.current_centroids, self.current_labels = self.semantic_engine.cluster(
             nodes, current_time, n_clusters=Config.CLUSTER_COUNT,

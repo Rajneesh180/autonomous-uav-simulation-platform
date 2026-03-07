@@ -140,9 +140,9 @@ class MissionController:
         if (
             Config.ENABLE_DYNAMIC_NODES
             and self.temporal.current_step % Config.DYNAMIC_NODE_INTERVAL == 0
-            and len(self.env.nodes) < Config.NODE_COUNT + Config.MAX_DYNAMIC_NODES
+            and len(self.env.sensors) < Config.NODE_COUNT + Config.MAX_DYNAMIC_NODES
         ):
-            new_id = len(self.env.nodes)
+            new_id = len(self.env.sensors) + 1
             new_node = spawn_single_node(
                 self.env.width,
                 self.env.height,
