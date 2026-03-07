@@ -264,7 +264,7 @@ def run_simulation(verbose=True, render=True, seed_override=None):
 
         # ---- Phase-4: Routing Pipeline Compression ----
         if Config.ENABLE_RENDEZVOUS_SELECTION and hasattr(mission, "rp_member_map"):
-            rp_all = list(mission.rp_member_map.keys()) if mission.rp_member_map else []
+            rp_all = getattr(mission, "rp_nodes", [])
             PlotRenderer.render_routing_pipeline(
                 env=env,
                 rp_nodes=rp_all,

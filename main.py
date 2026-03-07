@@ -17,13 +17,13 @@ def run_single(render: bool = True):
     print("\nMission execution completed.")
     print(f"Run ID: {results['run_id']}")
     print(f"Total simulation steps executed: {results['steps']}")
-    print(f"Final battery: {round(results['final_battery'], 2)}")
+    print(f"Final battery: {round(results['final_battery_J'], 2)}")
     print(f"path_stability_index: {round(metrics['path_stability_index'], 4)}")
     print(f"node_churn_impact: {round(metrics['node_churn_impact'], 4)}")
     print(f"energy_prediction_error: {round(metrics['energy_prediction_error'], 4)}")
-    print(f"Visited nodes: {results['visited']}")
+    print(f"Visited nodes: {results['nodes_visited']}")
     print(f"Replan count: {results['replans']}")
-    print(f"Collision count: {results['collisions']}")
+    print(f"Collision count: {results['collision_rate']}")
     
     if "priority_satisfaction_percent" in results:
         print("\n--- Semantic Intelligence Metrics ---")

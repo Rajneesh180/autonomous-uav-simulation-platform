@@ -1174,7 +1174,7 @@ class PlotRenderer:
         node_colour = {}
         for rp_idx, (rp, members) in enumerate(rp_map.items()):
             for m in members:
-                node_colour[m.id] = cmap(rp_idx % 20)
+                node_colour[m] = cmap(rp_idx % 20)
 
         fig, axes = plt.subplots(1, 2, figsize=(14, 6))
         fig.suptitle(

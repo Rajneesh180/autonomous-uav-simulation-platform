@@ -55,6 +55,7 @@ class MissionController:
 
         # Rendezvous Point analytics (Gap 1)
         self.rp_member_map: dict = {}  # {rp_id: [member_node_ids]}
+        self.rp_nodes: list = []  # list of RP Node objects
 
         # RP+GA plan cache — recompute only when visit set changes (perf fix)
         self._rp_cache_key: frozenset = frozenset()
@@ -309,6 +310,7 @@ class MissionController:
             )
             if rp_nodes:
                 self.rp_member_map = rp_member_map
+                self.rp_nodes = rp_nodes
                 remaining = rp_nodes
 
 
