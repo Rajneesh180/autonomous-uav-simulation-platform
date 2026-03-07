@@ -162,7 +162,7 @@ class Config:
     # =========================================================
     # Temporal Engine
     # =========================================================
-    TIME_STEP = 1
+    TIME_STEP = 1.0  # seconds (float for continuous-time support)
     MAX_TIME_STEPS = 800
 
     ENABLE_TEMPORAL = True
