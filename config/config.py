@@ -111,7 +111,7 @@ class Config:
     # =========================================================
     DEFAULT_BUFFER_CAP_MBITS = 50.0 
     DEFAULT_DATA_RATE_MBPS = 0.5
-    MAX_HOVER_STEPS_PER_NODE = 30    # Safety cap: abandon node after N hover steps (prevents infinite hover)
+    MAX_SERVICE_TIME_S = 30.0        # Safety cap: max analytical service time per node (seconds)
 
     # =========================================================
     # Rendezvous Point (RP) Selection (Gap 1 — Donipati et al.)
@@ -439,8 +439,8 @@ class Config:
                "BS_DATA_AGE_LIMIT must be >= 1 (steps)")
 
         # --- Buffer / Hover ---
-        _check(cls.MAX_HOVER_STEPS_PER_NODE >= 1,
-               "MAX_HOVER_STEPS_PER_NODE must be >= 1")
+        _check(cls.MAX_SERVICE_TIME_S > 0,
+               "MAX_SERVICE_TIME_S must be > 0")
 
         if errors:
             msg = "Configuration validation failed:\n" + "\n".join(

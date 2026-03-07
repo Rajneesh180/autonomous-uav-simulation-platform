@@ -1,5 +1,6 @@
 import math
 from core.comms.communication import CommunicationEngine
+from core.models.energy_model import EnergyModel
 from config.config import Config
 
 
@@ -92,3 +93,69 @@ class BufferAwareManager:
             node.current_buffer = 0.0
 
         return data_collected
+
+    @staticmethod
+    def execute_service(uav, node, env, temporal):
+        """
+        Analytical service time model (Donipati et al., TNSM 2025).
+        Computes τ* = D_i(t) / R_i(t), drains buffer in one operation,
+        and advances the continuous clock by the total service duration.
+
+        Returns dict: data_collected, service_time_s, energy_consumed,
+                      achievable_rate, abandoned.
+        """
+        from metrics.metric_engine import MetricEngine
+
+        uav_pos = uav.position()
+        node_pos = node.position()
+
+        # Achievable data rate R_i (Mbps)
+        rate_mbps = CommunicationEngine.achievable_data_rate(node_pos, uav_pos, env)
+
+        if rate_mbps <= 0.0:
+            return {
+                'data_collected': 0.0,
+                'service_time_s': 0.0,
+                'energy_consumed': 0.0,
+                'achievable_rate': 0.0,
+                'abandoned': True,
+            }
+
+        # τ* = D_i(t) / R_i(t)
+        tau_star = node.current_buffer / rate_mbps
+
+        # Multi-trial sensing overhead (Zheng & Liu, IEEE TVT 2025, Eq. 6)
+        dist = MetricEngine.euclidean_distance(node_pos, uav_pos)
+        t_sense = CommunicationEngine.minimum_hover_time(dist)
+
+        # Total service time (capped for safety)
+        t_total = min(tau_star + t_sense, Config.MAX_SERVICE_TIME_S)
+
+        # Energy feasibility — cap service time to what the battery can afford
+        hover_power = EnergyModel.propulsion_power(0.0)
+        e_hover = hover_power * t_total
+
+        if hover_power > 0 and uav.current_battery < e_hover:
+            t_total = uav.current_battery / hover_power
+            e_hover = hover_power * t_total
+
+        # Data collected (drain phase = t_total - sensing overhead)
+        effective_drain_time = max(0.0, t_total - t_sense)
+        data_collected = min(node.current_buffer, rate_mbps * effective_drain_time)
+
+        # Apply effects
+        node.current_buffer = max(0.0, node.current_buffer - data_collected)
+        if data_collected > 0:
+            node.max_aoi_timer = max(node.max_aoi_timer, node.aoi_timer)
+            node.aoi_timer = 0.0
+
+        EnergyModel.consume(uav, e_hover)
+        temporal.advance(t_total)
+
+        return {
+            'data_collected': data_collected,
+            'service_time_s': t_total,
+            'energy_consumed': e_hover,
+            'achievable_rate': rate_mbps,
+            'abandoned': False,
+        }

@@ -62,9 +62,6 @@ class MissionController:
         # SCA Hover Position Map — refined hover coords per node (Gap 5: Zheng & Liu §III-E)
         self._hover_positions: dict = {}  # {node_id: (x, y, z)}
 
-        # Per-node hover step counter (prevents infinite center-hover)
-        self._hover_step_count: dict = {}  # {node_id: int}
-
         # Metrics
         self.energy_consumed_total = 0.0
         self.collision_count = 0
@@ -440,56 +437,52 @@ class MissionController:
             return
 
         # -------------------------------------------------------------
-        # Target Reached: 'Center-Hover' Fallback
+        # Target Reached: Analytical Service (Donipati et al., TNSM 2025)
+        # τ* = D_i(t) / R_i(t) — single-shot buffer drain
         # -------------------------------------------------------------
         if distance < 1e-3:
-            # We are exactly above the node, but buffer is still not empty. Hover in place.
-            hover_e = EnergyModel.hover_energy(self.uav, dt)
-            EnergyModel.consume(self.uav, hover_e)
-            self.energy_consumed_total += hover_e
+            outcome = BufferAwareManager.execute_service(
+                uav=self.uav,
+                node=self.current_target,
+                env=self.env,
+                temporal=self.temporal,
+            )
 
-            hover_strategy = BufferAwareManager.get_optimal_hover_strategy(self.uav.position(), self.current_target, self.env)
-
-            # Phase 3.8: LoS Occlusion Failsafe
-            if hover_strategy['required_service_time'] == float('inf'):
+            if outcome['abandoned']:
                 print(f"[Warning] Node {self.current_target.id} Data Rate is 0 Mbps (NLoS Blocked). Abandoning target.")
                 self.visited.add(self.current_target.id)
-                self._hover_step_count.pop(self.current_target.id, None)
                 self.current_target = None
                 return
 
-            # Active buffer drain during center-hover (fixes DST-BA gap)
-            data_collected = BufferAwareManager.process_data_collection(
-                self.uav.position(), self.current_target, dt, self.env,
-                active_node_id=self.current_target.id
-            )
-            if data_collected > 0:
-                self.collected_data_mbits += data_collected
-                _rate = CommunicationEngine.achievable_data_rate(
-                    self.current_target.position(), self.uav.position()
-                )
-                self.rate_log.append(_rate)
+            self.energy_consumed_total += outcome['energy_consumed']
+            if outcome['data_collected'] > 0:
+                self.collected_data_mbits += outcome['data_collected']
+                self.rate_log.append(outcome['achievable_rate'])
 
-            # Per-node hover timeout — prevents infinite hovering
+            # Fast-forward other nodes' buffers and AoI by the service duration
+            t_service = outcome['service_time_s']
+            if t_service > 0:
+                for sensor in self.env.sensors:
+                    if sensor.id != self.current_target.id and sensor.id not in self.visited:
+                        sensor.current_buffer = min(
+                            sensor.buffer_capacity,
+                            sensor.current_buffer + sensor.data_generation_rate * t_service
+                        )
+                        sensor.aoi_timer += t_service
+                        if Config.ENABLE_AOI_EXPIRATION and sensor.aoi_timer >= Config.MAX_AOI_LIMIT:
+                            sensor.max_aoi_timer = max(sensor.max_aoi_timer, sensor.aoi_timer)
+                            sensor.current_buffer = 0.0
+                            sensor.aoi_timer = 0.0
+
             nid = self.current_target.id
-            self._hover_step_count[nid] = self._hover_step_count.get(nid, 0) + 1
+            residual = self.current_target.current_buffer
+            if residual <= 1e-3:
+                print(f"[Service] Node {nid}: τ*={outcome['service_time_s']:.1f}s, collected {outcome['data_collected']:.2f}Mb")
+            else:
+                print(f"[Service Timeout] Node {nid}: τ*={outcome['service_time_s']:.1f}s, residual {residual:.2f}Mb")
 
-            if self.current_target.current_buffer <= 1e-3:
-                self.visited.add(nid)
-                print(f"[Visited] Node {nid} (Buffer drained via Center-Hover)")
-                self._hover_step_count.pop(nid, None)
-                self.current_target = None
-                return
-
-            if self._hover_step_count[nid] >= Config.MAX_HOVER_STEPS_PER_NODE:
-                self.visited.add(nid)
-                residual = self.current_target.current_buffer
-                print(f"[Hover Timeout] Node {nid} abandoned after {Config.MAX_HOVER_STEPS_PER_NODE} steps | Residual: {residual:.2f}Mb")
-                self._hover_step_count.pop(nid, None)
-                self.current_target = None
-                return
-
-            print(f"[Center-Hover] Node {self.current_target.id} | Hover #{self._hover_step_count[nid]} | Vol: {self.current_target.current_buffer:.2f}Mb")
+            self.visited.add(nid)
+            self.current_target = None
             return
 
         dt = float(Config.TIME_STEP)
