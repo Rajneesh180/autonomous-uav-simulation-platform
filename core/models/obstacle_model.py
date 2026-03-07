@@ -30,7 +30,15 @@ class Obstacle:
         self.cy = (self.y1 + self.y2) / 2.0   # centre y
 
     def contains_point(self, x, y):
+        """2D bounding-box containment (kept for ground-level operations)."""
         return self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2
+
+    def contains_point_3d(self, x, y, z):
+        """True 3D containment: returns False if UAV is above the obstacle ceiling."""
+        if not self.contains_point(x, y):
+            return False
+        ceiling = self.gaussian_height(x, y) + Config.VERTICAL_CLEARANCE
+        return z <= ceiling
 
     def intersects_line(self, x3, y3, x4, y4):
         if (

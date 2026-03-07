@@ -67,14 +67,16 @@ class Environment:
     # ---------------- Collision Checks ----------------
 
     def has_collision(
-        self, start_pos: Tuple[float, float], end_pos: Tuple[float, float]
+        self, start_pos, end_pos
     ) -> bool:
         """
         Soft collision check using sampled points along the path.
-        Prevents over-blocking from rectangle edge overlaps.
+        Accepts 2D (x, y) or 3D (x, y, z) tuples.  When z is provided the
+        check uses Obstacle.contains_point_3d — UAV flying above the obstacle
+        ceiling is not a collision.
         """
-
         steps = 8  # sampling resolution
+        has_z = len(start_pos) >= 3 and len(end_pos) >= 3
 
         for obs in self.obstacles:
             for i in range(1, steps + 1):
@@ -82,8 +84,13 @@ class Environment:
                 x = start_pos[0] + t * (end_pos[0] - start_pos[0])
                 y = start_pos[1] + t * (end_pos[1] - start_pos[1])
 
-                if obs.contains_point(x, y):
-                    return True
+                if has_z:
+                    z = start_pos[2] + t * (end_pos[2] - start_pos[2])
+                    if obs.contains_point_3d(x, y, z):
+                        return True
+                else:
+                    if obs.contains_point(x, y):
+                        return True
 
         return False
 
@@ -97,11 +104,23 @@ class Environment:
                 multiplier *= zone.current_multiplier
         return multiplier
 
-    def point_in_obstacle(self, pos):
-        x, y = pos
+    def point_in_obstacle(self, pos, z=None):
+        """Check if a point is inside any obstacle.
+
+        If *z* is provided (or *pos* has 3 elements), uses the 3D Gaussian
+        ceiling check — returns False when the point is above the obstacle.
+        Otherwise falls back to the legacy 2D bounding-box test.
+        """
+        x, y = pos[0], pos[1]
+        if z is None and len(pos) >= 3:
+            z = pos[2]
         for obs in self.obstacles:
-            if obs.contains_point(x, y):
-                return True
+            if z is not None:
+                if obs.contains_point_3d(x, y, z):
+                    return True
+            else:
+                if obs.contains_point(x, y):
+                    return True
         return False
 
     def mark_changed(self):

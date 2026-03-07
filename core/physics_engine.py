@@ -107,8 +107,8 @@ class PhysicsEngine:
                     new_x, new_y, new_z, env.obstacles
                 )
 
-                # Hard collision check (2D footprint)
-                if env.point_in_obstacle((new_x, new_y)):
+                # Hard collision check (3D — altitude-aware)
+                if env.point_in_obstacle((new_x, new_y), z=new_z):
                     continue
 
                 travel_distance = math.sqrt(
