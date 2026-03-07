@@ -465,7 +465,7 @@ class PlotRenderer:
         for obs in env.obstacles:
             rect = plt.Rectangle(
                 (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
-                color="#B71C1C", alpha=0.2, linewidth=1, edgecolor="#B71C1C",
+                facecolor="#B71C1C", alpha=0.2, linewidth=1, edgecolor="#B71C1C",
             )
             ax.add_patch(rect)
 
@@ -473,7 +473,7 @@ class PlotRenderer:
         for rz in env.risk_zones:
             rect = plt.Rectangle(
                 (rz.x1, rz.y1), rz.x2 - rz.x1, rz.y2 - rz.y1,
-                color="orange", alpha=0.15, linewidth=1, edgecolor="darkorange",
+                facecolor="orange", alpha=0.15, linewidth=1, edgecolor="darkorange",
             )
             ax.add_patch(rect)
 
@@ -618,7 +618,7 @@ class PlotRenderer:
                 dx = obs.x2 - obs.x1
                 dy = obs.y2 - obs.y1
                 ax.bar3d(obs.x1, obs.y1, 0, dx, dy, z_ceil,
-                         color="#B71C1C", alpha=0.15, edgecolor="#B71C1C")
+                         color="#B71C1C", alpha=0.15)
 
             # UAV trail coloured by altitude
             if hasattr(env, "uav_trail") and len(env.uav_trail) > 1:
@@ -687,7 +687,7 @@ class PlotRenderer:
         for obs in env.obstacles:
             rect = plt.Rectangle(
                 (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
-                color="#B71C1C", alpha=0.15, edgecolor="#B71C1C",
+                facecolor="#B71C1C", alpha=0.15, edgecolor="#B71C1C",
             )
             ax.add_patch(rect)
 
@@ -862,7 +862,7 @@ class PlotRenderer:
         for obs in env.obstacles:
             rect = plt.Rectangle(
                 (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
-                color="#B71C1C", alpha=0.15, edgecolor="#B71C1C", linewidth=1,
+                facecolor="#B71C1C", alpha=0.15, edgecolor="#B71C1C", linewidth=1,
             )
             ax.add_patch(rect)
 
@@ -893,7 +893,7 @@ class PlotRenderer:
             if np.all(np.array(centroid) == 0):
                 continue
             ax.scatter(centroid[0], centroid[1], marker="*", s=220,
-                       color=cmap(idx % 10), edgecolors="black", linewidths=0.8,
+                       facecolors=cmap(idx % 10), edgecolors="black", linewidths=0.8,
                        zorder=5)
             ax.annotate(f"C{idx}", (centroid[0], centroid[1]),
                         textcoords="offset points", xytext=(6, 4), fontsize=7)
@@ -974,7 +974,7 @@ class PlotRenderer:
             for obs in env.obstacles:
                 rect = plt.Rectangle(
                     (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
-                    color="#B71C1C", alpha=0.15, edgecolor="#B71C1C",
+                    facecolor="#B71C1C", alpha=0.15, edgecolor="#B71C1C",
                 )
                 ax.add_patch(rect)
 
@@ -1086,7 +1086,7 @@ class PlotRenderer:
 
         # Panel 2: buffer occupancy histogram
         ax = axes[1]
-        ax.hist(buffer_fill, bins=15, color="#FF9800", edgecolor="black",
+        ax.hist(buffer_fill, bins=15, facecolor="#FF9800", edgecolor="black",
                 linewidth=0.5, alpha=0.85)
         ax.set_xlabel("Buffer Occupancy (%)")
         ax.set_ylabel("Node Count")
@@ -1189,7 +1189,7 @@ class PlotRenderer:
             for obs in env.obstacles:
                 rect = plt.Rectangle(
                     (obs.x1, obs.y1), obs.x2 - obs.x1, obs.y2 - obs.y1,
-                    color="#B71C1C", alpha=0.12, edgecolor="#B71C1C",
+                    facecolor="#B71C1C", alpha=0.12, edgecolor="#B71C1C",
                 )
                 ax.add_patch(rect)
 

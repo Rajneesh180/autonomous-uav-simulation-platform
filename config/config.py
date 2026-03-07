@@ -218,11 +218,11 @@ class Config:
     # =========================================================
     # Dynamic Node Behavior
     # =========================================================
-    ENABLE_DYNAMIC_NODES = False
+    ENABLE_DYNAMIC_NODES = True
     DYNAMIC_NODE_INTERVAL = 15
     MAX_DYNAMIC_NODES = 20
 
-    ENABLE_NODE_REMOVAL = False
+    ENABLE_NODE_REMOVAL = True
     NODE_REMOVAL_INTERVAL = 20
     NODE_REMOVAL_PROBABILITY = 0.15
     MIN_NODE_FLOOR = 15

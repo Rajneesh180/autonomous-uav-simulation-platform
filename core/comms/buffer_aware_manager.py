@@ -43,9 +43,10 @@ class BufferAwareManager:
         is_full = node.current_buffer >= (node.buffer_capacity * 0.95)
         required_time = BufferAwareManager.calculate_service_time(uav_pos, node, is_full, env)
 
-        # Multi-trial sensing: minimum hover time budget
-        dist = MetricEngine.euclidean_distance(node.position(), uav_pos)
-        min_hover_s = CommunicationEngine.minimum_hover_time(dist)
+        # Multi-trial sensing: minimum hover time budget (horizontal distance)
+        import math
+        horiz_dist = math.hypot(node.x - uav_pos[0], node.y - uav_pos[1])
+        min_hover_s = CommunicationEngine.minimum_hover_time(horiz_dist)
 
         strategy = "Center-Hover" if is_full else "Chord-Fly"
         return {
@@ -71,10 +72,13 @@ class BufferAwareManager:
             if node.id != active_node_id:
                 return 0.0  # TDMA silence — node waits for its slot
 
-        from metrics.metric_engine import MetricEngine
-        dist = MetricEngine.euclidean_distance(node.position(), uav_pos)
+        import math
+        # Use horizontal (2D) distance for sensing probability — the ISAC sensing
+        # model describes ground-plane proximity; altitude effects are captured
+        # separately by the channel path-loss model in achievable_data_rate.
+        horiz_dist = math.hypot(node.x - uav_pos[0], node.y - uav_pos[1])
 
-        if not CommunicationEngine.probabilistic_sensing_success(dist):
+        if not CommunicationEngine.probabilistic_sensing_success(horiz_dist):
             return 0.0
 
         rate_mbps = CommunicationEngine.achievable_data_rate(
@@ -125,8 +129,10 @@ class BufferAwareManager:
         tau_star = node.current_buffer / rate_mbps
 
         # Multi-trial sensing overhead (Zheng & Liu, IEEE TVT 2025, Eq. 6)
-        dist = MetricEngine.euclidean_distance(node_pos, uav_pos)
-        t_sense = CommunicationEngine.minimum_hover_time(dist)
+        # Use horizontal distance — altitude is already in the channel model.
+        import math
+        horiz_dist = math.hypot(node_pos[0] - uav_pos[0], node_pos[1] - uav_pos[1])
+        t_sense = CommunicationEngine.minimum_hover_time(horiz_dist)
 
         # Total service time (capped for safety)
         t_total = min(tau_star + t_sense, Config.MAX_SERVICE_TIME_S)

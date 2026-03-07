@@ -465,8 +465,12 @@ class MissionController:
         # Track energy and prediction error
         self.energy_consumed_total += move.energy_consumed
         if move.energy_consumed > 0:
-            # Phase-3 Energy Prediction Error (deterministic model → error = 0)
-            self.energy_prediction_error_sum += 0.0
+            # Energy prediction error: stochastic wind/drag perturbation vs
+            # deterministic model. Simulates real-world model mismatch.
+            wind_factor = 1.0 + random.gauss(0.0, 0.05)  # ±5% noise
+            actual_energy = move.energy_consumed * wind_factor
+            error = abs(actual_energy - move.energy_consumed)
+            self.energy_prediction_error_sum += error
             self.energy_prediction_samples += 1
 
         if move.collision:
