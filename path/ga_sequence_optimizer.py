@@ -48,12 +48,14 @@ class GASequenceOptimizer:
         p_crossover: float = None,
         p_mutate: float = None,
         tw_penalty: float = None,
+        energy_weight: float = None,
     ):
-        self.pop_size    = pop_size    or Config.GA_POPULATION_SIZE
-        self.max_gen     = max_gen     or Config.GA_MAX_GENERATIONS
-        self.p_crossover = p_crossover or Config.GA_CROSSOVER_RATE
-        self.p_mutate    = p_mutate    or Config.GA_MUTATION_RATE
-        self.tw_penalty  = tw_penalty  or Config.GA_TW_PENALTY_WEIGHT
+        self.pop_size     = pop_size     or Config.GA_POPULATION_SIZE
+        self.max_gen      = max_gen      or Config.GA_MAX_GENERATIONS
+        self.p_crossover  = p_crossover  or Config.GA_CROSSOVER_RATE
+        self.p_mutate     = p_mutate     or Config.GA_MUTATION_RATE
+        self.tw_penalty   = tw_penalty   or Config.GA_TW_PENALTY_WEIGHT
+        self.energy_weight = energy_weight if energy_weight is not None else Config.GA_ENERGY_WEIGHT
 
     # ------------------------------------------------------------------
     # Public API
@@ -116,20 +118,27 @@ class GASequenceOptimizer:
 
     def _fitness(self, chrom: List[int], start_pos: Tuple, nodes: List[Node]) -> float:
         """
-        f(π) = 1 / (1 + path_cost(π) + tw_penalty * violation(π))
+        f(π) = 1 / (1 + path_cost(π) + tw_penalty * violation(π) + energy_weight * altitude_cost(π))
+
+        The *altitude_cost* term captures the additional propulsion energy required
+        for vertical manoeuvres (climbing / descending), penalising sequences with
+        large z-dimension changes beyond the horizontal path cost.
         """
-        total_dist = 0.0
-        violation  = 0.0
+        total_dist   = 0.0
+        violation    = 0.0
+        altitude_cost = 0.0
         prev = start_pos
         t = 0.0
 
         for idx in chrom:
             node = nodes[idx]
             npos = node.position()
-            d = math.sqrt(sum((a-b)**2 for a, b in zip(prev[:2], npos[:2])))
-            total_dist += d
+            d_horiz = math.sqrt(sum((a-b)**2 for a, b in zip(prev[:2], npos[:2])))
+            d_vert  = abs(prev[2] - npos[2]) if len(prev) > 2 and len(npos) > 2 else 0.0
+            total_dist   += d_horiz
+            altitude_cost += d_vert  # vertical movement incurs extra propulsion cost
             # Approximate travel time (steps) at UAV_STEP_SIZE
-            t += d / max(Config.UAV_STEP_SIZE, 1e-3)
+            t += d_horiz / max(Config.UAV_STEP_SIZE, 1e-3)
 
             # Time-window violation
             if t < node.time_window_start:
@@ -139,7 +148,8 @@ class GASequenceOptimizer:
 
             prev = npos
 
-        return 1.0 / (1.0 + total_dist + self.tw_penalty * violation)
+        return 1.0 / (1.0 + total_dist + self.tw_penalty * violation
+                      + self.energy_weight * altitude_cost)
 
     # ------------------------------------------------------------------
     # GA operators
