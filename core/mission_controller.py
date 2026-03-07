@@ -86,8 +86,10 @@ class MissionController:
         # Histories
         self.visited_history = []
         self.battery_history = []
-        self.replan_history = []
-        self.aoi_history = {}  # node_id → [aoi_per_step]
+        self.replan_history  = []
+        self.aoi_history     = {}   # node_id → [aoi_per_step]
+        self.aoi_mean_history         = []  # mean AoI across all nodes per step
+        self.collected_data_history   = []  # cumulative Mbits collected per step
 
         # Replan cooldown
         self.last_replan_step = -100
@@ -229,12 +231,18 @@ class MissionController:
         self.visited_history.append(len(self.visited))
         self.battery_history.append(self.uav.current_battery)
         self.replan_history.append(self.temporal.replan_count)
+        self.collected_data_history.append(self.collected_data_mbits)
 
-        # Per-node AoI snapshot
+        # Per-node AoI snapshot and mean AoI history
+        step_aoi_vals = []
         for node in self.env.nodes[1:]:
             if node.id not in self.aoi_history:
                 self.aoi_history[node.id] = []
             self.aoi_history[node.id].append(node.aoi_timer)
+            step_aoi_vals.append(node.aoi_timer)
+        self.aoi_mean_history.append(
+            sum(step_aoi_vals) / len(step_aoi_vals) if step_aoi_vals else 0.0
+        )
 
         # Frame saving
         if (
@@ -306,25 +314,39 @@ class MissionController:
 
         ux, uy, uz = self.uav.position()
 
-        # Phase-4 Hierarchical Semantic Routing: 
-        # If Semantic Clustering is actively tracking centroids, 
-        # find the closest latent density centroid and route to its member nodes first.
+        # Phase-4 Hierarchical Semantic Routing:
+        # Score each cluster by urgency (priority × AoI) discounted by UAV distance,
+        # then route to the highest-urgency cluster first.
         if len(self.active_centroids) > 0 and len(self.active_labels) == len(remaining):
             import numpy as np
-            distances_to_centroids = [
-                (idx, np.linalg.norm(np.array([ux, uy, uz]) - centroid)) 
-                for idx, centroid in enumerate(self.active_centroids) 
-                if not np.all(centroid == 0) # Ignore empty noise clusters
-            ]
-            
-            if distances_to_centroids:
-                closest_cluster_idx = min(distances_to_centroids, key=lambda x: x[1])[0]
-                # Filter remaining to only the semantic locality
-                priority_subgroup = [
-                    remaining[i] for i, label in enumerate(self.active_labels) 
-                    if label == closest_cluster_idx
+            uav_vec = np.array([ux, uy, uz])
+
+            # Build per-cluster urgency score: mean_priority × (1 + mean_aoi/MAX_AOI_LIMIT)
+            # discounted by proximity to UAV.
+            cluster_scores = {}
+            for idx, centroid in enumerate(self.active_centroids):
+                if np.all(centroid == 0):
+                    continue  # skip empty noise cluster
+                members = [
+                    remaining[i] for i, label in enumerate(self.active_labels)
+                    if label == idx
                 ]
-                # Fallback if DBSCAN noise filtered out all valid subgroup routers
+                if not members:
+                    continue
+                mean_priority = sum(n.priority for n in members) / len(members)
+                mean_aoi      = sum(getattr(n, "aoi_timer", 0.0) for n in members) / len(members)
+                urgency       = mean_priority * (1.0 + mean_aoi / max(Config.MAX_AOI_LIMIT, 1))
+                dist          = float(np.linalg.norm(uav_vec - centroid))
+                # Higher urgency / closer clusters get higher scores
+                cluster_scores[idx] = urgency / (1.0 + dist)
+
+            if cluster_scores:
+                best_cluster_idx = max(cluster_scores, key=cluster_scores.get)
+                priority_subgroup = [
+                    remaining[i] for i, label in enumerate(self.active_labels)
+                    if label == best_cluster_idx
+                ]
+                # Fallback if DBSCAN noise filtered out all valid subgroup members
                 if priority_subgroup:
                     remaining = priority_subgroup
 
