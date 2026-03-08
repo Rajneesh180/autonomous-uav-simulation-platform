@@ -10,7 +10,6 @@ All outputs: dual PNG (300 DPI) + vector PDF.
 """
 
 import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -21,36 +20,36 @@ from config.feature_toggles import FeatureToggles
 
 
 class PlotRenderer:
-    """Professional 3D-first UAV simulation visualiser."""
+    """Professional UAV simulation visualiser — IEEE publication-quality."""
 
-    # ── Vibrant Colour Palette ───────────────────────────────
+    # ── IEEE / Research-Grade Colour Palette ─────────────────
     C = {
-        "visited":    "#00FF87",   # neon green
-        "waiting":    "#58A6FF",   # bright blue
-        "idle":       "#8B949E",   # muted gray
-        "critical":   "#FF6B6B",   # coral red
-        "uav":        "#00E5FF",   # electric cyan
-        "uav_edge":   "#FFFFFF",
-        "base":       "#FFC107",   # amber gold
-        "base_edge":  "#FF8F00",
-        "obstacle":   "#FF1744",   # vivid red
-        "obs_edge":   "#D50000",
-        "risk":       "#FFD740",   # bright amber
-        "risk_edge":  "#FF6F00",
-        "trail":      "#7C4DFF",   # deep purple
-        "trail_hot":  "#FF5252",
-        "rp":         "#FFD700",   # gold
-        "cluster":    "#E040FB",   # magenta
+        "visited":    "#2E7D32",   # forest green
+        "waiting":    "#1565C0",   # strong blue
+        "idle":       "#9E9E9E",   # neutral gray
+        "critical":   "#C62828",   # deep red
+        "uav":        "#0277BD",   # ocean blue
+        "uav_edge":   "#01579B",
+        "base":       "#E65100",   # burnt orange
+        "base_edge":  "#BF360C",
+        "obstacle":   "#B71C1C",   # dark red
+        "obs_edge":   "#7F0000",
+        "risk":       "#F9A825",   # golden amber
+        "risk_edge":  "#F57F17",
+        "trail":      "#4527A0",   # indigo
+        "trail_hot":  "#AD1457",   # deep rose
+        "rp":         "#FF8F00",   # dark amber
+        "cluster":    "#6A1B9A",   # purple
     }
 
     # Theme constants
-    _DARK_BG   = "#0D1117"
-    _DARK_GRID = "#30363D"
-    _DARK_TXT  = "#C9D1D9"
+    _DARK_BG   = "#1A1A2E"
+    _DARK_GRID = "#3A3A5C"
+    _DARK_TXT  = "#E0E0E0"
     _LIGHT_BG  = "#FFFFFF"
-    _LIGHT_AX  = "#F6F8FA"
-    _LIGHT_TXT = "#24292F"
-    _LIGHT_GRD = "#D0D7DE"
+    _LIGHT_AX  = "#FAFAFA"
+    _LIGHT_TXT = "#212121"
+    _LIGHT_GRD = "#BDBDBD"
 
     # ═══════════════════════════════════════════════════════════
     #  INTERNAL HELPERS

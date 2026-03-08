@@ -12,13 +12,14 @@ ROOT = Path(__file__).resolve().parent.parent
 FIG = ROOT / "report" / "figures"
 OUT = ROOT / "report" / "BTP_MidTerm_Presentation.pptx"
 
-# ── Colour palette ──────────────────────────────────────────────────────
-DARK = RGBColor(0x1B, 0x2A, 0x4A)   # dark navy
-ACCENT = RGBColor(0x00, 0x7A, 0xCC)  # blue accent
+# ── Colour palette (premium academic) ────────────────────────────────────
+DARK = RGBColor(0x0B, 0x0E, 0x1A)    # midnight navy
+ACCENT = RGBColor(0x00, 0x96, 0x88)   # teal (Material 500)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-LIGHT_GRAY = RGBColor(0xF0, 0xF0, 0xF0)
-DARK_GRAY = RGBColor(0x33, 0x33, 0x33)
-GREEN = RGBColor(0x00, 0x96, 0x4B)
+LIGHT_GRAY = RGBColor(0xEC, 0xEF, 0xF1) # blue-grey 50
+DARK_GRAY = RGBColor(0x26, 0x32, 0x38)  # blue-grey 900
+GREEN = RGBColor(0x00, 0xC8, 0x53)    # green A400
+GOLD = RGBColor(0xFF, 0xB3, 0x00)     # amber 600
 
 
 def _add_bg(slide, color=DARK):
@@ -29,11 +30,11 @@ def _add_bg(slide, color=DARK):
     fill.fore_color.rgb = color
 
 
-def _add_accent_bar(slide, top=Inches(0), h=Inches(0.08)):
+def _add_accent_bar(slide, top=Inches(0), h=Inches(0.08), color=None):
     shape = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE, Inches(0), top, Inches(13.333), h)
     shape.fill.solid()
-    shape.fill.fore_color.rgb = ACCENT
+    shape.fill.fore_color.rgb = color or ACCENT
     shape.line.fill.background()
 
 
@@ -73,7 +74,7 @@ def _title_bar(slide, title, subtitle=None):
               title, size=32, bold=True, color=WHITE)
     if subtitle:
         _text_box(slide, Inches(0.6), Inches(0.85), Inches(12), Inches(0.4),
-                  subtitle, size=16, color=RGBColor(0xCC, 0xDD, 0xFF))
+                  subtitle, size=16, color=RGBColor(0xB2, 0xDF, 0xDB))  # teal 100
 
 
 def _add_image_safe(slide, img_name, left, top, width=None, height=None):
@@ -102,7 +103,7 @@ prs.slide_height = Inches(7.5)
 sl = prs.slides.add_slide(prs.slide_layouts[6])  # blank
 _add_bg(sl)
 _add_accent_bar(sl, top=Inches(2.8), h=Inches(0.06))
-_add_accent_bar(sl, top=Inches(4.6), h=Inches(0.04))
+_add_accent_bar(sl, top=Inches(4.6), h=Inches(0.04), color=GOLD)
 
 # Logo (real institute logo)
 _add_image_safe(sl, "iiit_logo.png", Inches(5.4), Inches(0.3),
@@ -118,7 +119,7 @@ _text_box(sl, Inches(0.5), Inches(4.8), Inches(12.3), Inches(1.5),
           "Rajneesh Chaudhary  |  2022IMG-052\n"
           "Advisor: Dr. Ankur Jaiswal\n"
           "ABV-IIITM Gwalior  •  March 2026",
-          size=18, color=RGBColor(0xBB, 0xCC, 0xEE), alignment=PP_ALIGN.CENTER)
+          size=18, color=RGBColor(0xB2, 0xDF, 0xDB), alignment=PP_ALIGN.CENTER)
 
 # ── SLIDE 2: Agenda ────────────────────────────────────────────────────
 sl = prs.slides.add_slide(prs.slide_layouts[6])
@@ -226,7 +227,7 @@ _bullet_slide(sl, items, top=Inches(1.8), size=22)
 
 # ── SLIDE 9: Environment & Trajectory ──────────────────────────────────
 sl = prs.slides.add_slide(prs.slide_layouts[6])
-_add_bg(sl, RGBColor(0x10, 0x10, 0x18))
+_add_bg(sl, RGBColor(0x08, 0x0A, 0x14))
 _title_bar(sl, "Environment & Trajectory")
 _add_image_safe(sl, "environment.png", Inches(0.3), Inches(1.6),
                 width=Inches(6.2))
@@ -235,7 +236,7 @@ _add_image_safe(sl, "trajectory_summary.png", Inches(6.8), Inches(1.6),
 
 # ── SLIDE 10: 3D Trajectory ────────────────────────────────────────────
 sl = prs.slides.add_slide(prs.slide_layouts[6])
-_add_bg(sl, RGBColor(0x10, 0x10, 0x18))
+_add_bg(sl, RGBColor(0x08, 0x0A, 0x14))
 _title_bar(sl, "3D Trajectory Views")
 _add_image_safe(sl, "trajectory_3d_isometric.png", Inches(0.3), Inches(1.6),
                 width=Inches(6.2))
@@ -283,7 +284,7 @@ for i, row in enumerate(data):
             p.alignment = PP_ALIGN.CENTER
         cell.fill.solid()
         if i == 0:
-            cell.fill.fore_color.rgb = RGBColor(0x00, 0x50, 0x88)
+            cell.fill.fore_color.rgb = RGBColor(0x00, 0x69, 0x5C)  # teal 800
         else:
             cell.fill.fore_color.rgb = LIGHT_GRAY if (i % 2) else WHITE
 
@@ -353,7 +354,7 @@ _add_image_safe(sl, "scalability_node_count_path_stability_index.png",
 
 # ── SLIDE 18: Dashboard & Radar ────────────────────────────────────────
 sl = prs.slides.add_slide(prs.slide_layouts[6])
-_add_bg(sl, RGBColor(0x10, 0x10, 0x18))
+_add_bg(sl, RGBColor(0x08, 0x0A, 0x14))
 _title_bar(sl, "Comprehensive Dashboard & Metrics")
 _add_image_safe(sl, "dashboard_panel.png", Inches(0.3), Inches(1.6),
                 width=Inches(6.2))
@@ -401,7 +402,7 @@ _bullet_slide(sl, items, top=Inches(1.8), size=22)
 
 # ── SLIDE 22: Mission Progress ─────────────────────────────────────────
 sl = prs.slides.add_slide(prs.slide_layouts[6])
-_add_bg(sl, RGBColor(0x10, 0x10, 0x18))
+_add_bg(sl, RGBColor(0x08, 0x0A, 0x14))
 _title_bar(sl, "Mission Progress Overview")
 _add_image_safe(sl, "mission_progress_combined.png", Inches(1.5), Inches(1.5),
                 width=Inches(10))
@@ -410,20 +411,20 @@ _add_image_safe(sl, "mission_progress_combined.png", Inches(1.5), Inches(1.5),
 sl = prs.slides.add_slide(prs.slide_layouts[6])
 _add_bg(sl)
 _add_accent_bar(sl, top=Inches(2.8), h=Inches(0.06))
-_add_accent_bar(sl, top=Inches(5.0), h=Inches(0.04))
+_add_accent_bar(sl, top=Inches(5.0), h=Inches(0.04), color=GOLD)
 
 _text_box(sl, Inches(0.5), Inches(3.0), Inches(12.3), Inches(0.8),
           "Thank You!", size=44, bold=True, color=WHITE,
           alignment=PP_ALIGN.CENTER)
 
 _text_box(sl, Inches(0.5), Inches(3.9), Inches(12.3), Inches(0.6),
-          "Questions & Discussion", size=28, color=ACCENT,
+          "Questions & Discussion", size=28, color=GOLD,
           alignment=PP_ALIGN.CENTER)
 
 _text_box(sl, Inches(0.5), Inches(5.3), Inches(12.3), Inches(1.0),
           "Rajneesh Chaudhary  •  2022IMG-052\n"
           "Advisor: Dr. Ankur Jaiswal  •  ABV-IIITM Gwalior",
-          size=18, color=RGBColor(0xAA, 0xBB, 0xDD),
+          size=18, color=RGBColor(0xB2, 0xDF, 0xDB),
           alignment=PP_ALIGN.CENTER)
 
 # ── Save ────────────────────────────────────────────────────────────────

@@ -196,124 +196,122 @@ def run_simulation(verbose=True, render=True, seed_override=None):
         json.dump(config_snapshot, f, indent=4)
 
     # ---------------------------------------------------------
-    # Final Visual Metric Artifact Generation
-    # Gate heavy artifacts behind render flag (batch runs skip this)
+    # Publication Plots — ALWAYS saved so thesis / PPT images stay fresh
     # ---------------------------------------------------------
-    if render:
-        visuals_path = run_manager.get_path("plots")
+    visuals_path = run_manager.get_path("plots")
 
-        # === ALL plots rendered regardless of preset ===
-        PlotRenderer.render_environment(env, visuals_path)
+    PlotRenderer.render_environment(env, visuals_path)
 
-        PlotRenderer.render_energy_plots(
-            visited=len(mission.visited),
-            energy_consumed=mission.energy_consumed_total,
-            save_dir=visuals_path
-        )
+    PlotRenderer.render_energy_plots(
+        visited=len(mission.visited),
+        energy_consumed=mission.energy_consumed_total,
+        save_dir=visuals_path
+    )
 
-        PlotRenderer.render_time_series(
-            visited_hist=mission.visited_history,
-            battery_hist=mission.battery_history,
-            replan_hist=mission.replan_history,
-            save_dir=visuals_path
-        )
+    PlotRenderer.render_time_series(
+        visited_hist=mission.visited_history,
+        battery_hist=mission.battery_history,
+        replan_hist=mission.replan_history,
+        save_dir=visuals_path
+    )
 
-        PlotRenderer.render_trajectory_summary(
+    PlotRenderer.render_trajectory_summary(
+        env=env,
+        visited_ids=mission.visited,
+        save_dir=visuals_path
+    )
+
+    PlotRenderer.render_battery_with_replans(
+        battery_hist=mission.battery_history,
+        replan_steps=mission.replan_timestamps,
+        save_dir=visuals_path
+    )
+
+    PlotRenderer.render_radar_chart(results, visuals_path)
+
+    PlotRenderer.render_node_energy_heatmap(
+        nodes=env.sensors,
+        env_width=env.width,
+        env_height=env.height,
+        save_dir=visuals_path
+    )
+
+    PlotRenderer.render_dashboard_panel(
+        results=results,
+        battery_hist=mission.battery_history,
+        visited_hist=mission.visited_history,
+        save_dir=visuals_path
+    )
+
+    PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
+    PlotRenderer.render_trajectory_heatmap(env=env, save_dir=visuals_path)
+
+    PlotRenderer.render_aoi_timeline(
+        aoi_history=mission.aoi_history,
+        save_dir=visuals_path
+    )
+
+    # Semantic Clustering Overlays
+    if Config.ENABLE_SEMANTIC_CLUSTERING and len(mission.active_labels) > 0:
+        PlotRenderer.render_semantic_clustering(
             env=env,
-            visited_ids=mission.visited,
-            save_dir=visuals_path
+            active_labels=mission.active_labels,
+            active_centroids=mission.active_centroids,
+            save_dir=visuals_path,
         )
+        if hasattr(mission, "cluster_manager") and mission.cluster_manager is not None:
+            reduced = getattr(mission.cluster_manager, "last_reduced_features", None)
+            if reduced is not None:
+                PlotRenderer.render_clustering_pca_space(
+                    reduced_features=reduced,
+                    active_labels=mission.active_labels,
+                    save_dir=visuals_path,
+                )
 
-        PlotRenderer.render_battery_with_replans(
-            battery_hist=mission.battery_history,
-            replan_steps=mission.replan_timestamps,
-            save_dir=visuals_path
+    # Routing Pipeline Compression
+    if Config.ENABLE_RENDEZVOUS_SELECTION and hasattr(mission, "rp_member_map"):
+        rp_all = getattr(mission, "rp_nodes", [])
+        PlotRenderer.render_routing_pipeline(
+            env=env,
+            rp_nodes=rp_all,
+            rp_member_map=mission.rp_member_map,
+            route_sequence=getattr(mission, "_cached_queue", []),
+            save_dir=visuals_path,
         )
-
-        PlotRenderer.render_radar_chart(results, visuals_path)
-
-        PlotRenderer.render_node_energy_heatmap(
-            nodes=env.sensors,
-            env_width=env.width,
-            env_height=env.height,
-            save_dir=visuals_path
-        )
-
-        PlotRenderer.render_dashboard_panel(
-            results=results,
-            battery_hist=mission.battery_history,
-            visited_hist=mission.visited_history,
-            save_dir=visuals_path
-        )
-
-        PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
-        PlotRenderer.render_trajectory_heatmap(env=env, save_dir=visuals_path)
-
-        PlotRenderer.render_aoi_timeline(
-            aoi_history=mission.aoi_history,
-            save_dir=visuals_path
-        )
-
-        # Semantic Clustering Overlays
-        if Config.ENABLE_SEMANTIC_CLUSTERING and len(mission.active_labels) > 0:
-            PlotRenderer.render_semantic_clustering(
-                env=env,
-                active_labels=mission.active_labels,
-                active_centroids=mission.active_centroids,
-                save_dir=visuals_path,
-            )
-            if hasattr(mission, "cluster_manager") and mission.cluster_manager is not None:
-                reduced = getattr(mission.cluster_manager, "last_reduced_features", None)
-                if reduced is not None:
-                    PlotRenderer.render_clustering_pca_space(
-                        reduced_features=reduced,
-                        active_labels=mission.active_labels,
-                        save_dir=visuals_path,
-                    )
-
-        # Routing Pipeline Compression
-        if Config.ENABLE_RENDEZVOUS_SELECTION and hasattr(mission, "rp_member_map"):
-            rp_all = getattr(mission, "rp_nodes", [])
-            PlotRenderer.render_routing_pipeline(
-                env=env,
-                rp_nodes=rp_all,
-                rp_member_map=mission.rp_member_map,
-                route_sequence=getattr(mission, "_cached_queue", []),
-                save_dir=visuals_path,
-            )
-            PlotRenderer.render_rendezvous_compression(
-                env=env,
-                all_nodes=env.sensors,
-                rp_nodes=rp_all,
-                rp_member_map=mission.rp_member_map,
-                save_dir=visuals_path,
-            )
-
-        # Communication Quality
-        PlotRenderer.render_communication_quality(
-            nodes=env.sensors,
-            uav_trail=getattr(env, "uav_trail", []),
+        PlotRenderer.render_rendezvous_compression(
+            env=env,
+            all_nodes=env.sensors,
+            rp_nodes=rp_all,
+            rp_member_map=mission.rp_member_map,
             save_dir=visuals_path,
         )
 
-        # Mission Progress Combined
-        data_hist = getattr(mission, "collected_data_history", [])
-        aoi_mean_hist = [
-            sum(v[-1] for v in mission.aoi_history.values() if v) / max(len(mission.aoi_history), 1)
-            if mission.aoi_history else 0.0
-        ]
-        if hasattr(mission, "aoi_mean_history"):
-            aoi_mean_hist = mission.aoi_mean_history
-        PlotRenderer.render_mission_progress_combined(
-            visited_hist=mission.visited_history,
-            battery_hist=mission.battery_history,
-            data_hist=data_hist,
-            aoi_mean_hist=aoi_mean_hist,
-            replan_steps=mission.replan_timestamps,
-            save_dir=visuals_path,
-        )
+    # Communication Quality
+    PlotRenderer.render_communication_quality(
+        nodes=env.sensors,
+        uav_trail=getattr(env, "uav_trail", []),
+        save_dir=visuals_path,
+    )
 
-        # ---- MP4 Animation ----
+    # Mission Progress Combined
+    data_hist = getattr(mission, "collected_data_history", [])
+    aoi_mean_hist = [
+        sum(v[-1] for v in mission.aoi_history.values() if v) / max(len(mission.aoi_history), 1)
+        if mission.aoi_history else 0.0
+    ]
+    if hasattr(mission, "aoi_mean_history"):
+        aoi_mean_hist = mission.aoi_mean_history
+    PlotRenderer.render_mission_progress_combined(
+        visited_hist=mission.visited_history,
+        battery_hist=mission.battery_history,
+        data_hist=data_hist,
+        aoi_mean_hist=aoi_mean_hist,
+        replan_steps=mission.replan_timestamps,
+        save_dir=visuals_path,
+    )
+
+    # ---- MP4 Animation (needs frame images — only when render enabled) ----
+    if render:
         AnimationBuilder.build_mp4(
             frames_dir=frames_path,
             output_dir=run_manager.get_path("animations"),
@@ -321,29 +319,29 @@ def run_simulation(verbose=True, render=True, seed_override=None):
             max_frames=300,
         )
 
-        # ---- IEEE Experiment Report ----
-        IEEEDocLogger.generate_experiment_doc(
-            results=results,
-            metrics=stability,
-            run_id=run_id,
-            reports_dir=run_manager.get_path("reports"),
-        )
+    # ---- IEEE Experiment Report ----
+    IEEEDocLogger.generate_experiment_doc(
+        results=results,
+        metrics=stability,
+        run_id=run_id,
+        reports_dir=run_manager.get_path("reports"),
+    )
 
-        # ---- Post-Run Artifact Manifest ----
-        print(f"\n{'='*55}")
-        print(f"  Run Artifacts — {run_id}")
-        print(f"{'='*55}")
-        base = run_manager.base_path
-        artifact_count = 0
-        for root, dirs, files in os.walk(base):
-            for fname in sorted(files):
-                fpath = os.path.join(root, fname)
-                rel = os.path.relpath(fpath, base)
-                size_kb = os.path.getsize(fpath) / 1024
-                print(f"  {rel:50s} {size_kb:8.1f} KB")
-                artifact_count += 1
-        print(f"{'='*55}")
-        print(f"  Total: {artifact_count} artifacts in {base}")
-        print(f"{'='*55}\n")
+    # ---- Post-Run Artifact Manifest ----
+    print(f"\n{'='*55}")
+    print(f"  Run Artifacts — {run_id}")
+    print(f"{'='*55}")
+    base = run_manager.base_path
+    artifact_count = 0
+    for root, dirs, files in os.walk(base):
+        for fname in sorted(files):
+            fpath = os.path.join(root, fname)
+            rel = os.path.relpath(fpath, base)
+            size_kb = os.path.getsize(fpath) / 1024
+            print(f"  {rel:50s} {size_kb:8.1f} KB")
+            artifact_count += 1
+    print(f"{'='*55}")
+    print(f"  Total: {artifact_count} artifacts in {base}")
+    print(f"{'='*55}\n")
 
     return results

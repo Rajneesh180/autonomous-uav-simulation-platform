@@ -3,16 +3,16 @@
 Simple CLI runner for the Autonomous UAV Simulation Platform.
 
 Usage:
-    python run.py sim              # Basic simulation (20 nodes, no GUI)
-    python run.py sim --render     # With live 2D visualization
-    python run.py 2d               # Quick run with 2D visualization
-    python run.py 3d               # Quick run with 3D visualization
-    python run.py full             # Full 50-node simulation
-    python run.py compare          # DST-BA vs 4 baselines
-    python run.py ablation         # Ablation study (component removal)
-    python run.py scalability      # Scalability 10→100 nodes
-    python run.py batch            # 10-seed batch for statistics
-    python run.py all              # Run sim + compare + ablation + scalability
+    python run sim              # Basic simulation (20 nodes, no GUI)
+    python run sim --render     # With live 2D visualization
+    python run 2d               # Quick run with 2D visualization
+    python run 3d               # Quick run with 3D visualization
+    python run full             # Full 50-node simulation
+    python run compare          # DST-BA vs 4 baselines
+    python run ablation         # Ablation study (component removal)
+    python run scalability      # Scalability 10→100 nodes
+    python run batch            # 10-seed batch for statistics
+    python run all              # Run sim + compare + ablation + scalability
 """
 
 import subprocess

@@ -115,27 +115,27 @@ pip install -r requirements.txt
 
 ## Command Reference
 
-All experiments can be run using the simple `run.py` CLI:
+All experiments can be run using the simple `run` CLI:
 
 ### Simulations
 
 | Command | Description |
 |---------|-------------|
-| `python run.py sim` | Basic 20-node simulation (headless, fastest) |
-| `python run.py sim --render` | 20-node simulation with live 2D visualization |
-| `python run.py 2d` | Quick run with 2D trajectory visualization |
-| `python run.py 3d` | Quick run with 3D trajectory visualization |
-| `python run.py full` | Full-scale 50-node simulation |
-| `python run.py batch` | Statistical batch run (10 random seeds) |
+| `python run sim` | Basic 20-node simulation (headless, fastest) |
+| `python run sim --render` | 20-node simulation with live 2D visualization |
+| `python run 2d` | Quick run with 2D trajectory visualization |
+| `python run 3d` | Quick run with 3D trajectory visualization |
+| `python run full` | Full-scale 50-node simulation |
+| `python run batch` | Statistical batch run (10 random seeds) |
 
 ### Experiments
 
 | Command | Description |
 |---------|-------------|
-| `python run.py compare` | Compare DST-BA against 4 baseline algorithms |
-| `python run.py ablation` | Ablation study — tests contribution of each component |
-| `python run.py scalability` | Scalability test from 10 to 100 nodes |
-| `python run.py all` | Run all 4 experiments sequentially (sim + compare + ablation + scalability) |
+| `python run compare` | Compare DST-BA against 4 baseline algorithms |
+| `python run ablation` | Ablation study — tests contribution of each component |
+| `python run scalability` | Scalability test from 10 to 100 nodes |
+| `python run all` | Run all 4 experiments sequentially (sim + compare + ablation + scalability) |
 
 ### Development & Testing
 

@@ -327,7 +327,7 @@ class Config:
             # Scale
             cls.NODE_COUNT = 50
             cls.CLUSTER_COUNT = 5
-            cls.MAX_TIME_STEPS = 800
+            cls.MAX_TIME_STEPS = 2000
             cls.OBSTACLE_COUNT = 3
             # Algorithms — full power
             cls.GA_POPULATION_SIZE = 30
@@ -354,6 +354,8 @@ class Config:
             cls.ENABLE_GAUSSIAN_HEIGHT = True
             cls.FRAME_SUBSAMPLE_INTERVAL = 20
             cls.HOSTILITY_LEVEL = "medium"
+            # Movement — moderate speed for larger map coverage
+            cls.UAV_STEP_SIZE = 8.0
 
     # =========================================================
     # Hostility Policy Application

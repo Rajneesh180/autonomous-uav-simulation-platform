@@ -469,7 +469,7 @@ def _render_comparison_chart(results, save_dir):
     x = np.arange(n_met)
     width = 0.8 / n_alg
 
-    colours = ["#1565C0", "#43A047", "#FF9800", "#AB47BC", "#E53935"]
+    colours = ["#1565C0", "#2E7D32", "#E65100", "#6A1B9A", "#C62828"]
 
     fig, ax = plt.subplots(figsize=(14, 6))
     for i, r in enumerate(results):
@@ -504,12 +504,12 @@ def _render_per_metric_charts(results, save_dir):
 
     per_metric = [
         ("Coverage Ratio (%)", "coverage_ratio_percent", "#1565C0"),
-        ("Nodes Visited", "nodes_visited", "#43A047"),
-        ("Energy per Node (J)", "energy_per_node_J", "#FF9800"),
-        ("Total Energy (J)", "energy_consumed_J", "#E53935"),
-        ("Data Collected (Mbits)", "data_collected_mbits", "#00BCD4"),
-        ("Throughput (Mbits/J)", "throughput_mbits_per_J", "#7E57C2"),
-        ("Steps to Completion", "steps", "#AB47BC"),
+        ("Nodes Visited", "nodes_visited", "#2E7D32"),
+        ("Energy per Node (J)", "energy_per_node_J", "#E65100"),
+        ("Total Energy (J)", "energy_consumed_J", "#C62828"),
+        ("Data Collected (Mbits)", "data_collected_mbits", "#00838F"),
+        ("Throughput (Mbits/J)", "throughput_mbits_per_J", "#4527A0"),
+        ("Steps to Completion", "steps", "#6A1B9A"),
     ]
 
     algorithms = [r["algorithm"] for r in results]
@@ -526,7 +526,7 @@ def _render_per_metric_charts(results, save_dir):
             best_idx = int(np.argmin(vals)) if any(v > 0 for v in vals) else 0
         else:
             best_idx = int(np.argmax(vals))
-        bars[best_idx].set_edgecolor("#FFD600")
+        bars[best_idx].set_edgecolor("#1B5E20")
         bars[best_idx].set_linewidth(2.5)
 
         for bar in bars:

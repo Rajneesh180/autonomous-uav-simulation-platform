@@ -116,9 +116,9 @@ def _generate_scalability_plots(results: Dict[str, dict], param: str, output_dir
         ("coverage_ratio_percent",      "Coverage Ratio (%)",
          "#1565C0", "Coverage vs " + xlabel),
         ("replan_frequency",            "Replan Frequency (replans/step)",
-         "#E53935", "Replan Frequency vs " + xlabel),
+         "#C62828", "Replan Frequency vs " + xlabel),
         ("path_stability_index",        "Path Stability Index",
-         "#4CAF50", "Path Stability vs " + xlabel),
+         "#2E7D32", "Path Stability vs " + xlabel),
     ]
 
     for metric_key, ylabel, colour, title in metrics_to_plot:

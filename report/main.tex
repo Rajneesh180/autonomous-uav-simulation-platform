@@ -35,6 +35,7 @@
 \usepackage{nomencl}
 \usepackage{pdfpages}
 \usepackage{tikz}
+\usetikzlibrary{decorations.text}
 
 % ── Header / Footer ─────────────────────────────────────────────────────────
 \pagestyle{fancy}
@@ -85,14 +86,21 @@
 
 \vspace*{0.5cm}
 
-% ── Logo in circular clip ──
+% ── Logo with decorative seal ring ──
 \begin{tikzpicture}
-  \draw[line width=2pt, color=black!70] (0,0) circle (2.1cm);
-  \clip (0,0) circle (2cm);
-  \node at (0,0) {\includegraphics[width=4cm]{figures/iiit_logo.png}};
+  % Outer thin ring
+  \draw[line width=0.6pt, color=black!30] (0,0) circle (2.7cm);
+  % Double decorative ring
+  \draw[line width=1.8pt, color=black!60] (0,0) circle (2.5cm);
+  \draw[line width=0.8pt, color=black!40] (0,0) circle (2.3cm);
+  % Clipped logo inside the seal
+  \begin{scope}
+    \clip (0,0) circle (2.2cm);
+    \node at (0,0) {\includegraphics[width=4.4cm]{figures/iiit_logo.png}};
+  \end{scope}
 \end{tikzpicture}
 
-\vspace{0.5cm}
+\vspace{0.6cm}
 
 {\Large \textsc{Atal Bihari Vajpayee}}\\[4pt]
 {\large \textsc{Indian Institute of Information Technology \& Management}}\\[2pt]
