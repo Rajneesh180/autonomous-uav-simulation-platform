@@ -107,20 +107,64 @@ A discrete-event simulation engine for **autonomous UAV data collection** from g
 git clone https://github.com/Rajneesh180/autonomous-uav-simulation-platform.git
 cd autonomous-uav-simulation-platform
 
-# Install dependencies
+# Create virtual environment & install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+```
 
-# Run a single simulation (headless)
-make run
+## Command Reference
 
-# Run with live GUI dashboard
-make run-gui
+All experiments can be run using the simple `run.py` CLI:
 
-# 10-seed batch experiment
-make batch
+### Simulations
 
-# Run the test suite
-make test
+| Command | Description |
+|---------|-------------|
+| `python run.py sim` | Basic 20-node simulation (headless, fastest) |
+| `python run.py sim --render` | 20-node simulation with live 2D visualization |
+| `python run.py 2d` | Quick run with 2D trajectory visualization |
+| `python run.py 3d` | Quick run with 3D trajectory visualization |
+| `python run.py full` | Full-scale 50-node simulation |
+| `python run.py batch` | Statistical batch run (10 random seeds) |
+
+### Experiments
+
+| Command | Description |
+|---------|-------------|
+| `python run.py compare` | Compare DST-BA against 4 baseline algorithms |
+| `python run.py ablation` | Ablation study — tests contribution of each component |
+| `python run.py scalability` | Scalability test from 10 to 100 nodes |
+| `python run.py all` | Run all 4 experiments sequentially (sim + compare + ablation + scalability) |
+
+### Development & Testing
+
+| Command | Description |
+|---------|-------------|
+| `make test` | Run full test suite (73 unit tests) |
+| `make lint` | Static analysis with ruff |
+| `make run` | Headless single simulation |
+| `make run-gui` | Simulation with live GUI dashboard |
+| `make batch` | 10-seed batch experiment |
+| `make clean` | Remove caches and temporary files |
+
+### Report & Presentation
+
+| File | Location |
+|------|----------|
+| BTP Report (LaTeX source) | `report/main.tex` |
+| BTP Report (PDF) | `report/main.pdf` |
+| Presentation (PPTX) | `report/BTP_MidTerm_Presentation.pptx` |
+| All figures | `report/figures/` |
+
+To recompile the report:
+```bash
+cd report && pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex
+```
+
+To regenerate the presentation:
+```bash
+python scripts/create_presentation.py
 ```
 
 ## Output Structure
