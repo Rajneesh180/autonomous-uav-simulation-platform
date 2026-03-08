@@ -71,6 +71,8 @@ def main():
         default="single",
         help="Execution mode: 'single' for a detailed run, 'batch' for statistical aggregation."
     )
+    parser.add_argument("--preset", type=str, choices=["simple", "full"], default=None,
+                        help="Apply a parameter preset: 'simple' (fast demo) or 'full' (research).")
     parser.add_argument(
         "--render", 
         action="store_true", 
@@ -83,33 +85,40 @@ def main():
         default="2D",
         help="Visualisation projection: '2D' top-down, '3D' perspective, or 'both'."
     )
-    parser.add_argument(
-        "--obstacles", 
-        type=str, 
-        choices=["true", "false", "True", "False"], 
-        default="true",
-        help="Toggle obstacle presence."
-    )
-    parser.add_argument(
-        "--moving_obstacles", 
-        type=str, 
-        choices=["true", "false", "True", "False"], 
-        default="true",
-        help="Toggle obstacle animation."
-    )
+    # --- Toggle flags (true/false strings) ---
+    _toggle = lambda name, default, hlp: parser.add_argument(
+        f"--{name}", type=str, choices=["true","false","True","False"], default=default, help=hlp)
+    _toggle("obstacles", "true", "Toggle obstacle presence.")
+    _toggle("moving_obstacles", "false", "Toggle obstacle animation.")
+    _toggle("risk_zones", None, "Toggle risk zones.")
+    _toggle("energy", None, "Toggle UAV energy model.")
+    _toggle("bs_uplink", None, "Toggle base-station uplink model.")
+    _toggle("tdma", None, "Toggle TDMA scheduling.")
+    _toggle("ga", None, "Toggle GA sequence optimizer.")
+    _toggle("clustering", None, "Toggle semantic clustering.")
+    _toggle("rendezvous", None, "Toggle rendezvous-point selection.")
+    _toggle("sca", None, "Toggle SCA hover optimizer.")
+    _toggle("sensing", None, "Toggle probabilistic sensing.")
+    _toggle("dynamic_nodes", None, "Toggle dynamic node join/leave.")
+    _toggle("predictive_avoidance", None, "Toggle predictive avoidance.")
     
     args = parser.parse_args()
 
-    # Apply Toggles
-    FeatureToggles.apply_overrides(args)
-    Config.ENABLE_OBSTACLES = FeatureToggles.ENABLE_OBSTACLES
-    Config.ENABLE_MOVING_OBSTACLES = FeatureToggles.MOVING_OBSTACLES
+    # 1. Apply preset (if given via CLI or use Config default)
+    if args.preset:
+        Config.PRESET = args.preset
+    Config.apply_preset()
 
-    # Pre-flight configuration validation
+    # 2. Apply CLI toggle overrides on top of preset
+    FeatureToggles.apply_overrides(args)
+    FeatureToggles.sync_to_config()
+
+    # 3. Hostility + validation
     Config.apply_hostility_profile()
     Config.validate()
 
     print("=== Autonomous UAV Simulation Platform ===")
+    print(f"    Preset: {Config.PRESET}  |  Nodes: {Config.NODE_COUNT}  |  Steps: {Config.MAX_TIME_STEPS}")
 
     if args.mode == "single":
         run_single(render=True)

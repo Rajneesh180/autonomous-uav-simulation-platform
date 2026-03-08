@@ -1,12 +1,20 @@
 class Config:
     # =========================================================
+    # SIMULATION PRESET: "simple" or "full"
+    #   simple = Fast, minimal, easy to understand (good for demos)
+    #   full   = All features enabled (for research/paper)
+    # Call Config.apply_preset("simple") or Config.apply_preset("full")
+    # =========================================================
+    PRESET = "simple"
+
+    # =========================================================
     # Core Map Configuration
     # =========================================================
     MAP_WIDTH = 800
     MAP_HEIGHT = 600
 
-    NODE_COUNT = 50
-    CLUSTER_COUNT = 5
+    NODE_COUNT = 20
+    CLUSTER_COUNT = 4
     # Supported modes: random, priority_heavy, deadline_critical, risk_dense, mixed_feature
     DATASET_MODE = "random"
 
@@ -131,7 +139,7 @@ class Config:
     # Successive Convex Approximation: refine hover xyz minimising path cost
     # =========================================================
     ENABLE_SCA_HOVER = True
-    SCA_MAX_ITERATIONS = 15             # max SCA refinement steps per hover point
+    SCA_MAX_ITERATIONS = 8              # max SCA refinement steps per hover point
     SCA_STEP_SIZE = 3.0                 # initial gradient step (metres)
     SCA_CONVERGENCE_TOL = 0.5           # distance convergence threshold (metres)
 
@@ -163,17 +171,17 @@ class Config:
     # Temporal Engine
     # =========================================================
     TIME_STEP = 1.0  # seconds (float for continuous-time support)
-    MAX_TIME_STEPS = 800
+    MAX_TIME_STEPS = 300
 
     ENABLE_TEMPORAL = True
-    FRAME_SUBSAMPLE_INTERVAL = 20   # render every Nth step as a keyframe (always-on)
+    FRAME_SUBSAMPLE_INTERVAL = 30   # render every Nth step as a keyframe (always-on)
 
     # =========================================================
     # GA Visiting Sequence Optimizer (Gap 4 — Zheng & Liu, IEEE TVT 2025)
     # =========================================================
     ENABLE_GA_SEQUENCE = True
-    GA_POPULATION_SIZE = 30
-    GA_MAX_GENERATIONS = 50
+    GA_POPULATION_SIZE = 15
+    GA_MAX_GENERATIONS = 25
     GA_CROSSOVER_RATE = 0.85
     GA_MUTATION_RATE = 0.15
     GA_TW_PENALTY_WEIGHT = 5.0
@@ -183,8 +191,8 @@ class Config:
     # GLS Penalty Augmentation (Donipati et al., IEEE TNSM 2025)
     # =========================================================
     GLS_LAMBDA = 0.3            # Penalty weight λ — scales augmented cost term
-    GLS_MAX_ITERATIONS = 20     # Maximum GLS penalty iterations before termination
-    GLS_PATIENCE = 5            # Early-stop if no real-distance improvement for N iters
+    GLS_MAX_ITERATIONS = 10     # Maximum GLS penalty iterations before termination
+    GLS_PATIENCE = 3            # Early-stop if no real-distance improvement for N iters
 
     # =========================================================
     # Hostility Level (Phase-3 Control Spectrum)
@@ -195,7 +203,7 @@ class Config:
     # Obstacles
     # =========================================================
     ENABLE_OBSTACLES = True
-    OBSTACLE_COUNT = 3           # Number of obstacles to generate per run (seeded)
+    OBSTACLE_COUNT = 2           # Number of obstacles to generate per run (seeded)
     OBSTACLE_SEED_OFFSET = 7     # Offset added to RANDOM_SEED for obstacle RNG
     ENABLE_MOVING_OBSTACLES = True
     OBSTACLE_MOTION_MODE = "linear"  # linear | random_walk
@@ -266,6 +274,84 @@ class Config:
 
     # Normalization epsilon
     SCORE_EPS = 1e-6
+
+    # =========================================================
+    # Preset Application
+    # =========================================================
+    @classmethod
+    def apply_preset(cls):
+        """
+        Apply parameter overrides based on PRESET value.
+        Call BEFORE apply_hostility_profile() and validate().
+          "simple" → Fast demo: fewer nodes, shorter run, heavy features off
+          "full"   → Research mode: all features enabled, full scale
+        """
+        preset = cls.PRESET.lower()
+        if preset == "simple":
+            # Scale
+            cls.NODE_COUNT = 20
+            cls.CLUSTER_COUNT = 4
+            cls.MAX_TIME_STEPS = 300
+            cls.OBSTACLE_COUNT = 2
+            # Algorithms — keep lightweight
+            cls.GA_POPULATION_SIZE = 15
+            cls.GA_MAX_GENERATIONS = 25
+            cls.GLS_MAX_ITERATIONS = 10
+            cls.GLS_PATIENCE = 3
+            cls.SCA_MAX_ITERATIONS = 8
+            # Disable heavy/optional modules
+            cls.ENABLE_MOVING_OBSTACLES = False
+            cls.ENABLE_BS_UPLINK_MODEL = False
+            cls.ENABLE_ISAC_DIGITAL_TWIN = False
+            cls.ENABLE_DYNAMIC_NODES = False
+            cls.ENABLE_NODE_REMOVAL = False
+            cls.ENABLE_PREDICTIVE_AVOIDANCE = False
+            cls.ENABLE_RISK_ZONES = False
+            cls.ENABLE_ROLLING_METRICS = False
+            # Keep core features
+            cls.ENABLE_ENERGY = True
+            cls.ENABLE_OBSTACLES = True
+            cls.ENABLE_SEMANTIC_CLUSTERING = True
+            cls.ENABLE_GA_SEQUENCE = True
+            cls.ENABLE_RENDEZVOUS_SELECTION = True
+            cls.ENABLE_TDMA_SCHEDULING = True
+            cls.ENABLE_PROBABILISTIC_SENSING = True
+            cls.ENABLE_GAUSSIAN_HEIGHT = True
+            # Visualization — lighter frames
+            cls.FRAME_SUBSAMPLE_INTERVAL = 30
+            cls.HOSTILITY_LEVEL = "low"
+
+        elif preset == "full":
+            # Scale
+            cls.NODE_COUNT = 50
+            cls.CLUSTER_COUNT = 5
+            cls.MAX_TIME_STEPS = 800
+            cls.OBSTACLE_COUNT = 3
+            # Algorithms — full power
+            cls.GA_POPULATION_SIZE = 30
+            cls.GA_MAX_GENERATIONS = 50
+            cls.GLS_MAX_ITERATIONS = 20
+            cls.GLS_PATIENCE = 5
+            cls.SCA_MAX_ITERATIONS = 15
+            # Enable all modules
+            cls.ENABLE_MOVING_OBSTACLES = True
+            cls.ENABLE_BS_UPLINK_MODEL = True
+            cls.ENABLE_ISAC_DIGITAL_TWIN = True
+            cls.ENABLE_DYNAMIC_NODES = True
+            cls.ENABLE_NODE_REMOVAL = True
+            cls.ENABLE_PREDICTIVE_AVOIDANCE = True
+            cls.ENABLE_RISK_ZONES = True
+            cls.ENABLE_ROLLING_METRICS = True
+            cls.ENABLE_ENERGY = True
+            cls.ENABLE_OBSTACLES = True
+            cls.ENABLE_SEMANTIC_CLUSTERING = True
+            cls.ENABLE_GA_SEQUENCE = True
+            cls.ENABLE_RENDEZVOUS_SELECTION = True
+            cls.ENABLE_TDMA_SCHEDULING = True
+            cls.ENABLE_PROBABILISTIC_SENSING = True
+            cls.ENABLE_GAUSSIAN_HEIGHT = True
+            cls.FRAME_SUBSAMPLE_INTERVAL = 20
+            cls.HOSTILITY_LEVEL = "medium"
 
     # =========================================================
     # Hostility Policy Application
