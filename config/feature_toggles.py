@@ -14,7 +14,7 @@ class FeatureToggles:
     """
 
     # --- Physics ---
-    RENDER_MODE = "2D"
+    RENDER_MODE = "3D"
     ENABLE_OBSTACLES = True
     MOVING_OBSTACLES = False        # simple preset default
     ENABLE_RISK_ZONES = False

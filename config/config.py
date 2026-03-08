@@ -291,7 +291,7 @@ class Config:
             # Scale
             cls.NODE_COUNT = 20
             cls.CLUSTER_COUNT = 4
-            cls.MAX_TIME_STEPS = 300
+            cls.MAX_TIME_STEPS = 800
             cls.OBSTACLE_COUNT = 2
             # Algorithms — keep lightweight
             cls.GA_POPULATION_SIZE = 15
@@ -308,6 +308,8 @@ class Config:
             cls.ENABLE_PREDICTIVE_AVOIDANCE = False
             cls.ENABLE_RISK_ZONES = False
             cls.ENABLE_ROLLING_METRICS = False
+            # Movement — faster UAV for smaller map
+            cls.UAV_STEP_SIZE = 10.0
             # Keep core features
             cls.ENABLE_ENERGY = True
             cls.ENABLE_OBSTACLES = True
@@ -317,8 +319,8 @@ class Config:
             cls.ENABLE_TDMA_SCHEDULING = True
             cls.ENABLE_PROBABILISTIC_SENSING = True
             cls.ENABLE_GAUSSIAN_HEIGHT = True
-            # Visualization — lighter frames
-            cls.FRAME_SUBSAMPLE_INTERVAL = 30
+            # Visualization — smoother frames for animation
+            cls.FRAME_SUBSAMPLE_INTERVAL = 5
             cls.HOSTILITY_LEVEL = "low"
 
         elif preset == "full":

@@ -21,27 +21,43 @@ htmlcov/
 Thumbs.db
 
 # Runtime experiment outputs
-results/
+results/runs/
+results/ablation/
+results/scalability/
+results/aggregated/
 artifacts/
 logs/
 
 # Temporary
 *.log
-*.json
-*.csv
 
-# Visualization & Runs
+# Visualization runtime outputs
 visualization/runs/
 visualization/plots/
 visualization/figures/
 visualization/frames/
 
-# Research Artifacts
-docs/references/*.pdf
-*.pdf
+# Docs — auto-generated experiment logs (keep theory & architecture)
+docs/experiments/
+docs/metrics/
+docs/phase_reports/
 
 # Environment
 .env
 .venv
 env/
 venv/
+
+# Report build artifacts (keep .tex, .pdf, .pptx)
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.lof
+report/*.lot
+report/*.out
+report/*.toc
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/*.nlovisualization/plot_renderer_backup.py
+visualization/plot_renderer_old.py

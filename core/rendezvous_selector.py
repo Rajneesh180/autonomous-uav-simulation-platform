@@ -59,6 +59,8 @@ class RendezvousSelector:
         if not nodes:
             return [], {}
 
+        original_nodes = list(nodes)  # preserve full set before filtering
+
         # Filter out nodes that are too close to obstacles (Fix 3 — avoid trap zones)
         buffer_r = Config.RP_OBSTACLE_BUFFER
         if obstacles and buffer_r > 0:
@@ -93,11 +95,24 @@ class RendezvousSelector:
 
         rp_nodes = [node_map[rid] for rid in rp_ids if rid in node_map]
 
+        # Assign obstacle-adjacent orphan nodes to their nearest RP so they
+        # are covered by propagation without adding extra waypoints.
+        covered_ids = set()
+        for rid in rp_ids:
+            covered_ids.add(rid)
+            covered_ids.update(member_map.get(rid, []))
+        orphans = [n for n in original_nodes if n.id not in covered_ids]
+        if orphans:
+            for orphan in orphans:
+                best_rp = min(rp_ids, key=lambda rid: self._dist(orphan, node_map[rid]))
+                member_map[best_rp].append(orphan.id)
+            print(f"[RendezvousSelector] {len(orphans)} orphan(s) assigned to nearest RPs")
+
         print(
-            f"[RendezvousSelector] N={len(nodes)} nodes → "
-            f"{len(rp_ids)} RPs selected "
+            f"[RendezvousSelector] N={len(original_nodes)} nodes → "
+            f"{len(rp_ids)} RPs covering {sum(len(v) for v in member_map.values()) + len(rp_ids)} nodes "
             f"(r_max={self.r_max:.1f} m, "
-            f"reduction={100*(1-len(rp_ids)/len(nodes)):.1f}%)"
+            f"reduction={100*(1-len(rp_ids)/len(original_nodes)):.1f}%)"  
         )
 
         return rp_nodes, member_map

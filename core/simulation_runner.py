@@ -201,9 +201,8 @@ def run_simulation(verbose=True, render=True, seed_override=None):
     # ---------------------------------------------------------
     if render:
         visuals_path = run_manager.get_path("plots")
-        is_full = Config.PRESET.lower() == "full"
 
-        # === Essential plots (always rendered) ===
+        # === ALL plots rendered regardless of preset ===
         PlotRenderer.render_environment(env, visuals_path)
 
         PlotRenderer.render_energy_plots(
@@ -231,100 +230,95 @@ def run_simulation(verbose=True, render=True, seed_override=None):
             save_dir=visuals_path
         )
 
-        # === Advanced plots (full preset only) ===
-        if is_full:
-            # ---- v0.5 IEEE-Quality Post-Run Plots ----
-            PlotRenderer.render_radar_chart(results, visuals_path)
+        PlotRenderer.render_radar_chart(results, visuals_path)
 
-            PlotRenderer.render_node_energy_heatmap(
-                nodes=env.sensors,
-                env_width=env.width,
-                env_height=env.height,
-                save_dir=visuals_path
+        PlotRenderer.render_node_energy_heatmap(
+            nodes=env.sensors,
+            env_width=env.width,
+            env_height=env.height,
+            save_dir=visuals_path
+        )
+
+        PlotRenderer.render_dashboard_panel(
+            results=results,
+            battery_hist=mission.battery_history,
+            visited_hist=mission.visited_history,
+            save_dir=visuals_path
+        )
+
+        PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
+        PlotRenderer.render_trajectory_heatmap(env=env, save_dir=visuals_path)
+
+        PlotRenderer.render_aoi_timeline(
+            aoi_history=mission.aoi_history,
+            save_dir=visuals_path
+        )
+
+        # Semantic Clustering Overlays
+        if Config.ENABLE_SEMANTIC_CLUSTERING and len(mission.active_labels) > 0:
+            PlotRenderer.render_semantic_clustering(
+                env=env,
+                active_labels=mission.active_labels,
+                active_centroids=mission.active_centroids,
+                save_dir=visuals_path,
             )
+            if hasattr(mission, "cluster_manager") and mission.cluster_manager is not None:
+                reduced = getattr(mission.cluster_manager, "last_reduced_features", None)
+                if reduced is not None:
+                    PlotRenderer.render_clustering_pca_space(
+                        reduced_features=reduced,
+                        active_labels=mission.active_labels,
+                        save_dir=visuals_path,
+                    )
 
-            PlotRenderer.render_dashboard_panel(
-                results=results,
-                battery_hist=mission.battery_history,
-                visited_hist=mission.visited_history,
-                save_dir=visuals_path
+        # Routing Pipeline Compression
+        if Config.ENABLE_RENDEZVOUS_SELECTION and hasattr(mission, "rp_member_map"):
+            rp_all = getattr(mission, "rp_nodes", [])
+            PlotRenderer.render_routing_pipeline(
+                env=env,
+                rp_nodes=rp_all,
+                rp_member_map=mission.rp_member_map,
+                route_sequence=getattr(mission, "_cached_queue", []),
+                save_dir=visuals_path,
             )
-
-            PlotRenderer.render_3d_trajectory(env=env, save_dir=visuals_path)
-
-            # ---- v0.5.2 Advanced Plots ----
-            PlotRenderer.render_trajectory_heatmap(env=env, save_dir=visuals_path)
-
-            PlotRenderer.render_aoi_timeline(
-                aoi_history=mission.aoi_history,
-                save_dir=visuals_path
-            )
-
-            # ---- Phase-4: Semantic Clustering Overlays ----
-            if Config.ENABLE_SEMANTIC_CLUSTERING and len(mission.active_labels) > 0:
-                PlotRenderer.render_semantic_clustering(
-                    env=env,
-                    active_labels=mission.active_labels,
-                    active_centroids=mission.active_centroids,
-                    save_dir=visuals_path,
-                )
-                if hasattr(mission, "cluster_manager") and mission.cluster_manager is not None:
-                    reduced = getattr(mission.cluster_manager, "last_reduced_features", None)
-                    if reduced is not None:
-                        PlotRenderer.render_clustering_pca_space(
-                            reduced_features=reduced,
-                            active_labels=mission.active_labels,
-                            save_dir=visuals_path,
-                        )
-
-            # ---- Phase-4: Routing Pipeline Compression ----
-            if Config.ENABLE_RENDEZVOUS_SELECTION and hasattr(mission, "rp_member_map"):
-                rp_all = getattr(mission, "rp_nodes", [])
-                PlotRenderer.render_routing_pipeline(
-                    env=env,
-                    rp_nodes=rp_all,
-                    rp_member_map=mission.rp_member_map,
-                    route_sequence=getattr(mission, "_cached_queue", []),
-                    save_dir=visuals_path,
-                )
-                PlotRenderer.render_rendezvous_compression(
-                    env=env,
-                    all_nodes=env.sensors,
-                    rp_nodes=rp_all,
-                    rp_member_map=mission.rp_member_map,
-                    save_dir=visuals_path,
-                )
-
-            # ---- Phase-4: Communication Quality ----
-            PlotRenderer.render_communication_quality(
-                nodes=env.sensors,
-                uav_trail=getattr(env, "uav_trail", []),
+            PlotRenderer.render_rendezvous_compression(
+                env=env,
+                all_nodes=env.sensors,
+                rp_nodes=rp_all,
+                rp_member_map=mission.rp_member_map,
                 save_dir=visuals_path,
             )
 
-            # ---- Phase-4: Mission Progress Combined ----
-            data_hist = getattr(mission, "collected_data_history", [])
-            aoi_mean_hist = [
-                sum(v[-1] for v in mission.aoi_history.values() if v) / max(len(mission.aoi_history), 1)
-                if mission.aoi_history else 0.0
-            ]  # scalar fallback — build per-step mean if available
-            if hasattr(mission, "aoi_mean_history"):
-                aoi_mean_hist = mission.aoi_mean_history
-            PlotRenderer.render_mission_progress_combined(
-                visited_hist=mission.visited_history,
-                battery_hist=mission.battery_history,
-                data_hist=data_hist,
-                aoi_mean_hist=aoi_mean_hist,
-                replan_steps=mission.replan_timestamps,
-                save_dir=visuals_path,
-            )
+        # Communication Quality
+        PlotRenderer.render_communication_quality(
+            nodes=env.sensors,
+            uav_trail=getattr(env, "uav_trail", []),
+            save_dir=visuals_path,
+        )
+
+        # Mission Progress Combined
+        data_hist = getattr(mission, "collected_data_history", [])
+        aoi_mean_hist = [
+            sum(v[-1] for v in mission.aoi_history.values() if v) / max(len(mission.aoi_history), 1)
+            if mission.aoi_history else 0.0
+        ]
+        if hasattr(mission, "aoi_mean_history"):
+            aoi_mean_hist = mission.aoi_mean_history
+        PlotRenderer.render_mission_progress_combined(
+            visited_hist=mission.visited_history,
+            battery_hist=mission.battery_history,
+            data_hist=data_hist,
+            aoi_mean_hist=aoi_mean_hist,
+            replan_steps=mission.replan_timestamps,
+            save_dir=visuals_path,
+        )
 
         # ---- MP4 Animation ----
         AnimationBuilder.build_mp4(
             frames_dir=frames_path,
             output_dir=run_manager.get_path("animations"),
-            fps=4,
-            max_frames=200,
+            fps=10,
+            max_frames=300,
         )
 
         # ---- IEEE Experiment Report ----

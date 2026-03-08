@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""
+Simple CLI runner for the Autonomous UAV Simulation Platform.
+
+Usage:
+    python run.py sim              # Basic simulation (20 nodes, no GUI)
+    python run.py sim --render     # With live 2D visualization
+    python run.py 2d               # Quick run with 2D visualization
+    python run.py 3d               # Quick run with 3D visualization
+    python run.py full             # Full 50-node simulation
+    python run.py compare          # DST-BA vs 4 baselines
+    python run.py ablation         # Ablation study (component removal)
+    python run.py scalability      # Scalability 10→100 nodes
+    python run.py batch            # 10-seed batch for statistics
+    python run.py all              # Run sim + compare + ablation + scalability
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+PYTHON = str(ROOT / ".venv" / "bin" / "python")
+
+
+def _run(cmd, label=None):
+    if label:
+        print(f"\n{'='*60}")
+        print(f"  {label}")
+        print(f"{'='*60}\n")
+    subprocess.run([PYTHON] + cmd, cwd=str(ROOT))
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(__doc__)
+        return
+
+    cmd = sys.argv[1].lower()
+    extra = sys.argv[2:]
+
+    if cmd == "sim":
+        _run(["main.py", "--preset", "simple", "--mode", "single"] + extra,
+             "Single Simulation (20 nodes)")
+
+    elif cmd == "2d":
+        _run(["main.py", "--preset", "simple", "--mode", "single",
+              "--render", "--render-mode", "2D"] + extra,
+             "2D Visualization Run")
+
+    elif cmd == "3d":
+        _run(["main.py", "--preset", "simple", "--mode", "single",
+              "--render", "--render-mode", "3D"] + extra,
+             "3D Visualization Run")
+
+    elif cmd == "full":
+        _run(["main.py", "--preset", "full", "--mode", "single"] + extra,
+             "Full Simulation (50 nodes)")
+
+    elif cmd == "compare":
+        _run(["-m", "experiments.comparison_runner"] + extra,
+             "Algorithm Comparison (DST-BA vs 4 baselines)")
+
+    elif cmd == "ablation":
+        _run(["-m", "experiments.ablation_runner"] + extra,
+             "Ablation Study")
+
+    elif cmd == "scalability":
+        _run(["-m", "experiments.scalability_runner"] + extra,
+             "Scalability Analysis (10→100 nodes)")
+
+    elif cmd == "batch":
+        _run(["main.py", "--preset", "simple", "--mode", "batch"] + extra,
+             "Batch Run (10 seeds)")
+
+    elif cmd == "all":
+        _run(["main.py", "--preset", "simple", "--mode", "single"],
+             "1/4  Single Simulation")
+        _run(["-m", "experiments.comparison_runner"],
+             "2/4  Algorithm Comparison")
+        _run(["-m", "experiments.ablation_runner"],
+             "3/4  Ablation Study")
+        _run(["-m", "experiments.scalability_runner"],
+             "4/4  Scalability Analysis")
+        print("\n All experiments completed!")
+
+    else:
+        print(f"Unknown command: '{cmd}'")
+        print(__doc__)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

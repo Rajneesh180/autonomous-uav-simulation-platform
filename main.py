@@ -121,8 +121,8 @@ def main():
     print(f"    Preset: {Config.PRESET}  |  Nodes: {Config.NODE_COUNT}  |  Steps: {Config.MAX_TIME_STEPS}")
 
     if args.mode == "single":
-        run_single(render=True)
-        if args.render or True: # Render is currently hardcoded to True in run_single above
+        run_single(render=args.render)
+        if args.render:
             print("\n[Dashboard] Simulation complete! The dynamic dashboard is still active.")
             input("Press [ENTER] to exit the simulation framework...")
     elif args.mode == "batch":

@@ -64,7 +64,7 @@ class InteractiveDashboard:
             ax.set_zlabel("Z-Axis Elevation (m)")
         ax.set_xlabel("X-Axis Spatial Coordinate (m)")
         ax.set_ylabel("Y-Axis Spatial Coordinate (m)")
-        ax.set_title(f"Dynamic Service Time (DST-BA) Trajectory - Iteration {step} | Energy Reserve: {uav.current_battery/1000:,.1f} kJ\n[Press 'T' to Toggle 2D/3D View]")
+        ax.set_title(f"DST-BA Trajectory — Step {step} | Battery: {uav.current_battery/1000:,.1f} kJ")
         ax.grid(True, linestyle=":", alpha=0.5)
         
         # 1. Primary Sink Node (Base Station)

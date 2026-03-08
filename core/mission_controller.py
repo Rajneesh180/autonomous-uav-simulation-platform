@@ -284,7 +284,10 @@ class MissionController:
         # Phase-4 Hierarchical Semantic Routing:
         # Score each cluster by urgency (priority × AoI) discounted by UAV distance,
         # then route to the highest-urgency cluster first.
-        if len(self.active_centroids) > 0 and len(self.active_labels) == len(remaining):
+        # Skip subgroup filtering when few nodes remain — visit them all.
+        if (len(remaining) > 8
+                and len(self.active_centroids) > 0
+                and len(self.active_labels) == len(remaining)):
             import numpy as np
             uav_vec = np.array([ux, uy, uz])
 
@@ -313,9 +316,13 @@ class MissionController:
                     remaining[i] for i, label in enumerate(self.active_labels)
                     if label == best_cluster_idx
                 ]
-                # Fallback if DBSCAN noise filtered out all valid subgroup members
+                # Include noise nodes (label=-1) so they are not dropped
+                noise_nodes = [
+                    remaining[i] for i, label in enumerate(self.active_labels)
+                    if label == -1 and i < len(remaining)
+                ]
                 if priority_subgroup:
-                    remaining = priority_subgroup
+                    remaining = priority_subgroup + noise_nodes
 
         # Stage 1: PCA-GLS Meta-Heuristic seed on the priority subgroup
         pca_gls_order = PCAGLSRouter.optimize((ux, uy, uz), remaining)
@@ -402,7 +409,7 @@ class MissionController:
 
         # Check if buffer drained via chord-fly
         if self.current_target.current_buffer <= 1e-3:
-            self.visited.add(self.current_target.id)
+            self._mark_visited(self.current_target.id)
             print(f"[Visited] Node {self.current_target.id} (Buffer completely drained via DST-BA)")
             self.current_target = None
             return
@@ -420,7 +427,7 @@ class MissionController:
 
             if outcome['abandoned']:
                 print(f"[Warning] Node {self.current_target.id} Data Rate is 0 Mbps (NLoS Blocked). Abandoning target.")
-                self.visited.add(self.current_target.id)
+                self._mark_visited(self.current_target.id)
                 self.current_target = None
                 return
 
@@ -451,7 +458,7 @@ class MissionController:
             else:
                 print(f"[Service Timeout] Node {nid}: τ*={outcome['service_time_s']:.1f}s, residual {residual:.2f}Mb")
 
-            self.visited.add(nid)
+            self._mark_visited(nid)
             self.current_target = None
             return
 
@@ -486,10 +493,35 @@ class MissionController:
             return
 
     # ---------------------------------------------------------
+    # RP-aware visited propagation
+    # ---------------------------------------------------------
+
+    def _mark_visited(self, node_id: int):
+        """Mark a node as visited. If it is a Rendezvous Point, also mark all member nodes."""
+        self.visited.add(node_id)
+        # Propagate visit to RP member nodes
+        member_ids = self.rp_member_map.get(node_id, [])
+        if member_ids:
+            for mid in member_ids:
+                self.visited.add(mid)
+            print(f"[RP Propagation] RP {node_id} → {len(member_ids)} member nodes marked visited")
+
+    # ---------------------------------------------------------
     # Terminal
     # ---------------------------------------------------------
 
     def _check_terminal_conditions(self):
         if not self.target_queue and not self.current_target:
-            print("[Mission] All targets processed.")
-            self.temporal.active = False
+            # Check if there are still unvisited nodes before terminating
+            unvisited = [n for n in self.env.sensors if n.id not in self.visited]
+            if not unvisited:
+                print("[Mission] All targets visited.")
+                self.temporal.active = False
+            else:
+                # Replan to cover remaining unvisited nodes
+                print(f"[Mission] Queue empty but {len(unvisited)} nodes remain — replanning.")
+                self._trigger_replan("coverage_gap")
+                self._recompute_plan()
+                if not self.target_queue:
+                    print("[Mission] No reachable targets remaining.")
+                    self.temporal.active = False
