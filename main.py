@@ -1,133 +1,91 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
 import argparse
-import json
-import os
 
-from config.config import Config
-from config.feature_toggles import FeatureToggles
-from core.batch_runner import BatchRunner
-from core.simulation_runner import run_simulation
-from metrics.auto_logger import IEEEDocLogger
-from metrics.metric_engine import MetricEngine
-
-
-def run_single(render: bool = True):
-    results = run_simulation(verbose=True, render=render)
-    metrics = MetricEngine.compute_stability_metrics(results)
-
-    print("\nMission execution completed.")
-    print(f"Run ID: {results['run_id']}")
-    print(f"Total simulation steps executed: {results['steps']}")
-    print(f"Final battery: {round(results['final_battery_J'], 2)}")
-    print(f"path_stability_index: {round(metrics['path_stability_index'], 4)}")
-    print(f"node_churn_impact: {round(metrics['node_churn_impact'], 4)}")
-    print(f"energy_prediction_error: {round(metrics['energy_prediction_error'], 4)}")
-    print(f"Visited nodes: {results['nodes_visited']}")
-    print(f"Replan count: {results['replans']}")
-    print(f"Collision count: {results['collision_rate']}")
-    
-    if "priority_satisfaction_percent" in results:
-        print("\n--- Semantic Intelligence Metrics ---")
-        print(f"Priority Satisfaction: {results['priority_satisfaction_percent']}%")
-        print(f"Semantic Purity Index: {results['semantic_purity_index']}")
-    print(f"Unsafe return count: {results['unsafe_return']}")
-
-    print("\n--- Stability Metrics ---")
-    for k, v in metrics.items():
-        print(f"{k}: {round(v, 4)}")
-
-    # Persist per-run stability metrics
-    metrics_path = os.path.join(
-        "visualization",
-        "runs",
-        results["run_id"],
-        "logs",
-        "stability_metrics.json",
-    )
-
-    with open(metrics_path, "w") as f:
-        json.dump(metrics, f, indent=4)
-        
-    # Generate automated IEEE report
-    IEEEDocLogger.generate_experiment_doc(results, metrics, results["run_id"])
+from config.settings import (
+    MAP_W, MAP_H, BATTERY_CAPACITY,
+    Node, Obstacle,
+)
+from core.deployment import deploy_nodes, deploy_obstacles
+from core.rp_selection import select_rendezvous_points
+from core.path_planning import compute_expected_path
+from core.energy import estimate_energy
+from visualization.diagrams import generate_all_diagrams
 
 
-def run_batch():
-    runner = BatchRunner(runs=10)
-    aggregated = runner.execute()
+# runs all 4 steps and prints results
+def run_simulation() -> tuple[list[Node], list[Obstacle], list[int], dict[int, list[int]]]:
+    print("UAV Data Collection - Phase 1 Simulation")
+    print("-" * 40)
 
-    runner.save(aggregated)
+    # Step 1 - place sensor nodes
+    nodes: list[Node] = deploy_nodes()
+    p_lo = min(n["priority"] for n in nodes)
+    p_hi = max(n["priority"] for n in nodes)
+    print(f"\n[nodes]  {len(nodes)} sensors placed in {MAP_W}x{MAP_H} m area "
+          f"(priority {p_lo}-{p_hi})")
 
-    print("\n--- Batch Aggregated Metrics ---")
-    for metric, stats in aggregated.items():
-        print(metric, stats)
+    # Step 2 - place obstacles
+    obstacles: list[Obstacle] = deploy_obstacles()
+    print(f"[obstacles]  {len(obstacles)} rectangular obstacles:")
+    for o in obstacles:
+        print(f"   #{o['id']}  ({o['x1']},{o['y1']})->({o['x2']},{o['y2']})  "
+              f"{o['width']}x{o['depth']}x{o['height']}m")
+
+    # Step 3 - pick rendezvous points
+    rps, members = select_rendezvous_points(nodes, obstacles)
+    ratio = 100 * (1 - len(rps) / len(nodes))
+    print(f"\n[RP select]  {len(rps)} RPs out of {len(nodes)} nodes  ({ratio:.0f}% reduced)")
+    for rp in rps:
+        mlist = [f"N{m}" for m in members.get(rp, [])]
+        print(f"   N{rp} ({nodes[rp]['x']},{nodes[rp]['y']})  ->  {mlist}")
+
+    # Step 4 - compute path & energy
+    path, total_dist = compute_expected_path(nodes, rps)
+    e_total, pct = estimate_energy(total_dist, len(rps))
+    print(f"\n[path]  BS -> {len(rps)} RPs -> BS  ({len(path)} waypoints)")
+    print(f"   distance = {total_dist:.1f} m")
+    print(f"   energy   = {e_total / 1000:.1f} kJ  "
+          f"({pct:.1f}% of {BATTERY_CAPACITY / 1000:.0f} kJ capacity)")
+
+    print("\ndone.")
+    return nodes, obstacles, rps, members
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Autonomous UAV Simulation Platform")
-    parser.add_argument(
-        "--mode", 
-        type=str, 
-        choices=["single", "batch"], 
-        default="single",
-        help="Execution mode: 'single' for a detailed run, 'batch' for statistical aggregation."
-    )
-    parser.add_argument("--preset", type=str, choices=["simple", "full"], default=None,
-                        help="Apply a parameter preset: 'simple' (fast demo) or 'full' (research).")
-    parser.add_argument(
-        "--render", 
-        action="store_true", 
-        help="Enable Matplotlib/Pygame telemetry visualizer."
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="UAV-Assisted Obstacle-Aware Data Collection Framework",
     )
     parser.add_argument(
-        "--render-mode", 
-        type=str, 
-        choices=["2D", "3D", "both"], 
-        default="2D",
-        help="Visualisation projection: '2D' top-down, '3D' perspective, or 'both'."
+        "--diagrams", action="store_true",
+        help="Also generate report diagrams after simulation",
     )
-    # --- Toggle flags (true/false strings) ---
-    _toggle = lambda name, default, hlp: parser.add_argument(
-        f"--{name}", type=str, choices=["true","false","True","False"], default=default, help=hlp)
-    _toggle("obstacles", "true", "Toggle obstacle presence.")
-    _toggle("moving_obstacles", "false", "Toggle obstacle animation.")
-    _toggle("risk_zones", None, "Toggle risk zones.")
-    _toggle("energy", None, "Toggle UAV energy model.")
-    _toggle("bs_uplink", None, "Toggle base-station uplink model.")
-    _toggle("tdma", None, "Toggle TDMA scheduling.")
-    _toggle("ga", None, "Toggle GA sequence optimizer.")
-    _toggle("clustering", None, "Toggle semantic clustering.")
-    _toggle("rendezvous", None, "Toggle rendezvous-point selection.")
-    _toggle("sca", None, "Toggle SCA hover optimizer.")
-    _toggle("sensing", None, "Toggle probabilistic sensing.")
-    _toggle("dynamic_nodes", None, "Toggle dynamic node join/leave.")
-    _toggle("predictive_avoidance", None, "Toggle predictive avoidance.")
-    
+    parser.add_argument(
+        "--diagrams-only", action="store_true",
+        help="Only generate diagrams (skip simulation)",
+    )
+    parser.add_argument(
+        "--all", action="store_true",
+        help="Run simulation + generate diagrams (same as --diagrams)",
+    )
     args = parser.parse_args()
 
-    # 1. Apply preset (if given via CLI or use Config default)
-    if args.preset:
-        Config.PRESET = args.preset
-    Config.apply_preset()
+    # --diagrams-only skips the simulation, just makes the figures
+    if args.diagrams_only:
+        nodes = deploy_nodes()
+        obstacles = deploy_obstacles()
+        rps, members = select_rendezvous_points(nodes, obstacles)
+        generate_all_diagrams(nodes, obstacles, rps, members)
+        return
 
-    # 2. Apply CLI toggle overrides on top of preset
-    FeatureToggles.apply_overrides(args)
-    FeatureToggles.sync_to_config()
+    nodes, obstacles, rps, members = run_simulation()
 
-    # 3. Hostility + validation
-    Config.apply_hostility_profile()
-    Config.validate()
+    if args.diagrams or args.all:
+        print()
+        generate_all_diagrams(nodes, obstacles, rps, members)
 
-    print("=== Autonomous UAV Simulation Platform ===")
-    print(f"    Preset: {Config.PRESET}  |  Nodes: {Config.NODE_COUNT}  |  Steps: {Config.MAX_TIME_STEPS}")
-
-    if args.mode == "single":
-        run_single(render=args.render)
-        if args.render:
-            print("\n[Dashboard] Simulation complete! The dynamic dashboard is still active.")
-            input("Press [ENTER] to exit the simulation framework...")
-    elif args.mode == "batch":
-        print(f"[Warning] GUI rendering is implicitly disabled during high-speed batch executions.")
-        run_batch()
 
 if __name__ == "__main__":
     main()

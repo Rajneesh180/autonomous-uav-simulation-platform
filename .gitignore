@@ -6,12 +6,6 @@ __pycache__/
 dist/
 build/
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-
 # IDE
 .vscode/
 .idea/
@@ -20,44 +14,11 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Runtime experiment outputs
-results/runs/
-results/ablation/
-results/scalability/
-results/aggregated/
-artifacts/
-logs/
-
-# Temporary
-*.log
-
-# Visualization runtime outputs
-visualization/runs/
-visualization/plots/
-visualization/figures/
-visualization/frames/
-
-# Docs — auto-generated experiment logs (keep theory & architecture)
-docs/experiments/
-docs/metrics/
-docs/phase_reports/
-
 # Environment
 .env
 .venv
 env/
 venv/
 
-# Report build artifacts (keep .tex, .pdf, .pptx)
-report/*.aux
-report/*.bbl
-report/*.blg
-report/*.lof
-report/*.lot
-report/*.out
-report/*.toc
-report/*.fls
-report/*.fdb_latexmk
-report/*.synctex.gz
-report/*.nlovisualization/plot_renderer_backup.py
-visualization/plot_renderer_old.py
+# Report (latex sources + pdfs kept separately)
+report/

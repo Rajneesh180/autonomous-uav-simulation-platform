@@ -1,21 +1,3 @@
-"""
-Visualization
-=============
-Plotting, animation, dashboards, and batch result visualization.
+from visualization.diagrams import generate_all_diagrams
 
-Usage::
-
-    from visualization import PlotRenderer, AnimationBuilder, BatchPlotter
-"""
-
-from visualization.plot_renderer import PlotRenderer
-from visualization.animation_builder import AnimationBuilder
-from visualization.batch_plotter import BatchPlotter
-from visualization.interactive_dashboard import InteractiveDashboard
-
-__all__ = [
-    "PlotRenderer",
-    "AnimationBuilder",
-    "BatchPlotter",
-    "InteractiveDashboard",
-]
+__all__ = ["generate_all_diagrams"]
